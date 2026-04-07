@@ -16,6 +16,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AI news aggregation toolkit")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    def add_persist_flags(target_parser: argparse.ArgumentParser, *, default: bool) -> None:
+        target_parser.set_defaults(persist=default)
+        target_parser.add_argument(
+            "--persist",
+            dest="persist",
+            action="store_true",
+            help="Store generated digests in SQLite",
+        )
+        target_parser.add_argument(
+            "--no-persist",
+            dest="persist",
+            action="store_false",
+            help="Do not store generated digests in SQLite",
+        )
+
     ingest_parser = subparsers.add_parser("ingest", help="Fetch and store the latest news")
     ingest_parser.add_argument(
         "--source", action="append", dest="sources", help="Ingest only selected source ids"
@@ -36,7 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
     digest_parser.add_argument("--since-hours", type=int, default=None)
     digest_parser.add_argument("--limit", type=int, default=30)
     digest_parser.add_argument("--use-llm", action="store_true")
-    digest_parser.add_argument("--persist", action="store_true")
+    add_persist_flags(digest_parser, default=False)
 
     enrich_parser = subparsers.add_parser(
         "enrich",
@@ -95,11 +110,12 @@ def _build_parser() -> argparse.ArgumentParser:
     pipeline_parser.add_argument("--limit", type=int, default=30)
     pipeline_parser.add_argument("--max-items", type=int, default=None)
     pipeline_parser.add_argument("--use-llm", action="store_true")
-    pipeline_parser.add_argument("--persist", action="store_true")
+    add_persist_flags(pipeline_parser, default=True)
     pipeline_parser.add_argument("--export", action="store_true")
     pipeline_parser.add_argument("--publish", action="store_true")
     pipeline_parser.add_argument("--target", action="append", dest="targets")
     pipeline_parser.add_argument("--wechat-submit", action="store_true")
+    pipeline_parser.add_argument("--force-republish", action="store_true")
 
     publish_parser = subparsers.add_parser(
         "publish",
@@ -112,10 +128,11 @@ def _build_parser() -> argparse.ArgumentParser:
     publish_parser.add_argument("--since-hours", type=int, default=None)
     publish_parser.add_argument("--limit", type=int, default=30)
     publish_parser.add_argument("--use-llm", action="store_true")
-    publish_parser.add_argument("--persist", action="store_true")
+    add_persist_flags(publish_parser, default=True)
     publish_parser.add_argument("--export", action="store_true")
     publish_parser.add_argument("--target", action="append", dest="targets")
     publish_parser.add_argument("--wechat-submit", action="store_true")
+    publish_parser.add_argument("--force-republish", action="store_true")
 
     subparsers.add_parser("stats", help="Print article and digest statistics")
 
@@ -231,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
                 publish=args.publish,
                 publish_targets=args.targets,
                 wechat_submit=args.wechat_submit,
+                force_republish=args.force_republish,
             )
         )
         return 0
@@ -247,6 +265,7 @@ def main(argv: list[str] | None = None) -> int:
                 export=args.export,
                 targets=args.targets,
                 wechat_submit=args.wechat_submit,
+                force_republish=args.force_republish,
             )
         )
         return 0

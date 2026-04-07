@@ -1,9 +1,10 @@
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
 from ainews.models import ArticleRecord, DailyDigest
-from ainews.repository import ArticleRepository
+from ainews.repository import CURRENT_SCHEMA_VERSION, ArticleRepository
 from ainews.utils import make_content_hash, make_dedup_key, utc_now
 
 
@@ -136,6 +137,68 @@ class RepositoryTestCase(unittest.TestCase):
             )
             self.assertEqual(len(filtered), 1)
             self.assertEqual(filtered[0]["external_id"], "PUBLISH123")
+
+    def test_repository_migrates_legacy_schema_and_sets_version(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "ainews.db"
+            connection = sqlite3.connect(str(database_path))
+            connection.executescript(
+                """
+                CREATE TABLE articles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_id TEXT NOT NULL,
+                    source_name TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    canonical_url TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    published_at TEXT NOT NULL,
+                    discovered_at TEXT NOT NULL,
+                    language TEXT NOT NULL,
+                    region TEXT NOT NULL,
+                    country TEXT NOT NULL,
+                    topic TEXT NOT NULL,
+                    content_hash TEXT NOT NULL,
+                    dedup_key TEXT NOT NULL,
+                    raw_payload TEXT NOT NULL
+                );
+
+                CREATE TABLE digests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    region TEXT NOT NULL,
+                    since_hours INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    body_markdown TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    article_count INTEGER NOT NULL,
+                    source_count INTEGER NOT NULL,
+                    generated_at TEXT NOT NULL,
+                    payload TEXT NOT NULL
+                );
+
+                CREATE TABLE publications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    digest_id INTEGER,
+                    target TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    external_id TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    response_payload TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                """
+            )
+            connection.commit()
+            connection.close()
+
+            repository = ArticleRepository(database_path)
+
+            self.assertEqual(repository.get_schema_version(), CURRENT_SCHEMA_VERSION)
+            stats = repository.get_stats()
+            self.assertEqual(stats["schema_version"], CURRENT_SCHEMA_VERSION)
+            article = repository.list_articles(limit=1, include_hidden=True)
+            self.assertEqual(article, [])
 
 
 if __name__ == "__main__":

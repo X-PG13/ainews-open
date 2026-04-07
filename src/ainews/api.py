@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from . import __version__
 from .config import load_settings
 from .service import NewsService
 
@@ -53,6 +54,7 @@ class PipelineRequest(BaseModel):
     publish: bool = False
     publish_targets: Optional[List[str]] = None
     wechat_submit: Optional[bool] = None
+    force_republish: bool = False
 
 
 class PublishRequest(BaseModel):
@@ -65,6 +67,7 @@ class PublishRequest(BaseModel):
     export: bool = False
     targets: Optional[List[str]] = None
     wechat_submit: Optional[bool] = None
+    force_republish: bool = False
 
 
 class RefreshPublicationsRequest(BaseModel):
@@ -88,7 +91,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="AI News Open",
-        version="0.6.0",
+        version=__version__,
         description="Daily domestic and international AI news aggregation API.",
     )
 
@@ -118,7 +121,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok"}
+        return {"status": "ok", "version": __version__}
 
     @app.get("/sources")
     def list_sources() -> dict:
@@ -250,6 +253,7 @@ def create_app() -> FastAPI:
             publish=request.publish,
             publish_targets=request.publish_targets,
             wechat_submit=request.wechat_submit,
+            force_republish=request.force_republish,
         )
 
     @app.post("/admin/publish")
@@ -267,6 +271,7 @@ def create_app() -> FastAPI:
             export=request.export,
             targets=request.targets,
             wechat_submit=request.wechat_submit,
+            force_republish=request.force_republish,
         )
 
     @app.get("/admin/digests")

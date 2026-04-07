@@ -69,6 +69,9 @@ class DigestPublisher:
             return False
         return bool(self._wechat_publication_id(publication))
 
+    def normalize_targets(self, targets: Optional[Iterable[str]]) -> List[str]:
+        return self._normalize_targets(targets)
+
     def refresh_publication(self, publication: Dict[str, object]) -> PublicationResult:
         target = clean_text(str(publication.get("target", ""))).lower()
         if target != "wechat":

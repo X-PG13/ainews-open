@@ -70,6 +70,13 @@ pre-commit install
 make check
 ```
 
+### v1.0 Readiness Docs
+
+- [Compatibility Contract](docs/compatibility.md)
+- [Deployment Guide](docs/deployment.md)
+- [Database Migrations](docs/database-migrations.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
 ## What You Get
 
 当前版本提供：
@@ -237,6 +244,12 @@ python -m ainews run-pipeline \
   --target static_site
 ```
 
+说明：
+
+- `publish` 和 `run-pipeline --publish` 会自动持久化 digest，以便后续刷新发布状态并启用幂等防重复。
+- 同一个已存档 `digest` 发布到同一个 `target` 时，系统默认返回 `skipped`，不会新增脏记录。
+- 如果你明确要再次对外推送，可加 `--force-republish`。
+
 ## 正文抽取与 source-specific 清洗
 
 正文抽取器默认包含两层策略：
@@ -258,9 +271,10 @@ python -m ainews run-pipeline \
 发布示例：
 
 ```bash
-python -m ainews publish --use-llm --persist --target telegram
-python -m ainews publish --use-llm --persist --target feishu --target static_site
-python -m ainews publish --use-llm --persist --target wechat --wechat-submit
+python -m ainews publish --use-llm --target telegram
+python -m ainews publish --use-llm --target feishu --target static_site
+python -m ainews publish --use-llm --target wechat --wechat-submit
+python -m ainews publish --digest-id 1 --target static_site --force-republish
 ```
 
 如果不传 `--target`，系统会读取 `AINEWS_PUBLISH_TARGETS`。
@@ -341,6 +355,7 @@ python -m ainews enrich --limit 20
 python -m ainews print-digest --use-llm --persist
 python -m ainews run-pipeline --use-llm --persist --export
 python -m ainews publish --use-llm --persist --target static_site
+python -m ainews publish --digest-id 1 --target static_site --force-republish
 python -m ainews list-digests --limit 10
 python -m ainews list-publications --limit 20
 python -m ainews refresh-publications --target wechat --limit 20
@@ -352,7 +367,7 @@ python -m ainews serve --port 8000
 
 ### `GET /health`
 
-健康检查。
+健康检查。返回 `status` 和当前服务 `version`。
 
 ### `GET /sources`
 
@@ -441,7 +456,7 @@ curl -X POST "http://127.0.0.1:8000/admin/digests/generate" \
 curl -X POST "http://127.0.0.1:8000/admin/publish" \
   -H "Content-Type: application/json" \
   -H "X-Admin-Token: your-secret-token" \
-  -d '{"targets":["static_site","telegram"],"use_llm":true,"persist":true,"export":true}'
+  -d '{"targets":["static_site","telegram"],"use_llm":true,"persist":true,"export":true,"force_republish":false}'
 ```
 
 ### `GET /admin/publications`
@@ -508,6 +523,13 @@ curl -X POST "http://127.0.0.1:8000/admin/publications/refresh" \
 - `AINEWS_WECHAT_NEED_OPEN_COMMENT`: 微信图文是否打开评论
 - `AINEWS_WECHAT_ONLY_FANS_CAN_COMMENT`: 微信图文是否仅粉丝可评论
 - `AINEWS_WECHAT_PUBLISH_AFTER_DRAFT`: 创建草稿后是否自动提交发布
+
+## v1.0 Contract Notes
+
+- 导出 JSON 现在包含顶层 `schema_version`
+- `publish` 与 `run-pipeline --publish` 默认按“已存档 digest + target”做幂等控制
+- 数据库升级按 [Database Migrations](docs/database-migrations.md) 执行，当前 schema version 为 `3`
+- 对外兼容承诺见 [Compatibility Contract](docs/compatibility.md)
 
 ## 作为开源项目继续增强
 

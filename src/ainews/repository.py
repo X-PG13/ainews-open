@@ -31,6 +31,8 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
+CURRENT_SCHEMA_VERSION = 3
+
 
 class ArticleRepository:
     def __init__(self, database_path: Path):
@@ -46,6 +48,11 @@ class ArticleRepository:
         with self._connect() as connection:
             connection.executescript(
                 """
+                CREATE TABLE IF NOT EXISTS meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS articles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     source_id TEXT NOT NULL,
@@ -148,6 +155,7 @@ class ArticleRepository:
                     ON publications(digest_id, target, created_at);
                 """
             )
+            self._set_meta(connection, "schema_version", str(CURRENT_SCHEMA_VERSION))
 
     def _ensure_article_migrations(self, connection: sqlite3.Connection) -> None:
         existing_columns = self._table_columns(connection, "articles")
@@ -179,6 +187,17 @@ class ArticleRepository:
     def _table_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
         rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
         return {str(row["name"]) for row in rows}
+
+    @staticmethod
+    def _set_meta(connection: sqlite3.Connection, key: str, value: str) -> None:
+        connection.execute(
+            """
+            INSERT INTO meta(key, value)
+            VALUES(?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, value),
+        )
 
     @staticmethod
     def _row_to_article_dict(row: sqlite3.Row) -> Dict[str, object]:
@@ -926,11 +945,59 @@ class ArticleRepository:
             ).fetchall()
         return [self._row_to_publication_dict(row) for row in rows]
 
+    def get_latest_publication(
+        self,
+        *,
+        digest_id: int,
+        target: str,
+        statuses: Optional[Iterable[str]] = None,
+    ) -> Optional[dict]:
+        clauses = ["digest_id = ?", "target = ?"]
+        params: List[object] = [digest_id, target]
+
+        status_list = [str(item) for item in (statuses or []) if str(item)]
+        if status_list:
+            placeholders = ",".join("?" for _ in status_list)
+            clauses.append(f"status IN ({placeholders})")
+            params.extend(status_list)
+
+        where_sql = " AND ".join(clauses)
+        with self._connect() as connection:
+            row = connection.execute(
+                f"""
+                SELECT
+                    id,
+                    digest_id,
+                    target,
+                    status,
+                    external_id,
+                    message,
+                    response_payload,
+                    created_at,
+                    updated_at
+                FROM publications
+                WHERE {where_sql}
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                params,
+            ).fetchone()
+        return self._row_to_publication_dict(row) if row else None
+
     @staticmethod
     def _row_to_publication_dict(row: sqlite3.Row) -> Dict[str, object]:
         payload = dict(row)
         payload["response_payload"] = json.loads(payload["response_payload"])
         return payload
+
+    def get_schema_version(self) -> int:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM meta WHERE key = 'schema_version' LIMIT 1"
+            ).fetchone()
+        if not row:
+            return 0
+        return int(row["value"])
 
     def get_stats(self) -> Dict[str, object]:
         with self._connect() as connection:
@@ -964,6 +1031,7 @@ class ArticleRepository:
             ).fetchall()
 
         return {
+            "schema_version": self.get_schema_version(),
             "total_articles": int(totals_row["total_articles"] or 0),
             "visible_articles": int(totals_row["visible_articles"] or 0),
             "hidden_articles": int(totals_row["hidden_articles"] or 0),

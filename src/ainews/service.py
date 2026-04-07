@@ -15,6 +15,8 @@ from .repository import ArticleRepository
 from .source_registry import SourceRegistry
 from .utils import clean_text, format_local_date, matches_keywords, truncate_text
 
+EXPORT_SCHEMA_VERSION = "1.0"
+
 
 class NewsService:
     def __init__(
@@ -404,8 +406,10 @@ class NewsService:
         publish: bool = False,
         publish_targets: Optional[Iterable[str]] = None,
         wechat_submit: Optional[bool] = None,
+        force_republish: bool = False,
     ) -> Dict[str, object]:
         lookback = since_hours or self.settings.default_lookback_hours
+        effective_persist = persist or publish
         ingest_result = self.ingest(max_items_per_source=max_items_per_source)
         extract_result = self.extract_articles(since_hours=lookback, limit=limit, force=False)
         enrich_result = self.enrich_articles(since_hours=lookback, limit=limit, force=False)
@@ -414,7 +418,7 @@ class NewsService:
             since_hours=lookback,
             limit=limit,
             use_llm=use_llm,
-            persist=persist,
+            persist=effective_persist,
         )
 
         exported_files: List[str] = []
@@ -433,6 +437,7 @@ class NewsService:
                 digest_result,
                 targets=publish_targets,
                 wechat_submit=wechat_submit,
+                force_republish=force_republish,
             )
         return result
 
@@ -448,6 +453,7 @@ class NewsService:
         export: bool = False,
         targets: Optional[Iterable[str]] = None,
         wechat_submit: Optional[bool] = None,
+        force_republish: bool = False,
     ) -> Dict[str, object]:
         if digest_id is not None:
             stored_digest = self.repository.get_digest(digest_id)
@@ -460,7 +466,7 @@ class NewsService:
                 since_hours=since_hours,
                 limit=limit,
                 use_llm=use_llm,
-                persist=persist,
+                persist=True,
             )
 
         exported_files: List[str] = []
@@ -471,6 +477,7 @@ class NewsService:
             payload,
             targets=targets,
             wechat_submit=wechat_submit,
+            force_republish=force_republish,
         )
         publish_result["digest"] = payload
         publish_result["exported_files"] = exported_files
@@ -482,19 +489,84 @@ class NewsService:
         *,
         targets: Optional[Iterable[str]] = None,
         wechat_submit: Optional[bool] = None,
+        force_republish: bool = False,
     ) -> Dict[str, object]:
-        publish_result = self.publisher.publish(
-            payload,
-            targets=targets,
-            wechat_submit=wechat_submit,
-        )
         digest_id = None
         stored_digest = payload.get("stored_digest")
         if isinstance(stored_digest, dict) and stored_digest.get("id") is not None:
             digest_id = int(stored_digest["id"])
 
+        requested_targets = self.publisher.normalize_targets(targets)
+        if not requested_targets:
+            requested_targets = self.publisher.normalize_targets(
+                self.settings.publish_targets.split(",")
+            )
+        if not requested_targets:
+            publish_result = self.publisher.publish(
+                payload,
+                targets=targets,
+                wechat_submit=wechat_submit,
+            )
+            publish_result["publication_records"] = []
+            return publish_result
+
+        already_published: Dict[str, dict] = {}
+        targets_to_publish = list(requested_targets)
+        if digest_id is not None and not force_republish:
+            filtered_targets: List[str] = []
+            for target in requested_targets:
+                existing = self.repository.get_latest_publication(
+                    digest_id=digest_id,
+                    target=target,
+                    statuses=("ok", "pending"),
+                )
+                if existing is not None:
+                    already_published[target] = existing
+                    continue
+                filtered_targets.append(target)
+            targets_to_publish = filtered_targets
+
+        if targets_to_publish:
+            publish_result = self.publisher.publish(
+                payload,
+                targets=targets_to_publish,
+                wechat_submit=wechat_submit,
+            )
+        else:
+            publish_result = {
+                "status": "ok",
+                "requested_targets": requested_targets,
+                "targets": [],
+                "published": 0,
+                "errors": 0,
+            }
+
+        published_by_target = {
+            str(item.get("target", "")): item for item in publish_result.get("targets", [])
+        }
         records = []
-        for item in publish_result.get("targets", []):
+        merged_targets = []
+        for target in requested_targets:
+            if target in already_published:
+                existing = already_published[target]
+                merged_targets.append(
+                    {
+                        "target": target,
+                        "status": "skipped",
+                        "message": "skipped duplicate publish for existing digest target",
+                        "external_id": str(existing.get("external_id", "")),
+                        "response": dict(existing.get("response_payload", {}))
+                        if isinstance(existing.get("response_payload"), dict)
+                        else {},
+                        "existing_publication_id": existing.get("id"),
+                    }
+                )
+                continue
+
+            item = published_by_target.get(target)
+            if item is None:
+                continue
+            merged_targets.append(item)
             record = self.repository.save_publication(
                 digest_id=digest_id,
                 target=str(item.get("target", "")),
@@ -506,6 +578,14 @@ class NewsService:
                 else {},
             )
             records.append(record)
+        publish_result["requested_targets"] = requested_targets
+        publish_result["targets"] = merged_targets
+        publish_result["published"] = int(publish_result.get("published", 0))
+        publish_result["skipped"] = len(already_published)
+        if publish_result.get("errors", 0):
+            publish_result["status"] = "partial_error"
+        else:
+            publish_result["status"] = "ok"
         publish_result["publication_records"] = records
         return publish_result
 
@@ -571,6 +651,7 @@ class NewsService:
 
         body_markdown = self._render_digest_markdown(digest)
         payload = {
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "region": region,
             "since_hours": lookback,
             "total_articles": len(presented_articles),
@@ -782,6 +863,7 @@ class NewsService:
         )
         presented_articles = [self._present_article(article) for article in articles]
         return {
+            "schema_version": EXPORT_SCHEMA_VERSION,
             "region": region,
             "since_hours": since_hours,
             "total_articles": len(presented_articles),

@@ -71,12 +71,25 @@ class StubExtractor:
 
 
 class StubPublisher:
+    def __init__(self):
+        self.publish_calls = 0
+
+    @staticmethod
+    def normalize_targets(targets):
+        normalized = []
+        for target in list(targets or []):
+            value = str(target).strip().lower().replace("-", "_")
+            if value and value not in normalized:
+                normalized.append(value)
+        return normalized
+
     def publish(self, payload, *, targets=None, wechat_submit=None):
+        self.publish_calls += 1
         return {
             "status": "ok",
             "targets": [
                 {
-                    "target": "static_site",
+                    "target": str(list(targets or ["static_site"])[0]),
                     "status": "ok",
                     "message": "published",
                     "external_id": "static:index",
@@ -343,6 +356,7 @@ class ServiceFilterTestCase(unittest.TestCase):
                 export=True,
             )
 
+            self.assertEqual(result["digest"]["schema_version"], "1.0")
             self.assertEqual(len(result["exported_files"]), 2)
             for file_path in result["exported_files"]:
                 self.assertTrue(Path(file_path).exists())
@@ -387,13 +401,14 @@ class ServiceFilterTestCase(unittest.TestCase):
                     raw_payload={},
                 )
             )
+            publisher = StubPublisher()
             service = NewsService(
                 settings,
                 repository=repository,
                 source_registry=StubRegistry([source]),
                 llm_client=StubLLMClient(),
                 content_extractor=StubExtractor(),
-                publisher=StubPublisher(),
+                publisher=publisher,
             )
 
             result = service.publish_digest(
@@ -408,6 +423,216 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["status"], "ok")
             self.assertEqual(len(result["publication_records"]), 1)
             self.assertEqual(repository.list_publications(limit=10)[0]["target"], "static_site")
+            self.assertEqual(publisher.publish_calls, 1)
+
+    def test_run_pipeline_forces_persist_when_publish_is_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                output_dir=Path(temp_dir) / "output",
+                static_site_dir=Path(temp_dir) / "site",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            publisher = StubPublisher()
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+                publisher=publisher,
+            )
+
+            result = service.run_pipeline(
+                region="all",
+                since_hours=24,
+                limit=10,
+                use_llm=True,
+                persist=False,
+                publish=True,
+                publish_targets=["static_site"],
+            )
+
+            self.assertIn("stored_digest", result["digest"])
+            self.assertEqual(len(result["publish"]["publication_records"]), 1)
+
+    def test_publish_digest_skips_duplicate_target_for_stored_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                output_dir=Path(temp_dir) / "output",
+                static_site_dir=Path(temp_dir) / "site",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            publisher = StubPublisher()
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+                publisher=publisher,
+            )
+
+            first = service.publish_digest(
+                region="all",
+                since_hours=24,
+                limit=10,
+                use_llm=True,
+                persist=True,
+                targets=["static_site"],
+            )
+            stored_digest = first["digest"]["stored_digest"]
+
+            second = service.publish_digest(
+                digest_id=int(stored_digest["id"]),
+                targets=["static_site"],
+            )
+
+            self.assertEqual(first["status"], "ok")
+            self.assertEqual(second["status"], "ok")
+            self.assertEqual(second["skipped"], 1)
+            self.assertEqual(second["published"], 0)
+            self.assertEqual(second["targets"][0]["status"], "skipped")
+            self.assertEqual(len(second["publication_records"]), 0)
+            self.assertEqual(len(repository.list_publications(limit=10)), 1)
+            self.assertEqual(publisher.publish_calls, 1)
+
+    def test_force_republish_allows_existing_digest_target(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                output_dir=Path(temp_dir) / "output",
+                static_site_dir=Path(temp_dir) / "site",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            publisher = StubPublisher()
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+                publisher=publisher,
+            )
+
+            first = service.publish_digest(
+                region="all",
+                since_hours=24,
+                limit=10,
+                use_llm=True,
+                persist=True,
+                targets=["static_site"],
+            )
+            stored_digest = first["digest"]["stored_digest"]
+
+            second = service.publish_digest(
+                digest_id=int(stored_digest["id"]),
+                targets=["static_site"],
+                force_republish=True,
+            )
+
+            self.assertEqual(second["published"], 1)
+            self.assertEqual(second["skipped"], 0)
+            self.assertEqual(len(second["publication_records"]), 1)
+            self.assertEqual(len(repository.list_publications(limit=10)), 2)
+            self.assertEqual(publisher.publish_calls, 2)
 
     def test_refresh_publications_updates_wechat_status(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
