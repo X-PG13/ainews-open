@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v0.6.0`
+`v1.0.0`
 
 ### Suggested Title
 
-`AI News Open v0.6.0 · Open-Source Launch`
+`AI News Open v1.0.0 · First Stable Release`
 
 ### Release Notes
 
 ```md
-## AI News Open v0.6.0
+## AI News Open v1.0.0
 
-AI News Open is now publicly available as an open-source toolkit for daily domestic and international AI news aggregation.
+AI News Open reaches `v1.0.0` with a stable workflow for turning domestic and international AI news into a publishable Chinese daily digest.
 
 ### What it does
 
@@ -36,13 +36,14 @@ AI News Open is now publicly available as an open-source toolkit for daily domes
 - GitHub Actions for CI and scheduled digest generation
 - Docker packaging and non-root runtime
 - Contributing guide, security policy, code of conduct, changelog, and GitHub issue/PR templates
+- Compatibility contract, migration docs, deployment guide, and troubleshooting guide
 
 ### Highlights in this release
 
-- Initial open-source release of the end-to-end AI news pipeline
-- Publication history management and WeChat publish-status refresh
-- Source-specific article extraction cleanup for Chinese tech media
-- GitHub-ready project governance and release engineering baseline
+- Stable `v1.x` contract for config, CLI, API, export payloads, and SQLite upgrade path
+- Publication idempotency for `digest + target`, with explicit `force_republish` bypass
+- Export payload `schema_version` and repository `schema_version` metadata
+- Operator docs for local runs, Docker, `systemd`, GitHub Actions, and common failure cases
 
 ### Quick start
 
@@ -52,15 +53,17 @@ source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install .
 cp .env.example .env
-python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --persist --export
+python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --export
 python -m ainews serve --port 8000
 ```
 
 Open the dashboard at `http://127.0.0.1:8000/`.
 
-### Notes before production use
+### Release Notes
 
 - Private vulnerability reports are routed through GitHub Security Advisories
+- Repeat publishing for the same stored digest and target is skipped by default
+- Use `--force-republish` only when you intentionally want another outbound publish attempt
 - Configure your own LLM, Telegram, Feishu, or WeChat credentials in `.env`
 - Review generated content before external publishing
 ```

@@ -2,6 +2,27 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.0.0] - 2026-04-07
+
+### Added
+
+- Stable `v1.x` compatibility contract covering environment variables, CLI flags, HTTP endpoints, export JSON, and migration policy
+- Deployment, migration, and troubleshooting docs for local runs, Docker, `systemd`, and GitHub Actions
+- Source registry contract test for the default source pack
+- Legacy SQLite migration coverage with explicit `schema_version` metadata
+
+### Changed
+
+- Package version is now `1.0.0`
+- Exported digest payloads now include a top-level `schema_version`
+- `publish` and `run-pipeline --publish` now persist digests before publication so publication history and idempotency are enforced
+- Re-publishing the same stored digest to the same target is skipped by default unless `--force-republish` or `force_republish=true` is used
+- `/health` now returns the running service version
+
+### Fixed
+
+- Prevented duplicate publication rows and accidental repeat outbound publishes for the same digest and target in the default operator flow
+
 ## [0.6.0] - 2026-04-07
 
 ### Added
