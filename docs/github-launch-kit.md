@@ -81,6 +81,24 @@ If you do not have a project site yet, leave this empty for now.
 
 When you have a deployed static digest site, you can use that URL as the repository website.
 
+## Social Preview Asset
+
+Prepared asset files in this repository:
+
+- `docs/assets/social-preview.png`
+- `docs/assets/console-real.png`
+
+GitHub's official documentation describes social preview setup through the repository web UI:
+
+1. Open the repository main page
+2. Go to `Settings`
+3. Under `Social preview`, click `Edit`
+4. Upload `docs/assets/social-preview.png`
+
+Official docs:
+
+- https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/customizing-your-repositorys-social-media-preview
+
 ## Topics
 
 Suggested GitHub topics:

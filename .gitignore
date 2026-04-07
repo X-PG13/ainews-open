@@ -14,6 +14,8 @@ coverage.xml
 .venv/
 .venv-dev/
 .venv-editable/
+.npm-cache/
+.playwright-browsers/
 venv/
 dist/
 build/

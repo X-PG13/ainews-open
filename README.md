@@ -1,25 +1,34 @@
-# AI News Open
+<div align="center">
+  <h1>AI News Open</h1>
+  <p><strong>开源的国内外 AI 新闻聚合、中文翻译日报与多渠道发布工具</strong></p>
+  <p>Aggregate AI news, translate global coverage into Chinese, generate daily digests, and publish with one open-source stack.</p>
+  <p>
+    <a href="https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml"><img src="https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/X-PG13/ainews-open/releases"><img src="https://img.shields.io/github/v/release/X-PG13/ainews-open" alt="Release" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/X-PG13/ainews-open" alt="License" /></a>
+    <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.9%2B-3776AB" alt="Python" /></a>
+  </p>
+  <p>
+    <a href="https://github.com/X-PG13/ainews-open">Repository</a> ·
+    <a href="https://github.com/X-PG13/ainews-open/releases">Releases</a> ·
+    <a href="docs/github-launch-kit.md">Launch Kit</a>
+  </p>
+</div>
 
-[![CI](https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml/badge.svg)](https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/X-PG13/ainews-open)](https://github.com/X-PG13/ainews-open/releases)
-[![License](https://img.shields.io/github/license/X-PG13/ainews-open)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%2B-3776AB)](pyproject.toml)
+![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 
-`AI News Open` 是一个面向开源发布的 AI 新闻聚合工具。它每天自动抓取国内外 AI 新闻，完成清洗、去重、正文提取、国际新闻中文翻译、中文日报生成，并提供 Telegram、飞书、静态站点和微信公众号发布能力。
+## Landing Page
 
-项目仓库：
+AI News Open 是一个面向开源发布的 AI 新闻聚合工具。它每天自动抓取国内外 AI 新闻，完成清洗、去重、正文提取、国际新闻中文翻译、中文日报生成，并提供 Telegram、飞书、静态站点和微信公众号发布能力。
 
-- GitHub Repo: `https://github.com/X-PG13/ainews-open`
-- Release Notes: `https://github.com/X-PG13/ainews-open/releases`
-
-## 为什么值得看
+### 核心能力
 
 - 国内外 AI 新闻统一采集，不依赖付费新闻 API
 - 国际新闻自动转中文标题、摘要和“为什么重要”
 - 同时提供 CLI、FastAPI API、零构建后台和多渠道发布
 - 已补齐 CI、lint、测试、Docker、Issue/PR 模板、安全策略等开源工程基线
 
-## README Demo
+### Demo Flow
 
 ```bash
 python3 -m venv .venv
@@ -36,9 +45,15 @@ python -m ainews serve --port 8000
 - 查看新闻池、日报存档、发布历史和微信发布状态
 - 直接从控制台触发抓取、翻译、生成日报和发布
 
-## Preview
+### Delivery Surface
 
-![AI News Open Console Preview](docs/assets/console-preview.svg)
+| Layer | What You Get |
+| --- | --- |
+| Ingestion | Domestic and international RSS/Atom source registry |
+| Processing | Cleanup, deduplication, extraction, enrichment, digest generation |
+| Interfaces | CLI, FastAPI API, zero-build admin dashboard |
+| Publishing | Telegram, Feishu, static site, WeChat draft/publish |
+| Engineering | Tests, lint, pre-commit, CI, Docker, changelog, security policy |
 
 ## What You Get
 
