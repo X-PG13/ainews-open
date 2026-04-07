@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide focuses on the fastest path from clone to a working pipeline, then shows how to run AI News Open in Docker, `systemd`, and GitHub Actions.
+This guide focuses on the fastest path from clone to a working pipeline, then shows how to run AI News Open in Docker, Docker Compose, `systemd`, and GitHub Actions.
 
 ## 15-Minute Local Run
 
@@ -65,6 +65,32 @@ docker run --rm \
   python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --export
 ```
 
+The image now includes:
+
+- a built-in `HEALTHCHECK` against `http://127.0.0.1:8000/health`
+- JSON log output by default inside containers
+
+## Docker Compose
+
+The repository includes [compose.yaml](../compose.yaml).
+
+Start the service:
+
+```bash
+docker compose up --build
+```
+
+Stop it:
+
+```bash
+docker compose down
+```
+
+Compose mounts:
+
+- `./data` to `/app/data`
+- `./output` to `/app/output`
+
 ## systemd
 
 Example unit:
@@ -110,6 +136,13 @@ Use it when:
 - you want scheduled digest generation
 - you are comfortable storing credentials in GitHub repository secrets
 - exporting artifacts is enough for your current workflow
+
+The repository also includes:
+
+- [ci.yml](../.github/workflows/ci.yml) for matrix test, coverage, and build checks
+- [release.yml](../.github/workflows/release.yml) for tag-based release builds
+- [codeql.yml](../.github/workflows/codeql.yml) for security analysis
+- [.github/dependabot.yml](../.github/dependabot.yml) for dependency update PRs
 
 Recommended secrets:
 

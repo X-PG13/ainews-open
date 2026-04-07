@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import __version__
+
 PACKAGE_ROOT = Path(__file__).resolve().parent
 
 
@@ -38,7 +40,9 @@ class Settings:
     max_articles_per_source: int = 40
     allowed_origins: str = "*"
     admin_token: str = ""
-    user_agent: str = "ainews-open/0.6 (open-source AI news toolkit)"
+    user_agent: str = f"ainews-open/{__version__} (open-source AI news toolkit)"
+    log_level: str = "INFO"
+    log_format: str = "text"
     extraction_text_limit: int = 12000
     llm_article_context_chars: int = 6000
     llm_provider: str = "openai_compatible"
@@ -117,6 +121,8 @@ def load_settings() -> Settings:
         max_articles_per_source=int(os.getenv("AINEWS_MAX_ARTICLES_PER_SOURCE", "40")),
         allowed_origins=os.getenv("AINEWS_ALLOWED_ORIGINS", "*"),
         admin_token=os.getenv("AINEWS_ADMIN_TOKEN", ""),
+        log_level=os.getenv("AINEWS_LOG_LEVEL", "INFO").strip().upper() or "INFO",
+        log_format=os.getenv("AINEWS_LOG_FORMAT", "text").strip().lower() or "text",
         extraction_text_limit=int(os.getenv("AINEWS_EXTRACTION_TEXT_LIMIT", "12000")),
         llm_article_context_chars=int(os.getenv("AINEWS_LLM_ARTICLE_CONTEXT_CHARS", "6000")),
         llm_provider=os.getenv("AINEWS_LLM_PROVIDER", "openai_compatible"),

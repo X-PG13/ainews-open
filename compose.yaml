@@ -1,0 +1,16 @@
+services:
+  ainews:
+    build:
+      context: .
+    image: ainews-open:local
+    env_file:
+      - .env
+    environment:
+      AINEWS_HOME: /app
+      AINEWS_LOG_FORMAT: json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    restart: unless-stopped

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
+import time
+import uuid
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from . import __version__
 from .config import load_settings
+from .logging_utils import configure_logging
 from .service import NewsService
 
 
@@ -84,8 +88,12 @@ class ArticleCurationRequest(BaseModel):
     editorial_note: Optional[str] = Field(default=None, max_length=500)
 
 
+logger = logging.getLogger("ainews.api")
+
+
 def create_app() -> FastAPI:
     settings = load_settings()
+    configure_logging(level=settings.log_level, log_format=settings.log_format)
     service = NewsService(settings)
     web_dir = Path(__file__).resolve().parent / "web"
 
@@ -109,6 +117,41 @@ def create_app() -> FastAPI:
 
     app.mount("/assets", StaticFiles(directory=web_dir), name="assets")
 
+    @app.middleware("http")
+    async def request_logging(request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            logger.exception(
+                "request failed",
+                extra={
+                    "event": "http.request_error",
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "duration_ms": duration_ms,
+                },
+            )
+            raise
+
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        response.headers["X-Request-ID"] = request_id
+        logger.info(
+            "request completed",
+            extra={
+                "event": "http.request",
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": duration_ms,
+            },
+        )
+        return response
+
     def require_admin(
         x_admin_token: Optional[str] = Header(default=None),
     ) -> None:
@@ -121,7 +164,9 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "version": __version__}
+        payload = service.get_health()
+        payload["version"] = __version__
+        return payload
 
     @app.get("/sources")
     def list_sources() -> dict:

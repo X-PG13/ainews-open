@@ -5,6 +5,7 @@ import json
 import sys
 
 from .config import load_settings
+from .logging_utils import configure_logging
 from .service import NewsService
 
 
@@ -148,6 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     settings = load_settings()
+    configure_logging(level=settings.log_level, log_format=settings.log_format)
     service = NewsService(settings)
 
     if args.command == "ingest":

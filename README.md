@@ -68,6 +68,7 @@ python -m ainews serve --port 8000
 python -m pip install -e ".[dev]"
 pre-commit install
 make check
+make coverage
 ```
 
 ### v1.0 Readiness Docs
@@ -94,7 +95,7 @@ make check
 - 命令行采集、抓正文、翻译、日报生成、发布、整链路 pipeline
 - SQLite 存储
 - 单元测试、API 烟雾测试、Dockerfile、CI 工作流
-- `ruff`、`pre-commit`、issue/PR 模板、Security/Code of Conduct 等开源协作基建
+- `ruff`、coverage、`pre-commit`、issue/PR 模板、Security/Code of Conduct 等开源协作基建
 
 默认源地址已在 `2026-04-07` 验证可访问，包括：
 
@@ -165,6 +166,12 @@ http://127.0.0.1:8000/
 uvicorn ainews.api:create_app --factory --host 0.0.0.0 --port 8000
 ```
 
+如果你更希望直接用容器运行：
+
+```bash
+docker compose up --build
+```
+
 如果你准备二次开发，且本地 `pip` 足够新，可以改用 editable 安装：
 
 ```bash
@@ -177,8 +184,9 @@ python -m pip install -e ".[dev]"
 
 - 社区文档：`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`
 - 协作模板：GitHub issue templates 和 pull request template
-- 质量门禁：`ruff` lint、单元测试、包构建校验、`pre-commit`
-- 打包与运行：非 root Docker 运行、`.dockerignore`、`.editorconfig`
+- 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
+- 自动化：CI、tag release workflow、CodeQL、Dependabot
+- 打包与运行：非 root Docker 运行、`HEALTHCHECK`、`compose.yaml`、`.dockerignore`、`.editorconfig`
 
 发布仓库前你还应该确认两件事：
 
@@ -367,7 +375,7 @@ python -m ainews serve --port 8000
 
 ### `GET /health`
 
-健康检查。返回 `status` 和当前服务 `version`。
+健康检查。返回 `status`、当前服务 `version`、数据库检查结果和 `schema_version`。
 
 ### `GET /sources`
 
@@ -495,6 +503,8 @@ curl -X POST "http://127.0.0.1:8000/admin/publications/refresh" \
 - `AINEWS_MAX_ARTICLES_PER_SOURCE`: 每个源默认最大采集条数
 - `AINEWS_ALLOWED_ORIGINS`: API CORS 白名单
 - `AINEWS_ADMIN_TOKEN`: 管理接口 token，可选
+- `AINEWS_LOG_LEVEL`: 日志级别，建议 `INFO` 或 `DEBUG`
+- `AINEWS_LOG_FORMAT`: 日志格式，支持 `text` 或 `json`
 - `AINEWS_EXTRACTION_TEXT_LIMIT`: 单篇正文本地保留的最大字符数
 - `AINEWS_LLM_ARTICLE_CONTEXT_CHARS`: 送入 LLM 的正文上下文字符数
 - `AINEWS_LLM_PROVIDER`: 当前默认是 `openai_compatible`

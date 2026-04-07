@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import Counter
 from typing import Dict, Iterable, List, Optional
 
@@ -16,6 +17,7 @@ from .source_registry import SourceRegistry
 from .utils import clean_text, format_local_date, matches_keywords, truncate_text
 
 EXPORT_SCHEMA_VERSION = "1.0"
+logger = logging.getLogger("ainews.service")
 
 
 class NewsService:
@@ -50,12 +52,28 @@ class NewsService:
         payload["llm_model"] = self.settings.llm_model
         return payload
 
+    def get_health(self) -> Dict[str, object]:
+        schema_version = self.repository.get_schema_version()
+        return {
+            "status": "ok",
+            "checks": {
+                "database": "ok",
+            },
+            "schema_version": schema_version,
+        }
+
     def ingest(
         self,
         *,
         source_ids: Optional[Iterable[str]] = None,
         max_items_per_source: Optional[int] = None,
     ) -> Dict[str, object]:
+        logger.info(
+            "starting ingest",
+            extra={
+                "event": "ingest.start",
+            },
+        )
         results = []
         inserted_total = 0
         fetched_total = 0
@@ -95,14 +113,30 @@ class NewsService:
             except Exception as exc:  # pragma: no cover
                 status["status"] = "error"
                 status["error"] = str(exc)
+                logger.warning(
+                    "ingest source failed",
+                    extra={
+                        "event": "ingest.source_error",
+                        "target": source.id,
+                    },
+                )
             results.append(status)
 
-        return {
+        payload = {
             "sources": results,
             "fetched_total": fetched_total,
             "inserted_total": inserted_total,
             "stored_total": self.repository.count_articles(),
         }
+        logger.info(
+            "completed ingest",
+            extra={
+                "event": "ingest.finish",
+                "requested": len(results),
+                "stored_total": payload["stored_total"],
+            },
+        )
+        return payload
 
     def list_articles(
         self,
@@ -193,13 +227,23 @@ class NewsService:
                 )
                 errors += 1
 
-        return {
+        payload = {
             "status": "ok",
             "requested": len(candidates),
             "updated": updated,
             "errors": errors,
             "articles": results,
         }
+        logger.info(
+            "completed enrichment",
+            extra={
+                "event": "enrich.finish",
+                "requested": len(candidates),
+                "updated": updated,
+                "errors": errors,
+            },
+        )
+        return payload
 
     def extract_articles(
         self,
@@ -252,13 +296,23 @@ class NewsService:
                 )
                 errors += 1
 
-        return {
+        payload = {
             "status": "ok",
             "requested": len(candidates),
             "updated": updated,
             "errors": errors,
             "articles": results,
         }
+        logger.info(
+            "completed extraction",
+            extra={
+                "event": "extract.finish",
+                "requested": len(candidates),
+                "updated": updated,
+                "errors": errors,
+            },
+        )
+        return payload
 
     def curate_article(
         self,
@@ -384,7 +438,7 @@ class NewsService:
                 )
                 errors += 1
 
-        return {
+        payload = {
             "status": "ok" if errors == 0 else "partial_error",
             "requested": len(publications),
             "refreshed": refreshed,
@@ -392,6 +446,16 @@ class NewsService:
             "errors": errors,
             "publications": results,
         }
+        logger.info(
+            "completed publication refresh",
+            extra={
+                "event": "publish.refresh_finish",
+                "requested": len(publications),
+                "updated": refreshed,
+                "errors": errors,
+            },
+        )
+        return payload
 
     def run_pipeline(
         self,
@@ -410,6 +474,15 @@ class NewsService:
     ) -> Dict[str, object]:
         lookback = since_hours or self.settings.default_lookback_hours
         effective_persist = persist or publish
+        logger.info(
+            "starting pipeline",
+            extra={
+                "event": "pipeline.start",
+                "region": region,
+                "since_hours": lookback,
+                "limit": limit,
+            },
+        )
         ingest_result = self.ingest(max_items_per_source=max_items_per_source)
         extract_result = self.extract_articles(since_hours=lookback, limit=limit, force=False)
         enrich_result = self.enrich_articles(since_hours=lookback, limit=limit, force=False)
@@ -439,6 +512,16 @@ class NewsService:
                 wechat_submit=wechat_submit,
                 force_republish=force_republish,
             )
+        logger.info(
+            "completed pipeline",
+            extra={
+                "event": "pipeline.finish",
+                "region": region,
+                "since_hours": lookback,
+                "limit": limit,
+                "generation_mode": digest_result.get("generation_mode"),
+            },
+        )
         return result
 
     def publish_digest(
@@ -587,6 +670,15 @@ class NewsService:
         else:
             publish_result["status"] = "ok"
         publish_result["publication_records"] = records
+        logger.info(
+            "completed publish",
+            extra={
+                "event": "publish.finish",
+                "published": publish_result.get("published", 0),
+                "errors": publish_result.get("errors", 0),
+                "requested": len(requested_targets),
+            },
+        )
         return publish_result
 
     def build_digest(
@@ -672,6 +764,17 @@ class NewsService:
                 source_count=len({article["source_id"] for article in presented_articles}),
             )
 
+        logger.info(
+            "built digest",
+            extra={
+                "event": "digest.finish",
+                "region": region,
+                "since_hours": lookback,
+                "limit": limit,
+                "generation_mode": generation_mode,
+                "schema_version": EXPORT_SCHEMA_VERSION,
+            },
+        )
         return payload
 
     @staticmethod

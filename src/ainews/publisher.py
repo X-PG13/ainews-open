@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import html
 import json
+import logging
 import mimetypes
 import time
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ WECHAT_PUBLISH_STATUS_LABELS = {
     5: "wechat published article was deleted",
     6: "wechat published article was blocked by the platform",
 }
+logger = logging.getLogger("ainews.publisher")
 
 
 @dataclass
@@ -134,18 +136,42 @@ class DigestPublisher:
                     message=str(exc),
                 )
                 error_count += 1
+                logger.warning(
+                    "publish target failed",
+                    extra={
+                        "event": "publisher.target_error",
+                        "target": target,
+                    },
+                )
             else:
                 if result.status != "ok":
                     error_count += 1
+                logger.info(
+                    "publish target completed",
+                    extra={
+                        "event": "publisher.target_finish",
+                        "target": target,
+                    },
+                )
             results.append(result.to_dict())
 
-        return {
+        payload = {
             "status": "ok" if error_count == 0 else "partial_error",
             "requested_targets": requested,
             "targets": results,
             "published": len(results) - error_count,
             "errors": error_count,
         }
+        logger.info(
+            "publisher finished",
+            extra={
+                "event": "publisher.finish",
+                "published": payload["published"],
+                "errors": payload["errors"],
+                "requested": len(requested),
+            },
+        )
+        return payload
 
     def _publish_target(
         self,

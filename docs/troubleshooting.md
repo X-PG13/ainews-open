@@ -79,6 +79,14 @@ Checks:
 - rerun with `--export` or target `static_site`
 - check write permissions on the output directories
 
+## I need better operational traceability
+
+Checks:
+
+- set `AINEWS_LOG_LEVEL=INFO` or `DEBUG`
+- set `AINEWS_LOG_FORMAT=json` for container or log pipeline deployments
+- look for `X-Request-ID` in API responses and match it to request logs
+
 ## Contributors or GitHub stats look wrong
 
 Checks:

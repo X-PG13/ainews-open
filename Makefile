@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build check serve test
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build check serve test coverage
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -39,3 +39,7 @@ serve:
 
 test:
 	$(PYTHON) -m unittest discover -s tests -v
+
+coverage:
+	$(PYTHON) -m coverage run -m unittest discover -s tests -v
+	$(PYTHON) -m coverage report
