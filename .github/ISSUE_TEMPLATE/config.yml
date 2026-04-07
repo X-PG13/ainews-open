@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security Reporting
-    url: https://example.com/private-security-contact
-    about: Do not file public issues for sensitive vulnerabilities. Replace this placeholder before publishing the repository.
+    url: https://github.com/X-PG13/ainews-open/security/advisories/new
+    about: Report sensitive vulnerabilities privately through GitHub Security Advisories instead of public issues.

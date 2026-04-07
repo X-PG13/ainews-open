@@ -46,4 +46,4 @@ make check
 
 - Use the GitHub issue templates for bugs and feature requests.
 - Do not report vulnerabilities through public issues; follow `SECURITY.md`.
-- Replace placeholder contact information in `.github/ISSUE_TEMPLATE/config.yml` before publishing the repository.
+- Private vulnerability reports should go through the GitHub Security Advisory channel configured in `.github/ISSUE_TEMPLATE/config.yml`.

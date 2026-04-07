@@ -18,7 +18,11 @@ Report vulnerabilities privately with:
 
 If you are operating this project in production, rotate any leaked API keys or admin tokens immediately before reporting.
 
-Until a dedicated security mailbox is configured, maintainers should provide a private contact method before public release of the repository.
+Preferred reporting channel for this repository:
+
+- GitHub Security Advisories: `https://github.com/X-PG13/ainews-open/security/advisories/new`
+
+If a dedicated security mailbox is added later, it can be listed here as a secondary contact path.
 
 ## Response Expectations
 

@@ -60,7 +60,7 @@ Open the dashboard at `http://127.0.0.1:8000/`.
 
 ### Notes before production use
 
-- Replace the placeholder private security contact in `.github/ISSUE_TEMPLATE/config.yml`
+- Private vulnerability reports are routed through GitHub Security Advisories
 - Configure your own LLM, Telegram, Feishu, or WeChat credentials in `.env`
 - Review generated content before external publishing
 ```

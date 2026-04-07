@@ -1,6 +1,46 @@
 # AI News Open
 
-`AI News Open` 是一个面向开源发布的 AI 新闻聚合工具，目标是每天自动抓取、清洗、去重并统一输出国内外 AI 新闻，并进一步把国际新闻自动翻译成中文、生成中文日报。
+[![CI](https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml/badge.svg)](https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/X-PG13/ainews-open)](https://github.com/X-PG13/ainews-open/releases)
+[![License](https://img.shields.io/github/license/X-PG13/ainews-open)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-3776AB)](pyproject.toml)
+
+`AI News Open` 是一个面向开源发布的 AI 新闻聚合工具。它每天自动抓取国内外 AI 新闻，完成清洗、去重、正文提取、国际新闻中文翻译、中文日报生成，并提供 Telegram、飞书、静态站点和微信公众号发布能力。
+
+项目仓库：
+
+- GitHub Repo: `https://github.com/X-PG13/ainews-open`
+- Release Notes: `https://github.com/X-PG13/ainews-open/releases`
+
+## 为什么值得看
+
+- 国内外 AI 新闻统一采集，不依赖付费新闻 API
+- 国际新闻自动转中文标题、摘要和“为什么重要”
+- 同时提供 CLI、FastAPI API、零构建后台和多渠道发布
+- 已补齐 CI、lint、测试、Docker、Issue/PR 模板、安全策略等开源工程基线
+
+## README Demo
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install .
+cp .env.example .env
+python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --persist --export
+python -m ainews serve --port 8000
+```
+
+运行后可以：
+
+- 在 `http://127.0.0.1:8000/` 打开控制台
+- 查看新闻池、日报存档、发布历史和微信发布状态
+- 直接从控制台触发抓取、翻译、生成日报和发布
+
+## Preview
+
+![AI News Open Console Preview](docs/assets/console-preview.svg)
+
+## What You Get
 
 当前版本提供：
 
@@ -103,10 +143,10 @@ python -m pip install -e ".[dev]"
 - 质量门禁：`ruff` lint、单元测试、包构建校验、`pre-commit`
 - 打包与运行：非 root Docker 运行、`.dockerignore`、`.editorconfig`
 
-发布仓库前你还应该做两件事：
+发布仓库前你还应该确认两件事：
 
-1. 把 `.github/ISSUE_TEMPLATE/config.yml` 里的占位安全联系地址替换成你自己的私有通道。
-2. 把 README 和 `pyproject.toml` 中的组织名、仓库地址、维护者信息改成真实值。
+1. 私密漏洞上报入口已经配置到 GitHub Security Advisories。
+2. README 和 `pyproject.toml` 中的组织名、仓库地址、维护者信息已经改成真实值。
 
 如果你准备发布到 GitHub，首版 Release 文案和项目简介可直接复用：
 
