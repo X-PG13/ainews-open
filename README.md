@@ -17,18 +17,35 @@
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 
-## Landing Page
+## Product Snapshot
 
-AI News Open 是一个面向开源发布的 AI 新闻聚合工具。它每天自动抓取国内外 AI 新闻，完成清洗、去重、正文提取、国际新闻中文翻译、中文日报生成，并提供 Telegram、飞书、静态站点和微信公众号发布能力。
+AI News Open 是一个面向开源发布的 AI 新闻聚合工具。它把分散的国内外 AI 信息源整理成一条完整工作流：采集、清洗、去重、正文提取、国际新闻中文翻译、日报生成、存档和多渠道发布。
 
-### 核心能力
+### Why It Exists
 
 - 国内外 AI 新闻统一采集，不依赖付费新闻 API
 - 国际新闻自动转中文标题、摘要和“为什么重要”
 - 同时提供 CLI、FastAPI API、零构建后台和多渠道发布
 - 已补齐 CI、lint、测试、Docker、Issue/PR 模板、安全策略等开源工程基线
 
-### Demo Flow
+### What You Ship
+
+| Layer | Included |
+| --- | --- |
+| Sources | Domestic and international RSS/Atom source registry |
+| Processing | Cleanup, deduplication, extraction, enrichment, digest generation |
+| Interfaces | CLI, FastAPI API, zero-build admin dashboard |
+| Publishing | Telegram, Feishu, static site, WeChat draft/publish |
+| Engineering | Tests, lint, pre-commit, CI, Docker, changelog, security policy |
+
+### Use Cases
+
+- 个人维护 AI 新闻日报
+- 内容团队做国际 AI 新闻中文编译
+- 轻量化 AI 媒体或内部情报流转
+- 把日报自动分发到 Telegram、飞书、静态站点或公众号
+
+### 60-Second Start
 
 ```bash
 python3 -m venv .venv
@@ -39,21 +56,19 @@ python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-l
 python -m ainews serve --port 8000
 ```
 
-运行后可以：
+启动后你可以：
 
 - 在 `http://127.0.0.1:8000/` 打开控制台
 - 查看新闻池、日报存档、发布历史和微信发布状态
 - 直接从控制台触发抓取、翻译、生成日报和发布
 
-### Delivery Surface
+### Maintainer Flow
 
-| Layer | What You Get |
-| --- | --- |
-| Ingestion | Domestic and international RSS/Atom source registry |
-| Processing | Cleanup, deduplication, extraction, enrichment, digest generation |
-| Interfaces | CLI, FastAPI API, zero-build admin dashboard |
-| Publishing | Telegram, Feishu, static site, WeChat draft/publish |
-| Engineering | Tests, lint, pre-commit, CI, Docker, changelog, security policy |
+```bash
+python -m pip install -e ".[dev]"
+pre-commit install
+make check
+```
 
 ## What You Get
 
