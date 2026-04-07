@@ -1,0 +1,37 @@
+name: Daily Digest
+
+on:
+  schedule:
+    - cron: "15 1 * * *"
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    env:
+      AINEWS_DATABASE_URL: sqlite:///data/ainews.db
+      AINEWS_OUTPUT_DIR: output
+      AINEWS_LLM_PROVIDER: openai_compatible
+      AINEWS_LLM_BASE_URL: ${{ secrets.AINEWS_LLM_BASE_URL }}
+      AINEWS_LLM_API_KEY: ${{ secrets.AINEWS_LLM_API_KEY }}
+      AINEWS_LLM_MODEL: ${{ secrets.AINEWS_LLM_MODEL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: pip install .
+
+      - name: Run daily pipeline
+        run: python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --persist --export
+
+      - name: Upload digest artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-news-digest
+          path: output/

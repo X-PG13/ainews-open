@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI News Open Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="background-grid" aria-hidden="true"></div>
+    <main class="shell">
+      <section class="hero panel">
+        <div>
+          <p class="eyebrow">AI News Open</p>
+          <h1>国内外 AI 新闻控制台</h1>
+          <p class="hero-copy">
+            采集、翻译、摘要、日报生成都在一个页面里完成。前端直接调用当前服务，不需要额外构建。
+          </p>
+        </div>
+        <div class="token-box">
+          <label for="adminToken">Admin Token</label>
+          <div class="token-row">
+            <input id="adminToken" type="password" placeholder="可选，若服务端配置了 AINEWS_ADMIN_TOKEN" />
+            <button id="saveTokenButton" class="button ghost">保存</button>
+          </div>
+          <p class="muted">所有管理操作都会自动带上 `X-Admin-Token`。</p>
+        </div>
+      </section>
+
+      <section class="stats-grid" id="statsGrid"></section>
+
+      <section class="controls-grid">
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Pipeline</p>
+              <h2>作业控制</h2>
+            </div>
+            <button id="refreshAllButton" class="button ghost">刷新面板</button>
+          </div>
+          <div class="form-grid">
+            <label>
+              区域
+              <select id="regionSelect">
+                <option value="all">全部</option>
+                <option value="domestic">国内</option>
+                <option value="international">国际</option>
+              </select>
+            </label>
+            <label>
+              时间窗口
+              <select id="sinceHoursSelect">
+                <option value="24">24 小时</option>
+                <option value="48" selected>48 小时</option>
+                <option value="72">72 小时</option>
+              </select>
+            </label>
+            <label>
+              条数上限
+              <input id="limitInput" type="number" min="1" max="200" value="30" />
+            </label>
+            <label>
+              单源抓取上限
+              <input id="maxItemsInput" type="number" min="1" max="200" value="20" />
+            </label>
+          </div>
+          <div class="publish-grid">
+            <label class="check-label"><input class="publish-target" type="checkbox" value="telegram" /> Telegram</label>
+            <label class="check-label"><input class="publish-target" type="checkbox" value="feishu" /> 飞书</label>
+            <label class="check-label"><input class="publish-target" type="checkbox" value="wechat" /> 公众号草稿</label>
+            <label class="check-label"><input class="publish-target" type="checkbox" value="static_site" /> 静态站点</label>
+            <label class="check-label wide"><input id="wechatSubmitCheckbox" type="checkbox" /> 公众号草稿创建后直接提交发布</label>
+          </div>
+          <p class="muted">如果这里不勾选，系统会回退到服务端配置的 `AINEWS_PUBLISH_TARGETS` 默认发布目标。</p>
+          <div class="action-row">
+            <button id="ingestButton" class="button primary">抓取新闻</button>
+            <button id="extractButton" class="button ghost">抓正文</button>
+            <button id="enrichButton" class="button secondary">翻译国际新闻</button>
+            <button id="digestButton" class="button primary">生成中文日报</button>
+            <button id="pipelineButton" class="button secondary">跑完整流水线</button>
+            <button id="publishButton" class="button ghost">发布日报</button>
+          </div>
+          <pre id="jobOutput" class="terminal"></pre>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Sources</p>
+              <h2>来源状态</h2>
+            </div>
+          </div>
+          <div id="sourcesList" class="source-list"></div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel digest-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Digest</p>
+              <h2>最新日报</h2>
+            </div>
+          </div>
+          <div id="digestView" class="digest-view">
+            <p class="muted">还没有生成日报。</p>
+          </div>
+        </article>
+
+        <div class="side-stack">
+          <article class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Archive</p>
+                <h2>历史日报</h2>
+              </div>
+            </div>
+            <div id="digestArchive" class="archive-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Publish</p>
+                <h2>发布历史</h2>
+              </div>
+              <div class="toolbar-row">
+                <button id="refreshPublicationsButton" class="button ghost">刷新状态</button>
+                <button id="clearPublicationDigestFilterButton" class="button ghost">查看全部</button>
+              </div>
+            </div>
+            <p id="publicationsHint" class="muted">展示最近的发布记录；打开某份日报后会自动筛选到对应记录。</p>
+            <div class="publication-filters">
+              <label>
+                目标
+                <select id="publicationTargetFilter">
+                  <option value="">全部</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="feishu">飞书</option>
+                  <option value="wechat">公众号</option>
+                  <option value="static_site">静态站点</option>
+                </select>
+              </label>
+              <label>
+                状态
+                <select id="publicationStatusFilter">
+                  <option value="">全部</option>
+                  <option value="ok">成功</option>
+                  <option value="pending">处理中</option>
+                  <option value="error">失败</option>
+                </select>
+              </label>
+              <label class="check-label">
+                <input id="publicationOnlyPendingCheckbox" type="checkbox" checked />
+                仅刷新待完成记录
+              </label>
+            </div>
+            <div id="publicationsList" class="publication-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Articles</p>
+            <h2>新闻池</h2>
+          </div>
+        </div>
+        <div id="articlesList" class="articles-list"></div>
+      </section>
+    </main>
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>
