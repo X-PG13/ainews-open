@@ -108,6 +108,11 @@ python -m pip install -e ".[dev]"
 1. 把 `.github/ISSUE_TEMPLATE/config.yml` 里的占位安全联系地址替换成你自己的私有通道。
 2. 把 README 和 `pyproject.toml` 中的组织名、仓库地址、维护者信息改成真实值。
 
+如果你准备发布到 GitHub，首版 Release 文案和项目简介可直接复用：
+
+- `docs/github-launch-kit.md`
+- `docs/project-intro.md`
+
 ## LLM 翻译与日报
 
 如果你希望国际新闻自动转成中文，并由 LLM 生成日报，需要在 `.env` 中配置一组 OpenAI-compatible 参数：
