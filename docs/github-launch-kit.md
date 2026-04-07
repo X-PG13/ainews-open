@@ -69,11 +69,11 @@ Open the dashboard at `http://127.0.0.1:8000/`.
 
 ### GitHub About Description
 
-Open-source toolkit for aggregating domestic and international AI news, translating global stories into Chinese, and generating daily AI digests.
+Turn domestic and global AI news into a Chinese daily digest workflow with translation, archiving, and publishing built in.
 
 ### GitHub About Description Shorter Variant
 
-Open-source AI news aggregation and Chinese daily digest toolkit.
+AI news to Chinese daily digests, with translation and publishing built in.
 
 ### Website
 

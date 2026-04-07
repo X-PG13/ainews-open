@@ -12,6 +12,16 @@ AI News Open：开源的国内外 AI 新闻聚合、中文翻译日报与多渠�
 
 AI News Open: an open-source toolkit for AI news aggregation, Chinese digest generation, and multi-channel publishing.
 
+## Recommended for GitHub Pinned Card
+
+### Recommended English
+
+Turn domestic and global AI news into a publishable Chinese daily digest workflow.
+
+### Recommended Chinese
+
+把国内外 AI 新闻变成可发布的中文日报工作流。
+
 ## Short Variants
 
 ### Variant A
