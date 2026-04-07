@@ -1,0 +1,453 @@
+from __future__ import annotations
+
+import html
+import re
+from dataclasses import dataclass
+from html.parser import HTMLParser
+from typing import Any, Iterable, List, Tuple
+from urllib.parse import urlparse
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:  # pragma: no cover
+    BeautifulSoup = None  # type: ignore[assignment]
+
+from .http import fetch_text
+from .utils import clean_text
+
+ARTICLE_HINTS = (
+    "article",
+    "content",
+    "entry",
+    "post",
+    "story",
+    "main",
+    "body",
+    "markdown",
+)
+DROP_HINTS = (
+    "nav",
+    "menu",
+    "footer",
+    "header",
+    "comment",
+    "related",
+    "recommend",
+    "share",
+    "social",
+    "toolbar",
+    "breadcrumb",
+    "subscribe",
+    "popup",
+    "banner",
+    "sidebar",
+)
+
+DROP_TAGS = (
+    "script",
+    "style",
+    "noscript",
+    "svg",
+    "header",
+    "footer",
+    "nav",
+    "form",
+    "aside",
+    "iframe",
+)
+STRIP_BLOCK_RE = re.compile(
+    r"<(?:script|style|noscript|svg|header|footer|nav|form|aside|iframe)\b.*?</(?:script|style|noscript|svg|header|footer|nav|form|aside|iframe)>",
+    re.IGNORECASE | re.DOTALL,
+)
+TAG_RE = re.compile(r"<[^>]+>")
+TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+NOISE_LINE_PATTERNS = (
+    re.compile(r"^(责任编辑|责编|编辑)[:：]"),
+    re.compile(r"^(文章来源|本文来源|来源)[:：]"),
+    re.compile(r"^本文(来自|转载自|由)"),
+    re.compile(r"^(扫码|长按|点击).{0,12}(查看|关注|下载|阅读)"),
+    re.compile(r"^(更多|相关阅读|延伸阅读|相关推荐|相关内容)"),
+    re.compile(r"^(打开|下载)(APP|客户端)"),
+    re.compile(r"^(微信|公众号|微博)[:：]"),
+    re.compile(r"^分享至"),
+)
+NOISE_PHRASES = (
+    "返回搜狐",
+    "打开APP",
+    "点击查看更多",
+    "责任编辑",
+    "相关推荐",
+    "相关阅读",
+)
+HOST_SELECTORS = {
+    "36kr.com": (
+        ".common-width.content.articleDetailContent.kr-rich-text-wrapper",
+        ".articleDetailContent.kr-rich-text-wrapper",
+        ".kr-rich-text-wrapper",
+        ".article-content",
+    ),
+    "ithome.com": (
+        "#paragraph",
+        ".news-content",
+        ".post-content",
+        ".content",
+    ),
+}
+HOST_DROP_SELECTORS = {
+    "36kr.com": (
+        ".article-detail-item-pre",
+        ".article-detail-item-next",
+        ".statement",
+        ".entry-operate",
+        ".kr-loading-more-button",
+        ".recommend-list",
+        ".article-detail-tags",
+        ".article-share",
+    ),
+    "ithome.com": (
+        ".post-side-tools",
+        ".related-posts",
+        ".relation",
+        ".news_pl",
+        ".news_tags",
+        ".comment-entry",
+        ".comment-link",
+        ".post-nav",
+        ".content-breadcrumb",
+        ".video-box",
+    ),
+}
+HOST_NOISE_LINE_PATTERNS = {
+    "36kr.com": (
+        re.compile(r"^本文由.+原创"),
+        re.compile(r"^题图来自"),
+    ),
+    "ithome.com": (
+        re.compile(r"^广告声明"),
+    ),
+}
+FALLBACK_HOST_RULES = {
+    "36kr.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"common-width", "content", "articledetailcontent", "kr-rich-text-wrapper"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+    ),
+    "ithome.com": (
+        {"tags": {"div", "section"}, "id_tokens": {"paragraph"}},
+        {"tags": {"div", "section"}, "class_tokens": {"news-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+    ),
+}
+TEXT_BLOCK_TAGS = {
+    "article",
+    "blockquote",
+    "br",
+    "div",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "li",
+    "main",
+    "ol",
+    "p",
+    "section",
+    "ul",
+}
+MIN_EXTRACTED_TEXT_LENGTH = 140
+
+
+@dataclass
+class ExtractedContent:
+    text: str
+    title: str = ""
+
+
+class _FallbackContainerParser(HTMLParser):
+    def __init__(self, rules: tuple[dict, ...], drop_tokens: tuple[str, ...]):
+        super().__init__(convert_charrefs=True)
+        self.rules = rules
+        self.drop_tokens = drop_tokens
+        self.stack: List[bool] = []
+        self.buffer: List[str] = []
+        self.captures: List[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_dict = {key.lower(): (value or "") for key, value in attrs}
+        attrs_blob = " ".join([attrs_dict.get("id", ""), attrs_dict.get("class", "")]).lower()
+
+        if not self.stack:
+            if self._matches_target(tag, attrs_dict):
+                self.stack = [False]
+                self.buffer = []
+            return
+
+        parent_skip = self.stack[-1]
+        should_skip = parent_skip or tag.lower() in DROP_TAGS
+        if not should_skip:
+            if any(hint in attrs_blob for hint in DROP_HINTS):
+                should_skip = True
+            elif any(token and token in attrs_blob for token in self.drop_tokens):
+                should_skip = True
+
+        self.stack.append(should_skip)
+        if not should_skip and tag.lower() in TEXT_BLOCK_TAGS:
+            self.buffer.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self.stack:
+            return
+
+        should_skip = self.stack.pop()
+        if not should_skip and tag.lower() in TEXT_BLOCK_TAGS:
+            self.buffer.append("\n")
+        if not self.stack and self.buffer:
+            self.captures.append("".join(self.buffer))
+            self.buffer = []
+
+    def handle_data(self, data: str) -> None:
+        if self.stack and not self.stack[-1]:
+            self.buffer.append(data)
+
+    def _matches_target(self, tag: str, attrs_dict: dict[str, str]) -> bool:
+        tag_name = tag.lower()
+        class_tokens = {
+            token
+            for token in attrs_dict.get("class", "").lower().split()
+            if token
+        }
+        id_tokens = {
+            token
+            for token in attrs_dict.get("id", "").lower().split()
+            if token
+        }
+
+        for rule in self.rules:
+            if tag_name not in rule.get("tags", {tag_name}):
+                continue
+            rule_classes = rule.get("class_tokens", set())
+            rule_ids = rule.get("id_tokens", set())
+            if rule_classes and not rule_classes.issubset(class_tokens):
+                continue
+            if rule_ids and not rule_ids.issubset(id_tokens):
+                continue
+            return True
+        return False
+
+
+class ArticleContentExtractor:
+    def __init__(self, *, timeout: int, user_agent: str, text_limit: int = 12000):
+        self.timeout = timeout
+        self.user_agent = user_agent
+        self.text_limit = text_limit
+
+    def fetch_and_extract(self, url: str) -> ExtractedContent:
+        html = fetch_text(url, timeout=self.timeout, user_agent=self.user_agent)
+        return self.extract_from_html(html, url=url)
+
+    def extract_from_html(self, html: str, *, url: str = "") -> ExtractedContent:
+        host = self._normalize_host(url)
+        if BeautifulSoup is None:
+            return self._fallback_extract_from_html(html, url=url)
+
+        soup = BeautifulSoup(html, "html.parser")
+        self._prune_soup(soup, host)
+
+        title = clean_text(soup.title.get_text(" ", strip=True) if soup.title else "")
+        candidates = list(self._candidate_nodes(soup, host))
+        best_text = ""
+        best_score = -1.0
+
+        for node, bonus in candidates:
+            text = self._node_text(node, host)
+            score = self._score_node(node, text) + bonus
+            if score > best_score:
+                best_text = text
+                best_score = score
+
+        if not best_text:
+            body = soup.body or soup
+            best_text = self._node_text(body, host)
+
+        best_text = self._trim(best_text)
+        if len(best_text) < MIN_EXTRACTED_TEXT_LENGTH:
+            raise ValueError("extracted article text is too short")
+
+        return ExtractedContent(text=best_text, title=title)
+
+    def _candidate_nodes(self, soup: Any, host: str) -> Iterable[Tuple[Any, float]]:
+        seen: set[int] = set()
+
+        for selector in self._host_values(host, HOST_SELECTORS):
+            for node in soup.select(selector):
+                marker = id(node)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                yield node, 2400.0
+
+        selectors = [
+            "article",
+            "main",
+            "[role='main']",
+            ".article-content",
+            ".article__content",
+            ".entry-content",
+            ".post-content",
+            ".story-content",
+            ".main-content",
+            ".content-body",
+            ".markdown-body",
+        ]
+        for selector in selectors:
+            for node in soup.select(selector):
+                marker = id(node)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                yield node, 800.0
+
+        for node in soup.find_all(["div", "section"]):
+            attrs = " ".join(
+                [
+                    " ".join(node.get("class", [])),
+                    str(node.get("id", "")),
+                ]
+            ).lower()
+            if any(hint in attrs for hint in ARTICLE_HINTS):
+                marker = id(node)
+                if marker in seen:
+                    continue
+                seen.add(marker)
+                yield node, 0.0
+
+    def _trim(self, value: str) -> str:
+        if len(value) <= self.text_limit:
+            return value
+        return value[: self.text_limit].rsplit(" ", 1)[0].strip()
+
+    def _score_node(self, node: Any, text: str) -> float:
+        if not text:
+            return -1.0
+        paragraph_count = len(node.find_all("p")) if hasattr(node, "find_all") else 0
+        heading_count = len(node.find_all(["h2", "h3", "h4"])) if hasattr(node, "find_all") else 0
+        link_text_length = 0
+        if hasattr(node, "find_all"):
+            link_text_length = sum(
+                len(clean_text(link.get_text(" ", strip=True))) for link in node.find_all("a")
+            )
+        line_count = len([line for line in text.splitlines() if line.strip()])
+        noise_hits = sum(1 for phrase in NOISE_PHRASES if phrase in text)
+        return (
+            len(text)
+            + paragraph_count * 320
+            + heading_count * 120
+            + line_count * 16
+            - link_text_length * 0.65
+            - noise_hits * 420
+        )
+
+    def _node_text(self, node: Any, host: str) -> str:
+        fragment = BeautifulSoup(str(node), "html.parser")
+        root = fragment.find() or fragment
+        self._prune_soup(root, host)
+
+        return self._normalize_extracted_text(root.get_text("\n", strip=True), host)
+
+    def _prune_soup(self, soup: Any, host: str) -> None:
+        for tag in list(soup.find_all(DROP_TAGS)):
+            tag.decompose()
+        for selector in self._host_values(host, HOST_DROP_SELECTORS):
+            for node in list(soup.select(selector)):
+                node.decompose()
+        for node in list(soup.find_all(True)):
+            attrs = " ".join(
+                [
+                    " ".join(node.get("class", [])),
+                    str(node.get("id", "")),
+                ]
+            ).lower()
+            if attrs and any(hint in attrs for hint in DROP_HINTS):
+                node.decompose()
+
+    def _is_noise_line(self, line: str, host: str) -> bool:
+        if len(line) <= 1:
+            return True
+        if line.count("http://") + line.count("https://") > 1:
+            return True
+        if any(pattern.search(line) for pattern in NOISE_LINE_PATTERNS):
+            return True
+        if any(pattern.search(line) for pattern in self._host_values(host, HOST_NOISE_LINE_PATTERNS)):
+            return True
+        return any(phrase in line for phrase in NOISE_PHRASES)
+
+    @staticmethod
+    def _normalize_host(url: str) -> str:
+        if not url:
+            return ""
+        netloc = urlparse(url).netloc.lower()
+        return netloc[4:] if netloc.startswith("www.") else netloc
+
+    @staticmethod
+    def _host_matches(host: str, candidate: str) -> bool:
+        return bool(host) and (host == candidate or host.endswith(f".{candidate}"))
+
+    def _host_values(self, host: str, mapping: dict[str, tuple]) -> tuple:
+        matches: List[object] = []
+        for candidate, values in mapping.items():
+            if self._host_matches(host, candidate):
+                matches.extend(values)
+        return tuple(matches)
+
+    def _normalize_extracted_text(self, raw_text: str, host: str) -> str:
+        lines: List[str] = []
+        for raw_line in raw_text.splitlines():
+            line = clean_text(raw_line)
+            if not line:
+                continue
+            if self._is_noise_line(line, host):
+                continue
+            if lines and line == lines[-1]:
+                continue
+            lines.append(line)
+        return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+    def _host_fallback_rules(self, host: str) -> tuple[dict, ...]:
+        matches: List[dict] = []
+        for candidate, values in FALLBACK_HOST_RULES.items():
+            if self._host_matches(host, candidate):
+                matches.extend(values)
+        return tuple(matches)
+
+    def _host_drop_tokens(self, host: str) -> tuple[str, ...]:
+        tokens: List[str] = []
+        for selector in self._host_values(host, HOST_DROP_SELECTORS):
+            cleaned = re.sub(r"[^a-z0-9_-]+", " ", str(selector).lower()).split()
+            tokens.extend(cleaned)
+        return tuple(tokens)
+
+    def _fallback_extract_from_html(self, raw_html: str, *, url: str = "") -> ExtractedContent:
+        host = self._normalize_host(url)
+        title_match = TITLE_RE.search(raw_html)
+        title = clean_text(html.unescape(title_match.group(1))) if title_match else ""
+
+        rules = self._host_fallback_rules(host)
+        if rules:
+            parser = _FallbackContainerParser(rules, self._host_drop_tokens(host))
+            parser.feed(raw_html)
+            parser.close()
+            candidates = [
+                self._normalize_extracted_text(html.unescape(candidate), host)
+                for candidate in parser.captures
+            ]
+            best_text = max(candidates, key=len, default="")
+            best_text = self._trim(best_text)
+            if len(best_text) >= MIN_EXTRACTED_TEXT_LENGTH:
+                return ExtractedContent(text=best_text, title=title)
+
+        text = STRIP_BLOCK_RE.sub(" ", raw_html)
+        text = TAG_RE.sub(" ", text)
+        text = self._normalize_extracted_text(html.unescape(text), host)
+        text = self._trim(text)
+        if len(text) < MIN_EXTRACTED_TEXT_LENGTH:
+            raise ValueError("extracted article text is too short")
+        return ExtractedContent(text=text, title=title)
