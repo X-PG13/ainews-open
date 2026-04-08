@@ -88,6 +88,22 @@ class AggregateSkipExtractor:
         )
 
 
+class ResolvedUrlExtractor:
+    def __init__(self, resolved_url):
+        self.resolved_url = resolved_url
+
+    def fetch_and_extract(self, url):
+        return ExtractedContent(
+            text=(
+                "Arcee is trying to build a credible open source model company. "
+                "Infrastructure buyers still want more optionality around deployment and cost control. "
+                "The article body includes enough detail to verify the extractor stored the resolved URL."
+            ),
+            title="resolved title",
+            resolved_url=self.resolved_url,
+        )
+
+
 class StubPublisher:
     def __init__(self):
         self.publish_calls = 0
@@ -852,6 +868,50 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(health["status"], "ok")
             self.assertNotIn("article_extraction_errors", health["degraded_reasons"])
             self.assertEqual(stats["skipped_extractions"], 1)
+
+    def test_extract_articles_persists_resolved_google_news_target_url(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="google-news-global-ai",
+                    source_name="Google News Global AI",
+                    title="Arcee story",
+                    url="https://news.google.com/rss/articles/demo?oc=5",
+                    canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("Arcee story", "A release update"),
+                    dedup_key=make_dedup_key("Arcee story"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ResolvedUrlExtractor(
+                    "https://techcrunch.com/2026/04/07/arcee/"
+                ),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+
+            self.assertEqual(result["updated"], 1)
+            self.assertEqual(article["url"], "https://techcrunch.com/2026/04/07/arcee/")
+            self.assertEqual(article["canonical_url"], "https://techcrunch.com/2026/04/07/arcee/")
 
     def test_enrich_articles_masks_internal_error_details(self) -> None:
         class FailingLLMClient(StubLLMClient):

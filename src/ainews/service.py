@@ -405,10 +405,7 @@ class NewsService:
         for article in candidates:
             try:
                 extracted = self.content_extractor.fetch_and_extract(str(article["url"]))
-                self.repository.save_article_extraction(
-                    int(article["id"]),
-                    extracted_text=extracted.text,
-                )
+                self._store_extracted_article(article, extracted)
                 results.append(
                     {
                         "article_id": article["id"],
@@ -1133,10 +1130,7 @@ class NewsService:
             return article
         try:
             extracted = self.content_extractor.fetch_and_extract(str(article["url"]))
-            updated = self.repository.save_article_extraction(
-                int(article["id"]),
-                extracted_text=extracted.text,
-            )
+            updated = self._store_extracted_article(article, extracted)
             return updated or article
         except Exception as exc:
             logger.exception(
@@ -1152,6 +1146,26 @@ class NewsService:
                 error=self._public_error_message(exc),
             )
             return article
+
+    def _store_extracted_article(self, article: dict, extracted: object) -> Optional[dict]:
+        article_id = int(article["id"])
+        extracted_text = str(getattr(extracted, "text", ""))
+        updated = self.repository.save_article_extraction(
+            article_id,
+            extracted_text=extracted_text,
+        )
+        resolved_url = clean_text(str(getattr(extracted, "resolved_url", "")))
+        current_url = clean_text(str(article.get("url", "")))
+        current_canonical_url = clean_text(str(article.get("canonical_url", "")))
+        if resolved_url and resolved_url != current_url:
+            updated = self.repository.update_article_urls(
+                article_id,
+                url=resolved_url,
+                canonical_url=resolved_url
+                if resolved_url != current_canonical_url
+                else None,
+            )
+        return updated
 
     @staticmethod
     def _present_article(article: Optional[dict]) -> Optional[dict]:

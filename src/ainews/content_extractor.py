@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import html
+import logging
 import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import Any, Iterable, List, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 from urllib.parse import urlparse
 
 try:
@@ -12,6 +13,7 @@ try:
 except ImportError:  # pragma: no cover
     BeautifulSoup = None  # type: ignore[assignment]
 
+from .google_news import GoogleNewsResolutionError, GoogleNewsURLResolver, is_google_news_url
 from .http import fetch_text
 from .utils import clean_text
 
@@ -111,6 +113,16 @@ HOST_SELECTORS = {
         ".duet--layout--entry-body",
         ".duet--article--article-body-component",
     ),
+    "techcrunch.com": (
+        ".entry-content",
+        ".wp-block-post-content",
+        ".article-content",
+    ),
+    "venturebeat.com": (
+        ".article-content",
+        ".entry-content",
+        ".article-content__content-group",
+    ),
 }
 HOST_DROP_SELECTORS = {
     "36kr.com": (
@@ -156,6 +168,20 @@ HOST_DROP_SELECTORS = {
     "theverge.com": (
         ".duet--ledes--standard-lede-bottom",
     ),
+    "techcrunch.com": (
+        ".newsletter-signup",
+        ".social-share",
+        ".article-tags",
+        ".wp-block-jetpack-subscriptions",
+        ".wp-block-tc23-shared-social-share",
+    ),
+    "venturebeat.com": (
+        ".newsletter-signup",
+        ".article-footer",
+        ".more-stories",
+        ".share-this",
+        ".related-story-list",
+    ),
 }
 HOST_NOISE_LINE_PATTERNS = {
     "36kr.com": (
@@ -189,6 +215,13 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Speed$"),
         re.compile(r"^(0\.75X|1X|1\.5X|2X)$"),
     ),
+    "techcrunch.com": (
+        re.compile(r"^Sign up for .+ newsletters?$"),
+    ),
+    "venturebeat.com": (
+        re.compile(r"^Subscribe to VB Daily$"),
+        re.compile(r"^Join the event that brings together.+$"),
+    ),
 }
 FALLBACK_HOST_RULES = {
     "36kr.com": (
@@ -221,6 +254,16 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div"}, "class_tokens": {"duet--layout--entry-body"}},
         {"tags": {"div"}, "class_tokens": {"duet--article--article-body-component"}},
     ),
+    "techcrunch.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"wp-block-post-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+    ),
+    "venturebeat.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content__content-group"}},
+    ),
 }
 TEXT_BLOCK_TAGS = {
     "article",
@@ -240,12 +283,14 @@ TEXT_BLOCK_TAGS = {
 }
 MIN_EXTRACTED_TEXT_LENGTH = 140
 GOOGLE_NEWS_SKIP_MESSAGE = "skipped aggregated Google News shell page; direct article URL required"
+logger = logging.getLogger("ainews.content_extractor")
 
 
 @dataclass
 class ExtractedContent:
     text: str
     title: str = ""
+    resolved_url: str = ""
 
 
 class ExtractionSkippedError(ValueError):
@@ -361,14 +406,36 @@ class _FallbackTextParser(HTMLParser):
 
 
 class ArticleContentExtractor:
-    def __init__(self, *, timeout: int, user_agent: str, text_limit: int = 12000):
+    def __init__(
+        self,
+        *,
+        timeout: int,
+        user_agent: str,
+        text_limit: int = 12000,
+        google_news_resolver: Optional[GoogleNewsURLResolver] = None,
+    ):
         self.timeout = timeout
         self.user_agent = user_agent
         self.text_limit = text_limit
+        self.google_news_resolver = google_news_resolver or GoogleNewsURLResolver(
+            timeout=timeout,
+            user_agent=user_agent,
+        )
 
     def fetch_and_extract(self, url: str) -> ExtractedContent:
-        html = fetch_text(url, timeout=self.timeout, user_agent=self.user_agent)
-        return self.extract_from_html(html, url=url)
+        fetch_url = url
+        if is_google_news_url(url):
+            try:
+                fetch_url = self.google_news_resolver.resolve(url)
+            except GoogleNewsResolutionError:
+                logger.warning(
+                    "google news resolution failed; falling back to wrapper extraction path",
+                    extra={"event": "extract.google_news_resolution_failed", "url": url},
+                )
+        html = fetch_text(fetch_url, timeout=self.timeout, user_agent=self.user_agent)
+        extracted = self.extract_from_html(html, url=fetch_url)
+        extracted.resolved_url = fetch_url
+        return extracted
 
     def extract_from_html(self, html: str, *, url: str = "") -> ExtractedContent:
         host = self._normalize_host(url)

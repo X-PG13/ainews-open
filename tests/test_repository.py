@@ -177,6 +177,61 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(len(forced), 1)
             self.assertEqual(repository.get_stats()["skipped_extractions"], 1)
 
+    def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+            direct = ArticleRecord(
+                source_id="direct",
+                source_name="Direct Source",
+                title="Direct article",
+                url="https://techcrunch.com/2026/04/07/arcee/",
+                canonical_url="https://techcrunch.com/2026/04/07/arcee/",
+                summary="A short summary",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Direct article", "A short summary"),
+                dedup_key=make_dedup_key("Direct article"),
+                raw_payload={},
+            )
+            wrapped = ArticleRecord(
+                source_id="google-news",
+                source_name="Google News",
+                title="Wrapped article",
+                url="https://news.google.com/rss/articles/demo?oc=5",
+                canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                summary="Another short summary",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Wrapped article", "Another short summary"),
+                dedup_key=make_dedup_key("Wrapped article"),
+                raw_payload={},
+            )
+            repository.insert_if_new(direct)
+            repository.insert_if_new(wrapped)
+            wrapped_row = next(
+                row
+                for row in repository.list_articles(limit=10, include_hidden=True)
+                if row["source_id"] == "google-news"
+            )
+
+            updated = repository.update_article_urls(
+                int(wrapped_row["id"]),
+                url="https://techcrunch.com/2026/04/07/arcee/",
+                canonical_url="https://techcrunch.com/2026/04/07/arcee/",
+            )
+
+            self.assertEqual(updated["url"], "https://techcrunch.com/2026/04/07/arcee/")
+            self.assertEqual(updated["canonical_url"], "https://news.google.com/rss/articles/demo?oc=5")
+
     def test_repository_migrates_legacy_schema_and_sets_version(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir) / "ainews.db"

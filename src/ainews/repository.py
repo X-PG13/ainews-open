@@ -547,6 +547,56 @@ class ArticleRepository:
             )
         return self.get_article(article_id)
 
+    def update_article_urls(
+        self,
+        article_id: int,
+        *,
+        url: str,
+        canonical_url: Optional[str] = None,
+    ) -> Optional[dict]:
+        with self._connect() as connection:
+            if canonical_url:
+                try:
+                    connection.execute(
+                        """
+                        UPDATE articles
+                        SET
+                            url = ?,
+                            canonical_url = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            url,
+                            canonical_url,
+                            article_id,
+                        ),
+                    )
+                except sqlite3.IntegrityError:
+                    connection.execute(
+                        """
+                        UPDATE articles
+                        SET url = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            url,
+                            article_id,
+                        ),
+                    )
+            else:
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET url = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        url,
+                        article_id,
+                    ),
+                )
+        return self.get_article(article_id)
+
     def mark_article_extraction_error(
         self,
         article_id: int,

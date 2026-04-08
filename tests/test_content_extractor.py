@@ -129,6 +129,30 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Posts from this author", content.text)
         self.assertNotIn("Follow", content.text)
 
+    def test_prefers_techcrunch_entry_content_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("techcrunch-article.html"),
+            url="https://techcrunch.com/2026/04/07/i-cant-help-rooting-for-tiny-open-source-ai-model-maker-arcee/",
+        )
+
+        self.assertIn("Arcee is trying to build a credible open source model company", content.text)
+        self.assertIn("infrastructure buyers still want more optionality", content.text)
+        self.assertNotIn("Sign up for the TechCrunch AI newsletter", content.text)
+        self.assertNotIn("Share this article", content.text)
+
+    def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("venturebeat-article.html"),
+            url="https://venturebeat.com/ai/open-source-ai-infrastructure-startups-keep-finding-enterprise-demand/",
+        )
+
+        self.assertIn("Enterprise infrastructure teams still want open model optionality", content.text)
+        self.assertIn("Operators increasingly evaluate AI vendors on observability", content.text)
+        self.assertNotIn("Subscribe to VB Daily", content.text)
+        self.assertNotIn("Related stories", content.text)
+
     def test_skips_google_news_aggregate_fixture(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
 
@@ -137,6 +161,27 @@ class ContentExtractorTestCase(unittest.TestCase):
                 _fixture("google-news-aggregate.html"),
                 url="https://news.google.com/rss/articles/demo?oc=5",
             )
+
+    def test_fetch_and_extract_resolves_google_news_wrapper_before_extracting(self) -> None:
+        class StubResolver:
+            def resolve(self, url: str) -> str:
+                return "https://techcrunch.com/2026/04/07/arcee/"
+
+        extractor = ArticleContentExtractor(
+            timeout=10,
+            user_agent="test-agent",
+            text_limit=5000,
+            google_news_resolver=StubResolver(),
+        )
+
+        with patch(
+            "ainews.content_extractor.fetch_text",
+            return_value=_fixture("techcrunch-article.html"),
+        ):
+            content = extractor.fetch_and_extract("https://news.google.com/rss/articles/demo?oc=5")
+
+        self.assertEqual(content.resolved_url, "https://techcrunch.com/2026/04/07/arcee/")
+        self.assertIn("Arcee is trying to build a credible open source model company", content.text)
 
     def test_fallback_parser_extracts_text_without_regex_block_stripping(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
