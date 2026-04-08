@@ -53,9 +53,7 @@ jobs:
           ls -la dist
 
       - name: Verify release checksums
-        run: |
-          cd dist
-          sha256sum -c sha256sums.txt
+        run: sha256sum -c dist/sha256sums.txt
 
       - name: Install artifact
         run: |
