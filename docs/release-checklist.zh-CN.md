@@ -8,16 +8,17 @@
 
 1. 阅读 `CHANGELOG.md`，并在 `docs/releases/` 下补本次版本说明。
 2. 确认 `README.md` 和 `README.zh-CN.md` 里的文档、demo 链接都有效。
-3. 运行：
+3. 确认 `docs/release-artifacts.zh-CN.md` 仍然和当前 release bundle 结构一致。
+4. 运行：
 
 ```bash
 make check
 make smoke
 ```
 
-4. 用 `.env.example` 验证 `docker compose config -q` 能通过。
-5. 确认 open code scanning alerts 为 `0`。
-6. 确认 demo 页面和 `docs/demo/` 下的样例文件都还在。
+5. 用当前 compose profile 验证 `docker compose config -q` 能通过。
+6. 确认 open code scanning alerts 为 `0`。
+7. 确认 demo 页面和 `docs/demo/` 下的样例文件都还在。
 
 ## 版本更新
 
@@ -52,6 +53,14 @@ git push origin vX.Y.Z
 - SBOM
 - provenance attestation
 - 最终版 release notes
+- release artifact 的安装与校验说明
+
+3. 额外验证一次 release artifact 安装说明可用：
+
+```bash
+python -m pip install ainews_open-X.Y.Z-py3-none-any.whl
+python -m ainews --help
+```
 
 ## 发版后
 

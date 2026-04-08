@@ -1,0 +1,24 @@
+# Default ownership
+* @X-PG13
+
+# Project governance and automation
+/.github/ @X-PG13
+/CODE_OF_CONDUCT.md @X-PG13
+/CONTRIBUTING.md @X-PG13
+/SECURITY.md @X-PG13
+/SUPPORT.md @X-PG13
+
+# Core application
+/src/ainews/ @X-PG13
+/tests/ @X-PG13
+
+# Docs and demo assets
+/docs/ @X-PG13
+/README.md @X-PG13
+/README.zh-CN.md @X-PG13
+
+# Release and deployment material
+/compose.yaml @X-PG13
+/Dockerfile @X-PG13
+/Makefile @X-PG13
+/pyproject.toml @X-PG13

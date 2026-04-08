@@ -51,6 +51,8 @@ make check
 - Do not remove existing sources without documenting the reason.
 - Use the pull request template and summarize validation clearly.
 - Prefer existing labels such as `good first issue`, `help wanted`, `source`, `extractor`, and `publisher`.
+- Follow `docs/pr-review-policy.md` for review scope and single-maintainer rules.
+- Check `CODEOWNERS` before moving code across ownership boundaries.
 
 ## Issues And Security
 
