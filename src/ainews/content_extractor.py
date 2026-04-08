@@ -95,6 +95,11 @@ HOST_SELECTORS = {
         ".post-content",
         ".content",
     ),
+    "jiqizhixin.com": (
+        ".article__content",
+        ".article-content",
+        ".post-content",
+    ),
     "huggingface.co": (
         ".blog-content.prose",
         ".blog-content",
@@ -133,6 +138,21 @@ HOST_SELECTORS = {
         ".article-body__content",
         "[data-testid='paragraph-0']",
     ),
+    "arstechnica.com": (
+        ".article-content",
+        ".post-content",
+        "article",
+    ),
+    "substack.com": (
+        ".body.markup",
+        ".available-content",
+        ".post-content",
+    ),
+    "yahoo.com": (
+        "[data-test-locator='articleBody']",
+        ".caas-body",
+        ".article-body",
+    ),
 }
 HOST_DROP_SELECTORS = {
     "36kr.com": (
@@ -156,6 +176,15 @@ HOST_DROP_SELECTORS = {
         ".post-nav",
         ".content-breadcrumb",
         ".video-box",
+    ),
+    "jiqizhixin.com": (
+        ".article__copyright",
+        ".article__tags",
+        ".related-posts",
+        ".recommend-list",
+        ".share-box",
+        ".author-card",
+        ".sidebar-recommend",
     ),
     "huggingface.co": (
         ".blog-content > .mb-4",
@@ -204,6 +233,28 @@ HOST_DROP_SELECTORS = {
         ".related-news",
         ".article-topics",
     ),
+    "arstechnica.com": (
+        ".post-meta",
+        ".video-block",
+        ".related-stories",
+        ".sidebar",
+        ".newsletter-callout",
+    ),
+    "substack.com": (
+        ".subscription-widget-wrap",
+        ".subscribe-widget",
+        ".comments-page",
+        ".footer-wrap",
+        ".pencraft",
+    ),
+    "yahoo.com": (
+        ".caas-share-section",
+        ".caas-readmore",
+        ".caas-3p-blocked",
+        ".caas-da",
+        ".video-player-element",
+        ".caas-vertical-video",
+    ),
 }
 HOST_NOISE_LINE_PATTERNS = {
     "36kr.com": (
@@ -212,6 +263,10 @@ HOST_NOISE_LINE_PATTERNS = {
     ),
     "ithome.com": (
         re.compile(r"^广告声明"),
+    ),
+    "jiqizhixin.com": (
+        re.compile(r"^机器之心(报道|编辑部).*$"),
+        re.compile(r"^原标题[:：].*$"),
     ),
     "huggingface.co": (
         re.compile(r"^Back to Articles$"),
@@ -253,6 +308,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Our Standards: The Thomson Reuters Trust Principles$"),
         re.compile(r"^Reporting by .+$"),
     ),
+    "arstechnica.com": (
+        re.compile(r"^Ars Technica may earn compensation.*$"),
+        re.compile(r"^Stay tuned for.*$"),
+    ),
+    "substack.com": (
+        re.compile(r"^Thanks for reading.*$"),
+        re.compile(r"^Subscribe (?:now|for free).*$"),
+        re.compile(r"^Share this post$"),
+        re.compile(r"^Leave a comment$"),
+    ),
+    "yahoo.com": (
+        re.compile(r"^Recommended Stories$"),
+        re.compile(r"^Advertisement$"),
+        re.compile(r"^Read more:.*$"),
+    ),
 }
 FALLBACK_HOST_RULES = {
     "36kr.com": (
@@ -267,6 +337,11 @@ FALLBACK_HOST_RULES = {
     "tmtpost.com": (
         {"tags": {"article"}},
         {"tags": {"div", "section"}, "class_tokens": {"article__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+    ),
+    "jiqizhixin.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
     ),
     "huggingface.co": (
@@ -304,6 +379,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-body__content__17yit"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
         {"tags": {"div", "section"}, "id_tokens": {"paragraph-0"}},
+    ),
+    "arstechnica.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+        {"tags": {"article"}},
+    ),
+    "substack.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"body", "markup"}},
+        {"tags": {"div", "section"}, "class_tokens": {"available-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+    ),
+    "yahoo.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"caas-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "id_tokens": {"articlebody"}},
     ),
 }
 TEXT_BLOCK_TAGS = {

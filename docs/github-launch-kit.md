@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.1.2`
+`v1.2.0`
 
 ### Suggested Title
 
-`AI News Open v1.1.2 · Automated Release Validation`
+`AI News Open v1.2.0 · Operations And Content Quality`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.1.2
+## AI News Open v1.2.0
 
-AI News Open `v1.1.2` closes the last manual step in the release process by automatically dispatching published-artifact smoke validation after each GitHub Release.
+AI News Open `v1.2.0` upgrades both the operator surface and the extraction layer with a unified Operations dashboard and broader fixture-driven cleanup coverage across more media layouts.
 
 ### What it does
 
@@ -40,10 +40,10 @@ AI News Open `v1.1.2` closes the last manual step in the release process by auto
 
 ### Highlights in this release
 
-- Automatic dispatch from `release.yml` to `release-artifact-smoke.yml`
-- Published-artifact smoke validation remains the release-completion gate
-- Manual reruns remain available for any already-published tag
-- PyPI publication remains opt-in by default until trusted publishing is configured
+- One-screen `Operations` panel for health, pipeline, incidents, and publication failures
+- Richer `/admin/operations` payload for dashboard and automation consumers
+- New extraction fixtures and cleanup rules for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo`
+- Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
 

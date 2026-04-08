@@ -2,6 +2,25 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.0] - 2026-04-09
+
+### Added
+
+- A one-screen `Operations` dashboard panel that aggregates `/health`, metrics, recent pipeline runs, source cooldown hotspots, source alerts, and publication failures
+- A richer `/admin/operations` payload with runtime summaries for operators and demo assets for the new operations surface
+- New source-specific extraction regression fixtures for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo` syndication targets
+
+### Changed
+
+- Package version is now `1.2.0`
+- Content extraction cleanup now covers more Chinese media, English media, blog/newsletter layouts, and syndication-style article pages
+- README and public demo assets now show the operator-focused overview and sample operations payload
+
+### Fixed
+
+- Reduced over-cleaning risk on Chinese publisher pages by separating editorial label noise from the first body paragraph
+- Improved article body extraction on additional noisy layouts where share widgets, subscribe prompts, and recirculation blocks previously contaminated the output
+
 ## [1.1.2] - 2026-04-08
 
 ### Changed
