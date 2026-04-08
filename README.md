@@ -91,6 +91,8 @@ make smoke
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Monitoring](docs/monitoring.md)
+- [PR Review Policy](docs/pr-review-policy.md)
+- [Release Artifacts](docs/release-artifacts.md)
 - [Use Cases](docs/use-cases.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
 - [Release Checklist](docs/release-checklist.md)
@@ -208,7 +210,7 @@ python -m pip install -e ".[dev]"
 This repository already includes the expected open-source project baseline:
 
 - Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`
-- Collaboration templates: GitHub issue templates and pull request template
+- Collaboration templates: GitHub issue templates, pull request template, `CODEOWNERS`, and review policy
 - Quality gates: `ruff`, unit tests, coverage, package build validation, `pre-commit`
 - Automation: CI, tag-based release workflow, CodeQL, Dependabot
 - Packaging and runtime: non-root Docker runtime, `HEALTHCHECK`, `compose.yaml`, `.dockerignore`, `.editorconfig`

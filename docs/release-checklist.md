@@ -8,16 +8,17 @@ Use this checklist before cutting a new public release.
 
 1. Read `CHANGELOG.md` and add the new release notes file under `docs/releases/`.
 2. Confirm `README.md` and `README.zh-CN.md` still point to valid docs and demo assets.
-3. Run:
+3. Confirm `docs/release-artifacts.md` still matches the current release bundle shape.
+4. Run:
 
 ```bash
 make check
 make smoke
 ```
 
-4. Confirm `docker compose config -q` passes with `.env.example`.
-5. Confirm open code scanning alerts are `0`.
-6. Confirm the demo page still renders and sample assets exist under `docs/demo/`.
+5. Confirm `docker compose config -q` passes with the current compose profile.
+6. Confirm open code scanning alerts are `0`.
+7. Confirm the demo page still renders and sample assets exist under `docs/demo/`.
 
 ## Versioning
 
@@ -52,6 +53,14 @@ git push origin vX.Y.Z
 - SBOM artifact
 - provenance attestation
 - final release notes
+- artifact install and checksum verification guidance
+
+3. Verify the release artifact instructions still work:
+
+```bash
+python -m pip install ainews_open-X.Y.Z-py3-none-any.whl
+python -m ainews --help
+```
 
 ## After Release
 

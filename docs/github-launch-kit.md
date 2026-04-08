@@ -67,6 +67,14 @@ Open the dashboard at `http://127.0.0.1:8000/`.
 - Use `--force-republish` only when you intentionally want another outbound publish attempt
 - Configure your own LLM, Telegram, Feishu, or WeChat credentials in `.env`
 - Review generated content before external publishing
+
+### Artifact Verification
+
+```bash
+shasum -a 256 -c sha256sums.txt
+python -m pip install ainews_open-X.Y.Z-py3-none-any.whl
+python -m ainews --help
+```
 ```
 
 ## Repository About
