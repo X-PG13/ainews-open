@@ -33,6 +33,7 @@ Confirm:
 
 - GitHub Actions `CI` is green
 - GitHub Actions `CodeQL` is green
+- GitHub Actions `Release Artifact Smoke` is green for the last published tag
 - `release.yml` is present and current
 - `pypi-publish.yml` is present if PyPI publication is intended
 - required repository secrets are configured
@@ -65,6 +66,7 @@ python -m ainews --help
 ## After Release
 
 1. Verify the release page and demo page are still reachable.
-2. Confirm the package metadata on GitHub and PyPI looks correct.
-3. Confirm `Latest` points to the intended tag.
-4. Announce the release using `docs/releases/` copy if applicable.
+2. Confirm `Release Artifact Smoke` passed for the published tag.
+3. Confirm the package metadata on GitHub and PyPI looks correct.
+4. Confirm `Latest` points to the intended tag.
+5. Announce the release using `docs/releases/` copy if applicable.

@@ -10,6 +10,12 @@
 - CycloneDX SBOM JSON
 - provenance attestation
 
+仓库还提供了一个自动验收 workflow：
+
+- `.github/workflows/release-artifact-smoke.yml`
+
+它会下载已经发布的 release 资产，校验 checksum，在干净环境里分别安装 wheel 和 source archive，并执行最小 CLI 与 `/health` 烟雾测试。
+
 ## 下载并校验
 
 从 Release 页面下载 wheel、source archive 和 `sha256sums.txt`。
@@ -44,6 +50,8 @@ python -m pip install ainews_open-X.Y.Z.tar.gz
 python -m ainews --help
 python -m ainews stats
 ```
+
+如果你想跑 GitHub 托管环境里的同等校验，直接对已发布 tag 重新执行 `Release Artifact Smoke` workflow。
 
 ## SBOM 和 Provenance
 

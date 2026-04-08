@@ -1,0 +1,115 @@
+name: Release Artifact Smoke
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to validate, for example v1.1.0
+        required: true
+        type: string
+
+concurrency:
+  group: release-artifact-smoke-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  install-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact:
+          - wheel
+          - sdist
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      AINEWS_HOME: ${{ github.workspace }}/.ainews-release-smoke
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Download release assets
+        run: |
+          mkdir -p dist
+          gh release download "${RELEASE_TAG}" \
+            --dir dist \
+            --pattern "*.whl" \
+            --pattern "*.tar.gz" \
+            --pattern "sha256sums.txt"
+          ls -la dist
+
+      - name: Verify release checksums
+        run: |
+          cd dist
+          sha256sum -c sha256sums.txt
+
+      - name: Install artifact
+        run: |
+          case "${{ matrix.artifact }}" in
+            wheel)
+              ARTIFACT_PATH="$(find dist -maxdepth 1 -type f -name '*.whl' | head -n 1)"
+              ;;
+            sdist)
+              ARTIFACT_PATH="$(find dist -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
+              ;;
+          esac
+          test -n "${ARTIFACT_PATH}"
+          python -m pip install --upgrade pip
+          python -m pip install "${ARTIFACT_PATH}"
+
+      - name: Run CLI smoke checks
+        run: |
+          mkdir -p "${AINEWS_HOME}"
+          python -m ainews --help
+          python -m ainews stats
+
+      - name: Start API and verify health
+        run: |
+          python -m uvicorn ainews.api:create_app --factory --host 127.0.0.1 --port 8001 >/tmp/ainews-release-smoke.log 2>&1 &
+          echo $! >/tmp/ainews-release-smoke.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8001/health >/tmp/ainews-release-health.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ainews-release-smoke.log
+          exit 1
+
+      - name: Validate health payload
+        run: |
+          python - <<'PY'
+          import json
+
+          with open("/tmp/ainews-release-health.json", "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          assert payload["ready"] is True
+          assert payload["checks"]["database"] == "ok"
+          assert payload["checks"]["sources"] == "ok"
+          assert "version" in payload
+          PY
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/ainews-release-smoke.pid ]; then
+            kill "$(cat /tmp/ainews-release-smoke.pid)" >/dev/null 2>&1 || true
+          fi
+          if [ -f /tmp/ainews-release-smoke.log ]; then
+            tail -n 200 /tmp/ainews-release-smoke.log
+          fi
