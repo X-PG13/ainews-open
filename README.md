@@ -66,8 +66,11 @@ After startup you can:
 ## Public Demo
 
 - Sample demo page: [docs/demo/index.html](docs/demo/index.html)
-- Sample digest markdown: [docs/demo/sample-digest.md](docs/demo/sample-digest.md)
+- Sample digest markdown (ZH): [docs/demo/sample-digest.md](docs/demo/sample-digest.md)
+- Sample digest markdown (EN): [docs/demo/sample-digest.en.md](docs/demo/sample-digest.en.md)
 - Sample digest JSON: [docs/demo/sample-digest.json](docs/demo/sample-digest.json)
+- Sample health payload: [docs/demo/sample-health.json](docs/demo/sample-health.json)
+- Sample publication history: [docs/demo/sample-publications.json](docs/demo/sample-publications.json)
 
 ## Maintainer Flow
 
@@ -76,15 +79,18 @@ python -m pip install -e ".[dev]"
 pre-commit install
 make check
 make coverage
+make smoke
 ```
 
 ## v1.0 Readiness Docs
 
 - [Compatibility Contract](docs/compatibility.md)
 - [Configuration Matrix](docs/configuration.md)
+- [First Deploy Guide](docs/first-deploy.md)
 - [Deployment Guide](docs/deployment.md)
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Use Cases](docs/use-cases.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
 - [Support Policy](SUPPORT.md)
 - [Roadmap](ROADMAP.md)

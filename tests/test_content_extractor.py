@@ -57,6 +57,16 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("首页 > 科技", content.text)
         self.assertNotIn("相关推荐 热门标签", content.text)
 
+    def test_extracts_international_openai_article_fixture(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-article.html"), url="https://openai.com/index/enterprise-model/"
+        )
+
+        self.assertEqual(content.title, "OpenAI launches a new enterprise reasoning model")
+        self.assertIn("OpenAI released a new model for enterprise deployment.", content.text)
+        self.assertNotIn("site nav", content.text)
+
     def test_fallback_parser_extracts_text_without_regex_block_stripping(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         with patch("ainews.content_extractor.BeautifulSoup", None):

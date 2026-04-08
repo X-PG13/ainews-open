@@ -66,8 +66,11 @@ python -m ainews serve --port 8000
 ## 公开 Demo
 
 - 示例页面：[docs/demo/index.html](docs/demo/index.html)
-- 示例日报 Markdown：[docs/demo/sample-digest.md](docs/demo/sample-digest.md)
+- 示例日报 Markdown（中文）：[docs/demo/sample-digest.md](docs/demo/sample-digest.md)
+- 示例日报 Markdown（英文）：[docs/demo/sample-digest.en.md](docs/demo/sample-digest.en.md)
 - 示例日报 JSON：[docs/demo/sample-digest.json](docs/demo/sample-digest.json)
+- 示例健康检查返回：[docs/demo/sample-health.json](docs/demo/sample-health.json)
+- 示例发布记录：[docs/demo/sample-publications.json](docs/demo/sample-publications.json)
 
 ## 维护者工作流
 
@@ -76,15 +79,18 @@ python -m pip install -e ".[dev]"
 pre-commit install
 make check
 make coverage
+make smoke
 ```
 
 ## v1.0 就绪文档
 
 - [兼容性约定](docs/compatibility.md)
 - [配置矩阵](docs/configuration.md)
-- [部署指南](docs/deployment.md)
+- [首次部署指南](docs/first-deploy.zh-CN.md)
+- [部署指南](docs/deployment.zh-CN.md)
 - [数据库迁移](docs/database-migrations.md)
 - [故障排查](docs/troubleshooting.md)
+- [使用场景](docs/use-cases.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)
 - [支持策略](SUPPORT.md)
 - [路线图](ROADMAP.md)

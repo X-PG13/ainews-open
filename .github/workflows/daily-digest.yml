@@ -5,9 +5,14 @@ on:
     - cron: "15 1 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: daily-digest-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     env:
       AINEWS_DATABASE_URL: sqlite:///data/ainews.db

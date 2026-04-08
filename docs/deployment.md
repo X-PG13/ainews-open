@@ -1,6 +1,10 @@
 # Deployment Guide
 
+[English](./deployment.md) · [简体中文](./deployment.zh-CN.md)
+
 This guide focuses on the fastest path from clone to a working pipeline, then shows how to run AI News Open in Docker, Docker Compose, `systemd`, and GitHub Actions.
+
+If you want the shortest onboarding path first, read [first-deploy.md](./first-deploy.md).
 
 For a variable-by-variable breakdown, see [configuration.md](./configuration.md).
 
@@ -142,6 +146,7 @@ Use it when:
 The repository also includes:
 
 - [ci.yml](../.github/workflows/ci.yml) for matrix test, coverage, and build checks
+- [smoke.yml](../.github/workflows/smoke.yml) for install-and-health smoke validation
 - [release.yml](../.github/workflows/release.yml) for tag-based release builds, checksums, SBOM, and provenance
 - [pypi-publish.yml](../.github/workflows/pypi-publish.yml) for trusted PyPI publishing
 - [demo-pages.yml](../.github/workflows/demo-pages.yml) for publishing the sample demo to GitHub Pages

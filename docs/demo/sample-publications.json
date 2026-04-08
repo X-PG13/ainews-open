@@ -1,0 +1,22 @@
+{
+  "publications": [
+    {
+      "id": 21,
+      "digest_id": 7,
+      "target": "static_site",
+      "status": "ok",
+      "external_id": "static:index",
+      "message": "published static site bundle",
+      "created_at": "2026-04-08T09:00:00+08:00"
+    },
+    {
+      "id": 22,
+      "digest_id": 7,
+      "target": "wechat",
+      "status": "pending",
+      "external_id": "PUBLISH123",
+      "message": "wechat publish in progress",
+      "created_at": "2026-04-08T09:02:00+08:00"
+    }
+  ]
+}

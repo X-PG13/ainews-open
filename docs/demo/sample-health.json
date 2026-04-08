@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "ready": true,
+  "schema_version": 3,
+  "version": "1.0.0",
+  "checks": {
+    "database": "ok",
+    "sources": "ok"
+  },
+  "degraded_reasons": [],
+  "stats": {
+    "total_articles": 128,
+    "stored_digests": 12,
+    "publication_errors": 0
+  }
+}

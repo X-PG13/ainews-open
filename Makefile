@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build sbom check serve test coverage
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build sbom check serve test coverage smoke
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -47,3 +47,15 @@ test:
 coverage:
 	$(PYTHON) -m coverage run -m unittest discover -s tests -v
 	$(PYTHON) -m coverage report
+
+smoke:
+	@AINEWS_HOME="$(CURDIR)/.ainews-smoke" $(PYTHON) -m uvicorn ainews.api:create_app --factory --host 127.0.0.1 --port 8001 >/tmp/ainews-smoke.log 2>&1 & \
+	PID=$$!; \
+	trap 'kill $$PID >/dev/null 2>&1 || true' EXIT; \
+	for attempt in $$(seq 1 30); do \
+		if curl -fsS http://127.0.0.1:8001/health >/tmp/ainews-smoke-health.json; then \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	$(PYTHON) -c 'import json; payload=json.load(open("/tmp/ainews-smoke-health.json", "r", encoding="utf-8")); assert payload["ready"] is True'

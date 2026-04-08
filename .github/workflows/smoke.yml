@@ -1,0 +1,83 @@
+name: Smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "pyproject.toml"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "Makefile"
+      - ".github/workflows/smoke.yml"
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      AINEWS_HOME: ${{ github.workspace }}/.ainews-smoke
+      AINEWS_ADMIN_TOKEN: smoke-token
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install package
+        run: python -m pip install --upgrade pip && python -m pip install .
+
+      - name: Prepare example env for Compose validation
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config -q
+
+      - name: Start API
+        run: |
+          mkdir -p "${AINEWS_HOME}"
+          python -m uvicorn ainews.api:create_app --factory --host 127.0.0.1 --port 8001 >/tmp/ainews-smoke.log 2>&1 &
+          echo $! >/tmp/ainews-smoke.pid
+
+      - name: Wait for health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8001/health >/tmp/health.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/ainews-smoke.log
+          exit 1
+
+      - name: Validate health payload
+        run: |
+          python - <<'PY'
+          import json
+
+          with open("/tmp/health.json", "r", encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          assert payload["ready"] is True
+          assert payload["checks"]["database"] == "ok"
+          assert payload["checks"]["sources"] == "ok"
+          assert "version" in payload
+          PY
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/ainews-smoke.pid ]; then
+            kill "$(cat /tmp/ainews-smoke.pid)" >/dev/null 2>&1 || true
+          fi
+          if [ -f /tmp/ainews-smoke.log ]; then
+            tail -n 200 /tmp/ainews-smoke.log
+          fi
