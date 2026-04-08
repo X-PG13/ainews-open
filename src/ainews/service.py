@@ -18,6 +18,7 @@ from .telemetry import OperationTracker
 from .utils import clean_text, format_local_date, matches_keywords, truncate_text
 
 EXPORT_SCHEMA_VERSION = "1.0"
+PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
 logger = logging.getLogger("ainews.service")
 
 
@@ -176,10 +177,10 @@ class NewsService:
             except Exception as exc:  # pragma: no cover
                 category = self._classify_error(exc)
                 status["status"] = "error"
-                status["error"] = str(exc)
+                status["error"] = self._public_error_message(exc)
                 status["error_category"] = category
                 failure_categories[category] += 1
-                logger.warning(
+                logger.exception(
                     "ingest source failed",
                     extra={
                         "event": "ingest.source_error",
@@ -313,18 +314,27 @@ class NewsService:
                 updated += 1
             except Exception as exc:
                 category = self._classify_error(exc)
+                public_error = self._public_error_message(exc)
+                logger.exception(
+                    "article enrichment failed",
+                    extra={
+                        "event": "enrich.article_error",
+                        "article_id": int(article["id"]),
+                        "error_category": category,
+                    },
+                )
                 self.repository.mark_article_enrichment_error(
                     int(article["id"]),
                     provider=self.settings.llm_provider,
                     model=self.settings.llm_model,
-                    error=str(exc),
+                    error=public_error,
                 )
                 results.append(
                     {
                         "article_id": article["id"],
                         "status": "error",
                         "title": article["title"],
-                        "error": str(exc),
+                        "error": public_error,
                         "error_category": category,
                     }
                 )
@@ -408,16 +418,25 @@ class NewsService:
                 updated += 1
             except Exception as exc:
                 category = self._classify_error(exc)
+                public_error = self._public_error_message(exc)
+                logger.exception(
+                    "article extraction failed",
+                    extra={
+                        "event": "extract.article_error",
+                        "article_id": int(article["id"]),
+                        "error_category": category,
+                    },
+                )
                 self.repository.mark_article_extraction_error(
                     int(article["id"]),
-                    error=str(exc),
+                    error=public_error,
                 )
                 results.append(
                     {
                         "article_id": article["id"],
                         "status": "error",
                         "title": article["title"],
-                        "error": str(exc),
+                        "error": public_error,
                         "error_category": category,
                     }
                 )
@@ -568,13 +587,23 @@ class NewsService:
                 refreshed += 1
             except Exception as exc:
                 category = self._classify_error(exc)
+                public_error = self._public_error_message(exc)
+                logger.exception(
+                    "publication refresh failed",
+                    extra={
+                        "event": "publication.refresh_error",
+                        "publication_id": int(publication["id"]),
+                        "target": publication["target"],
+                        "error_category": category,
+                    },
+                )
                 stored = self.repository.update_publication(
                     int(publication["id"]),
                     status="error",
-                    message=str(exc),
+                    message=public_error,
                     response_payload=self._merge_publication_response(
                         publication.get("response_payload"),
-                        {"status_query_error": {"message": str(exc)}},
+                        {"status_query_error": {"message": public_error}},
                     ),
                 )
                 results.append(
@@ -582,7 +611,7 @@ class NewsService:
                         "publication_id": publication["id"],
                         "target": publication["target"],
                         "status": "error",
-                        "message": str(exc),
+                        "message": public_error,
                         "error_category": category,
                         "publication": stored or publication,
                     }
@@ -1091,9 +1120,17 @@ class NewsService:
             )
             return updated or article
         except Exception as exc:
+            logger.exception(
+                "best-effort extraction for enrichment failed",
+                extra={
+                    "event": "enrich.extract_error",
+                    "article_id": int(article["id"]),
+                    "error_category": self._classify_error(exc),
+                },
+            )
             self.repository.mark_article_extraction_error(
                 int(article["id"]),
-                error=str(exc),
+                error=self._public_error_message(exc),
             )
             return article
 
@@ -1169,6 +1206,10 @@ class NewsService:
     @classmethod
     def _classify_error(cls, exc: Exception) -> str:
         return cls._classify_error_message(str(exc))
+
+    @staticmethod
+    def _public_error_message(exc: Exception) -> str:
+        return PUBLIC_ERROR_MESSAGE
 
     @staticmethod
     def _classify_error_message(message: str) -> str:

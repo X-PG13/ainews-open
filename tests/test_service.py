@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,7 +8,7 @@ from ainews.content_extractor import ExtractedContent
 from ainews.models import ArticleEnrichment, ArticleRecord, DailyDigest, SourceDefinition
 from ainews.publisher import PublicationResult
 from ainews.repository import ArticleRepository
-from ainews.service import NewsService
+from ainews.service import PUBLIC_ERROR_MESSAGE, NewsService
 from ainews.source_registry import SourceRegistry
 from ainews.utils import make_content_hash, make_dedup_key, utc_now
 
@@ -73,6 +74,11 @@ class StubExtractor:
 class FailingExtractor:
     def fetch_and_extract(self, url):
         raise TimeoutError("request timed out while fetching article")
+
+
+class LeakyExtractor:
+    def fetch_and_extract(self, url):
+        raise RuntimeError("internal extractor path leaked: /srv/private")
 
 
 class StubPublisher:
@@ -732,6 +738,143 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertTrue(health["ready"])
             self.assertIn("article_extraction_errors", health["degraded_reasons"])
             self.assertIn("extract", health["operations"])
+
+    def test_extract_articles_masks_internal_error_details(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=LeakyExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+
+            self.assertEqual(result["articles"][0]["error"], PUBLIC_ERROR_MESSAGE)
+            self.assertEqual(article["extraction_error"], PUBLIC_ERROR_MESSAGE)
+            self.assertNotIn("/srv/private", json.dumps(result))
+
+    def test_enrich_articles_masks_internal_error_details(self) -> None:
+        class FailingLLMClient(StubLLMClient):
+            def enrich_article(self, article):
+                raise RuntimeError("llm secret leaked: sk-test")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                llm_base_url="https://example.com/v1",
+                llm_api_key="token",
+                llm_model="stub-model",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=FailingLLMClient(),
+                content_extractor=StubExtractor(),
+            )
+
+            result = service.enrich_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+
+            self.assertEqual(result["articles"][0]["error"], PUBLIC_ERROR_MESSAGE)
+            self.assertEqual(article["llm_error"], PUBLIC_ERROR_MESSAGE)
+            self.assertNotIn("sk-test", json.dumps(result))
+
+    def test_refresh_publications_masks_internal_error_details(self) -> None:
+        class FailingRefreshPublisher(StubPublisher):
+            def refresh_publication(self, publication):
+                raise RuntimeError("wechat token leaked: abc123")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            publication = repository.save_publication(
+                digest_id=None,
+                target="wechat",
+                status="pending",
+                external_id="PUBLISH123",
+                message="wechat draft created and publish submitted",
+                response_payload={"publish": {"publish_id": "PUBLISH123"}},
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                publisher=FailingRefreshPublisher(),
+            )
+
+            result = service.refresh_publications(
+                publication_ids=[int(publication["id"])],
+                target="wechat",
+                only_pending=True,
+            )
+            refreshed = repository.get_publication(int(publication["id"]))
+
+            self.assertEqual(result["publications"][0]["message"], PUBLIC_ERROR_MESSAGE)
+            self.assertEqual(refreshed["message"], PUBLIC_ERROR_MESSAGE)
+            self.assertEqual(
+                refreshed["response_payload"]["status_query_error"]["message"],
+                PUBLIC_ERROR_MESSAGE,
+            )
+            self.assertNotIn("abc123", json.dumps(result))
 
     def test_stats_include_operation_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
