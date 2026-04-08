@@ -14,6 +14,10 @@ ARTICLE_EXTRA_COLUMNS = {
     "extraction_status": "TEXT NOT NULL DEFAULT 'pending'",
     "extraction_error": "TEXT NOT NULL DEFAULT ''",
     "extraction_updated_at": "TEXT NOT NULL DEFAULT ''",
+    "extraction_attempts": "INTEGER NOT NULL DEFAULT 0",
+    "extraction_last_http_status": "INTEGER NOT NULL DEFAULT 0",
+    "extraction_next_retry_at": "TEXT NOT NULL DEFAULT ''",
+    "extraction_error_category": "TEXT NOT NULL DEFAULT ''",
     "llm_title_zh": "TEXT NOT NULL DEFAULT ''",
     "llm_summary_zh": "TEXT NOT NULL DEFAULT ''",
     "llm_brief_zh": "TEXT NOT NULL DEFAULT ''",
@@ -31,7 +35,7 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 
 
 class ArticleRepository:
@@ -74,6 +78,10 @@ class ArticleRepository:
                     extraction_status TEXT NOT NULL DEFAULT 'pending',
                     extraction_error TEXT NOT NULL DEFAULT '',
                     extraction_updated_at TEXT NOT NULL DEFAULT '',
+                    extraction_attempts INTEGER NOT NULL DEFAULT 0,
+                    extraction_last_http_status INTEGER NOT NULL DEFAULT 0,
+                    extraction_next_retry_at TEXT NOT NULL DEFAULT '',
+                    extraction_error_category TEXT NOT NULL DEFAULT '',
                     llm_title_zh TEXT NOT NULL DEFAULT '',
                     llm_summary_zh TEXT NOT NULL DEFAULT '',
                     llm_brief_zh TEXT NOT NULL DEFAULT '',
@@ -204,6 +212,8 @@ class ArticleRepository:
         payload = dict(row)
         payload["is_hidden"] = bool(payload.get("is_hidden"))
         payload["is_pinned"] = bool(payload.get("is_pinned"))
+        payload["extraction_attempts"] = int(payload.get("extraction_attempts") or 0)
+        payload["extraction_last_http_status"] = int(payload.get("extraction_last_http_status") or 0)
         return payload
 
     def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
@@ -308,6 +318,10 @@ class ArticleRepository:
                 extraction_status,
                 extraction_error,
                 extraction_updated_at,
+                extraction_attempts,
+                extraction_last_http_status,
+                extraction_next_retry_at,
+                extraction_error_category,
                 llm_title_zh,
                 llm_summary_zh,
                 llm_brief_zh,
@@ -351,6 +365,10 @@ class ArticleRepository:
                     extraction_status,
                     extraction_error,
                     extraction_updated_at,
+                    extraction_attempts,
+                    extraction_last_http_status,
+                    extraction_next_retry_at,
+                    extraction_error_category,
                     llm_title_zh,
                     llm_summary_zh,
                     llm_brief_zh,
@@ -427,6 +445,10 @@ class ArticleRepository:
                     extraction_status,
                     extraction_error,
                     extraction_updated_at,
+                    extraction_attempts,
+                    extraction_last_http_status,
+                    extraction_next_retry_at,
+                    extraction_error_category,
                     llm_title_zh,
                     llm_summary_zh,
                     llm_brief_zh,
@@ -476,7 +498,19 @@ class ArticleRepository:
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         if not force:
-            clauses.append("extraction_status NOT IN ('ready', 'skipped')")
+            retry_threshold = utc_now().isoformat()
+            clauses.append(
+                """
+                (
+                    extraction_status = 'pending'
+                    OR (
+                        extraction_status IN ('error', 'throttled', 'temporary_error')
+                        AND (extraction_next_retry_at = '' OR extraction_next_retry_at <= ?)
+                    )
+                )
+                """
+            )
+            params.append(retry_threshold)
 
         params.append(limit)
         where_sql = "WHERE " + " AND ".join(clauses)
@@ -502,6 +536,10 @@ class ArticleRepository:
                     extraction_status,
                     extraction_error,
                     extraction_updated_at,
+                    extraction_attempts,
+                    extraction_last_http_status,
+                    extraction_next_retry_at,
+                    extraction_error_category,
                     llm_title_zh,
                     llm_summary_zh,
                     llm_brief_zh,
@@ -573,6 +611,10 @@ class ArticleRepository:
                     extraction_status,
                     extraction_error,
                     extraction_updated_at,
+                    extraction_attempts,
+                    extraction_last_http_status,
+                    extraction_next_retry_at,
+                    extraction_error_category,
                     llm_title_zh,
                     llm_summary_zh,
                     llm_brief_zh,
@@ -607,12 +649,52 @@ class ArticleRepository:
                     extracted_text = ?,
                     extraction_status = 'ready',
                     extraction_error = '',
-                    extraction_updated_at = ?
+                    extraction_updated_at = ?,
+                    extraction_attempts = extraction_attempts + 1,
+                    extraction_last_http_status = 0,
+                    extraction_next_retry_at = '',
+                    extraction_error_category = ''
                 WHERE id = ?
                 """,
                 (
                     extracted_text,
                     utc_now().isoformat(),
+                    article_id,
+                ),
+            )
+        return self.get_article(article_id)
+
+    def mark_article_extraction_failure(
+        self,
+        article_id: int,
+        *,
+        error: str,
+        status: str,
+        error_category: str,
+        http_status: int = 0,
+        next_retry_at: str = "",
+    ) -> Optional[dict]:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE articles
+                SET
+                    extraction_status = ?,
+                    extraction_error = ?,
+                    extraction_updated_at = ?,
+                    extraction_attempts = extraction_attempts + 1,
+                    extraction_last_http_status = ?,
+                    extraction_next_retry_at = ?,
+                    extraction_error_category = ?
+                WHERE id = ?
+                """,
+                (
+                    status,
+                    error,
+                    utc_now().isoformat(),
+                    http_status,
+                    next_retry_at,
+                    error_category,
                     article_id,
                 ),
             )
@@ -739,6 +821,10 @@ class ArticleRepository:
                         extraction_status = ?,
                         extraction_error = ?,
                         extraction_updated_at = ?,
+                        extraction_attempts = ?,
+                        extraction_last_http_status = ?,
+                        extraction_next_retry_at = ?,
+                        extraction_error_category = ?,
                         llm_title_zh = ?,
                         llm_summary_zh = ?,
                         llm_brief_zh = ?,
@@ -762,6 +848,10 @@ class ArticleRepository:
                         merged_payload["extraction_status"],
                         merged_payload["extraction_error"],
                         merged_payload["extraction_updated_at"],
+                        merged_payload["extraction_attempts"],
+                        merged_payload["extraction_last_http_status"],
+                        merged_payload["extraction_next_retry_at"],
+                        merged_payload["extraction_error_category"],
                         merged_payload["llm_title_zh"],
                         merged_payload["llm_summary_zh"],
                         merged_payload["llm_brief_zh"],
@@ -798,9 +888,12 @@ class ArticleRepository:
             str(target.get("extracted_text") or ""),
             str(source.get("extracted_text") or ""),
         )
-        extraction_status = "ready" if extracted_text else ArticleRepository._best_status(
-            str(target.get("extraction_status") or "pending"),
-            str(source.get("extraction_status") or "pending"),
+        target_extraction_status = str(target.get("extraction_status") or "pending")
+        source_extraction_status = str(source.get("extraction_status") or "pending")
+        extraction_status = (
+            "ready"
+            if extracted_text
+            else ArticleRepository._best_status(target_extraction_status, source_extraction_status)
         )
         llm_title_zh = ArticleRepository._prefer_longer_text(
             str(target.get("llm_title_zh") or ""),
@@ -869,6 +962,24 @@ class ArticleRepository:
                 str(target.get("extraction_updated_at") or ""),
                 str(source.get("extraction_updated_at") or ""),
             ),
+            "extraction_attempts": int(target.get("extraction_attempts") or 0)
+            + int(source.get("extraction_attempts") or 0),
+            "extraction_last_http_status": ArticleRepository._max_int(
+                int(target.get("extraction_last_http_status") or 0),
+                int(source.get("extraction_last_http_status") or 0),
+            ),
+            "extraction_next_retry_at": ""
+            if extraction_status == "ready"
+            else ArticleRepository._max_text(
+                str(target.get("extraction_next_retry_at") or ""),
+                str(source.get("extraction_next_retry_at") or ""),
+            ),
+            "extraction_error_category": ""
+            if extraction_status == "ready"
+            else ArticleRepository._best_status(
+                str(target.get("extraction_error_category") or ""),
+                str(source.get("extraction_error_category") or ""),
+            ),
             "llm_title_zh": llm_title_zh,
             "llm_summary_zh": llm_summary_zh,
             "llm_brief_zh": llm_brief_zh,
@@ -900,7 +1011,17 @@ class ArticleRepository:
 
     @staticmethod
     def _status_rank(value: str) -> int:
-        return {"pending": 0, "skipped": 1, "error": 2, "ready": 3}.get(value, 0)
+        return {
+            "": 0,
+            "pending": 1,
+            "skipped": 2,
+            "throttled": 3,
+            "temporary_error": 4,
+            "error": 4,
+            "blocked": 5,
+            "permanent_error": 6,
+            "ready": 7,
+        }.get(value, 0)
 
     @staticmethod
     def _best_status(left: str, right: str) -> str:
@@ -919,6 +1040,10 @@ class ArticleRepository:
     def _max_text(left: str, right: str) -> str:
         values = [item for item in (left, right) if item]
         return max(values) if values else ""
+
+    @staticmethod
+    def _max_int(left: int, right: int) -> int:
+        return max(left, right)
 
     @staticmethod
     def _merge_editorial_notes(left: str, right: str) -> str:
@@ -965,23 +1090,12 @@ class ArticleRepository:
         *,
         error: str,
     ) -> Optional[dict]:
-        with self._connect() as connection:
-            connection.execute(
-                """
-                UPDATE articles
-                SET
-                    extraction_status = 'error',
-                    extraction_error = ?,
-                    extraction_updated_at = ?
-                WHERE id = ?
-                """,
-                (
-                    error,
-                    utc_now().isoformat(),
-                    article_id,
-                ),
+        return self.mark_article_extraction_failure(
+            article_id,
+            error=error,
+            status="error",
+            error_category="temporary_error",
         )
-        return self.get_article(article_id)
 
     def mark_article_extraction_skipped(
         self,
@@ -996,7 +1110,11 @@ class ArticleRepository:
                 SET
                     extraction_status = 'skipped',
                     extraction_error = ?,
-                    extraction_updated_at = ?
+                    extraction_updated_at = ?,
+                    extraction_attempts = extraction_attempts + 1,
+                    extraction_last_http_status = 0,
+                    extraction_next_retry_at = '',
+                    extraction_error_category = ''
                 WHERE id = ?
                 """,
                 (
@@ -1446,11 +1564,17 @@ class ArticleRepository:
                     SUM(CASE WHEN is_pinned = 1 THEN 1 ELSE 0 END) AS pinned_articles,
                     SUM(CASE WHEN extraction_status = 'ready' THEN 1 ELSE 0 END) AS extracted_articles,
                     SUM(CASE WHEN extraction_status = 'skipped' THEN 1 ELSE 0 END) AS skipped_extractions,
-                    SUM(CASE WHEN extraction_status = 'error' THEN 1 ELSE 0 END) AS extraction_errors,
+                    SUM(CASE WHEN extraction_status IN ('error', 'throttled', 'blocked', 'temporary_error', 'permanent_error') THEN 1 ELSE 0 END) AS extraction_errors,
+                    SUM(CASE WHEN extraction_status = 'throttled' THEN 1 ELSE 0 END) AS throttled_extractions,
+                    SUM(CASE WHEN extraction_status = 'blocked' THEN 1 ELSE 0 END) AS blocked_extractions,
+                    SUM(CASE WHEN extraction_status IN ('error', 'temporary_error') THEN 1 ELSE 0 END) AS temporary_extraction_errors,
+                    SUM(CASE WHEN extraction_status = 'permanent_error' THEN 1 ELSE 0 END) AS permanent_extraction_errors,
+                    SUM(CASE WHEN extraction_next_retry_at != '' AND extraction_next_retry_at > ? THEN 1 ELSE 0 END) AS scheduled_extraction_retries,
                     SUM(CASE WHEN llm_status = 'ready' THEN 1 ELSE 0 END) AS enriched_articles,
                     SUM(CASE WHEN llm_status = 'error' THEN 1 ELSE 0 END) AS llm_errors
                 FROM articles
-                """
+                """,
+                (utc_now().isoformat(),),
             ).fetchone()
             digest_row = connection.execute(
                 "SELECT COUNT(*) AS total_digests FROM digests"
@@ -1474,8 +1598,31 @@ class ArticleRepository:
                 ORDER BY total DESC
                 """
             ).fetchall()
+            extraction_status_rows = connection.execute(
+                """
+                SELECT extraction_status AS status, COUNT(*) AS total
+                FROM articles
+                GROUP BY extraction_status
+                ORDER BY total DESC
+                """
+            ).fetchall()
+            extraction_category_rows = connection.execute(
+                """
+                SELECT extraction_error_category AS category, COUNT(*) AS total
+                FROM articles
+                WHERE extraction_error_category != ''
+                GROUP BY extraction_error_category
+                ORDER BY total DESC
+                """
+            ).fetchall()
         publication_status_counts = {
             str(row["status"]): int(row["total"] or 0) for row in publication_status_rows
+        }
+        extraction_status_counts = {
+            str(row["status"]): int(row["total"] or 0) for row in extraction_status_rows
+        }
+        extraction_error_categories = {
+            str(row["category"]): int(row["total"] or 0) for row in extraction_category_rows
         }
 
         return {
@@ -1487,6 +1634,13 @@ class ArticleRepository:
             "extracted_articles": int(totals_row["extracted_articles"] or 0),
             "skipped_extractions": int(totals_row["skipped_extractions"] or 0),
             "extraction_errors": int(totals_row["extraction_errors"] or 0),
+            "throttled_extractions": int(totals_row["throttled_extractions"] or 0),
+            "blocked_extractions": int(totals_row["blocked_extractions"] or 0),
+            "temporary_extraction_errors": int(totals_row["temporary_extraction_errors"] or 0),
+            "permanent_extraction_errors": int(totals_row["permanent_extraction_errors"] or 0),
+            "scheduled_extraction_retries": int(totals_row["scheduled_extraction_retries"] or 0),
+            "extraction_status_counts": extraction_status_counts,
+            "extraction_error_categories": extraction_error_categories,
             "enriched_articles": int(totals_row["enriched_articles"] or 0),
             "llm_errors": int(totals_row["llm_errors"] or 0),
             "total_digests": int(digest_row["total_digests"] or 0),

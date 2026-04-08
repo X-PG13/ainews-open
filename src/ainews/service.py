@@ -3,10 +3,16 @@ from __future__ import annotations
 import json
 import logging
 from collections import Counter
+from datetime import timedelta
 from typing import Dict, Iterable, List, Optional
+from urllib.error import HTTPError, URLError
 
 from .config import Settings, load_settings
-from .content_extractor import ArticleContentExtractor, ExtractionSkippedError
+from .content_extractor import (
+    ArticleContentExtractor,
+    ExtractionBlockedError,
+    ExtractionSkippedError,
+)
 from .feed_parser import parse_feed_document, replace_article_url
 from .google_news import GoogleNewsResolutionError, GoogleNewsURLResolver, is_google_news_url
 from .http import fetch_text
@@ -16,7 +22,7 @@ from .publisher import DigestPublisher
 from .repository import ArticleRepository
 from .source_registry import SourceRegistry
 from .telemetry import OperationTracker
-from .utils import clean_text, format_local_date, matches_keywords, truncate_text
+from .utils import clean_text, format_local_date, matches_keywords, truncate_text, utc_now
 
 EXPORT_SCHEMA_VERSION = "1.0"
 PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
@@ -89,6 +95,10 @@ class NewsService:
         degraded_reasons: List[str] = []
         if stats["extraction_errors"]:
             degraded_reasons.append("article_extraction_errors")
+        if stats["throttled_extractions"]:
+            degraded_reasons.append("article_extraction_throttled")
+        if stats["blocked_extractions"]:
+            degraded_reasons.append("article_extraction_blocked")
         if stats["llm_errors"]:
             degraded_reasons.append("llm_enrichment_errors")
         if stats["publication_errors"]:
@@ -125,10 +135,17 @@ class NewsService:
                 "total_articles": stats["total_articles"],
                 "extraction_errors": stats["extraction_errors"],
                 "skipped_extractions": stats["skipped_extractions"],
+                "throttled_extractions": stats["throttled_extractions"],
+                "blocked_extractions": stats["blocked_extractions"],
+                "temporary_extraction_errors": stats["temporary_extraction_errors"],
+                "permanent_extraction_errors": stats["permanent_extraction_errors"],
+                "scheduled_extraction_retries": stats["scheduled_extraction_retries"],
                 "llm_errors": stats["llm_errors"],
                 "pending_publications": stats["pending_publications"],
                 "publication_errors": stats["publication_errors"],
             },
+            "extraction_status_counts": stats["extraction_status_counts"],
+            "extraction_error_categories": stats["extraction_error_categories"],
             "operations": telemetry["operations"],
             "failure_categories": telemetry["failure_categories"],
         }
@@ -595,31 +612,38 @@ class NewsService:
                 )
                 skipped += 1
             except Exception as exc:
-                category = self._classify_error(exc)
+                failure = self._classify_extraction_failure(exc, attempts=int(article.get("extraction_attempts") or 0))
                 public_error = self._public_error_message(exc)
                 logger.exception(
                     "article extraction failed",
                     extra={
                         "event": "extract.article_error",
                         "article_id": int(article["id"]),
-                        "error_category": category,
+                        "error_category": failure["error_category"],
+                        "http_status": failure["http_status"],
                     },
                 )
-                self.repository.mark_article_extraction_error(
+                self.repository.mark_article_extraction_failure(
                     int(article["id"]),
                     error=public_error,
+                    status=str(failure["status"]),
+                    error_category=str(failure["error_category"]),
+                    http_status=int(failure["http_status"]),
+                    next_retry_at=str(failure["next_retry_at"]),
                 )
                 results.append(
                     {
                         "article_id": article["id"],
-                        "status": "error",
+                        "status": str(failure["status"]),
                         "title": article["title"],
                         "error": public_error,
-                        "error_category": category,
+                        "error_category": str(failure["error_category"]),
+                        "http_status": int(failure["http_status"]),
+                        "next_retry_at": str(failure["next_retry_at"]),
                     }
                 )
                 errors += 1
-                failure_categories[category] += 1
+                failure_categories[str(failure["error_category"])] += 1
 
         payload = {
             "status": "partial_error" if errors else "ok",
@@ -1292,6 +1316,8 @@ class NewsService:
     def _maybe_extract_article_for_enrichment(self, article: dict) -> dict:
         if clean_text(str(article.get("extracted_text", ""))):
             return article
+        if not self._should_attempt_inline_extraction(article):
+            return article
         try:
             extracted = self.content_extractor.fetch_and_extract(str(article["url"]))
             updated = self._store_extracted_article(article, extracted)
@@ -1302,14 +1328,35 @@ class NewsService:
                 extra={
                     "event": "enrich.extract_error",
                     "article_id": int(article["id"]),
-                    "error_category": self._classify_error(exc),
+                    "error_category": self._classify_extraction_failure(
+                        exc,
+                        attempts=int(article.get("extraction_attempts") or 0),
+                    )["error_category"],
                 },
             )
-            self.repository.mark_article_extraction_error(
+            failure = self._classify_extraction_failure(
+                exc,
+                attempts=int(article.get("extraction_attempts") or 0),
+            )
+            self.repository.mark_article_extraction_failure(
                 int(article["id"]),
                 error=self._public_error_message(exc),
+                status=str(failure["status"]),
+                error_category=str(failure["error_category"]),
+                http_status=int(failure["http_status"]),
+                next_retry_at=str(failure["next_retry_at"]),
             )
             return article
+
+    @staticmethod
+    def _should_attempt_inline_extraction(article: dict) -> bool:
+        status = clean_text(str(article.get("extraction_status", ""))) or "pending"
+        if status in {"blocked", "permanent_error", "skipped", "ready"}:
+            return False
+        retry_at = clean_text(str(article.get("extraction_next_retry_at", "")))
+        if retry_at and retry_at > utc_now().isoformat():
+            return False
+        return True
 
     def _store_extracted_article(self, article: dict, extracted: object) -> Optional[dict]:
         article_id = int(article["id"])
@@ -1449,9 +1496,61 @@ class NewsService:
     def _classify_error(cls, exc: Exception) -> str:
         return cls._classify_error_message(str(exc))
 
+    @classmethod
+    def _classify_extraction_failure(cls, exc: Exception, *, attempts: int) -> Dict[str, object]:
+        http_status = cls._http_status_from_exception(exc)
+        message = clean_text(str(exc)).lower()
+
+        if isinstance(exc, ExtractionBlockedError):
+            category = "blocked"
+        elif http_status == 429 or "too many requests" in message or "rate limit" in message:
+            category = "throttled"
+        elif http_status in {401, 403}:
+            category = "blocked"
+        elif isinstance(exc, (TimeoutError, URLError)) or (500 <= http_status < 600):
+            category = "temporary_error"
+        elif http_status in {404, 410, 451}:
+            category = "permanent_error"
+        elif "captcha" in message or "challenge" in message or "verify you are human" in message:
+            category = "blocked"
+        elif "too short" in message or "unsupported" in message or "invalid" in message:
+            category = "permanent_error"
+        else:
+            category = "temporary_error"
+
+        next_retry_at = cls._next_extraction_retry_at(category, attempts=attempts)
+        return {
+            "status": category,
+            "error_category": category,
+            "http_status": http_status,
+            "next_retry_at": next_retry_at,
+        }
+
     @staticmethod
     def _public_error_message(exc: Exception) -> str:
         return PUBLIC_ERROR_MESSAGE
+
+    @staticmethod
+    def _http_status_from_exception(exc: Exception) -> int:
+        if isinstance(exc, HTTPError):
+            try:
+                return int(exc.code)
+            except (TypeError, ValueError):
+                return 0
+        return 0
+
+    @staticmethod
+    def _next_extraction_retry_at(category: str, *, attempts: int) -> str:
+        if category == "throttled":
+            delay_minutes = min(24 * 60, 30 * (2 ** min(attempts, 4)))
+            return (utc_now() + timedelta(minutes=delay_minutes)).isoformat()
+        if category == "blocked":
+            delay_hours = min(72, 24 * max(1, attempts + 1))
+            return (utc_now() + timedelta(hours=delay_hours)).isoformat()
+        if category == "temporary_error":
+            delay_minutes = min(12 * 60, 15 * (2 ** min(attempts, 4)))
+            return (utc_now() + timedelta(minutes=delay_minutes)).isoformat()
+        return ""
 
     @staticmethod
     def _classify_error_message(message: str) -> str:

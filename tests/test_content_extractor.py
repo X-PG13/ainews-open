@@ -2,7 +2,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ainews.content_extractor import ArticleContentExtractor, ExtractionSkippedError
+from ainews.content_extractor import (
+    ArticleContentExtractor,
+    ExtractionBlockedError,
+    ExtractionSkippedError,
+)
 
 HTML_SAMPLE = """
 <html>
@@ -160,6 +164,23 @@ class ContentExtractorTestCase(unittest.TestCase):
             extractor.extract_from_html(
                 _fixture("google-news-aggregate.html"),
                 url="https://news.google.com/rss/articles/demo?oc=5",
+            )
+
+    def test_detects_access_challenge_page_as_blocked(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+
+        with self.assertRaisesRegex(ExtractionBlockedError, "anti-bot challenge"):
+            extractor.extract_from_html(
+                """
+                <html>
+                  <head><title>Attention Required</title></head>
+                  <body>
+                    <h1>Verify you are human</h1>
+                    <p>Please enable JavaScript and cookies to continue.</p>
+                  </body>
+                </html>
+                """,
+                url="https://venturebeat.com/ai/story",
             )
 
     def test_fetch_and_extract_resolves_google_news_wrapper_before_extracting(self) -> None:

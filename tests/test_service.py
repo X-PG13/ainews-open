@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from ainews.config import Settings
 from ainews.content_extractor import ExtractedContent, ExtractionSkippedError
@@ -75,6 +76,16 @@ class StubExtractor:
 class FailingExtractor:
     def fetch_and_extract(self, url):
         raise TimeoutError("request timed out while fetching article")
+
+
+class ThrottledExtractor:
+    def fetch_and_extract(self, url):
+        raise HTTPError(url, 429, "Too Many Requests", hdrs=None, fp=None)
+
+
+class ForbiddenExtractor:
+    def fetch_and_extract(self, url):
+        raise HTTPError(url, 403, "Forbidden", hdrs=None, fp=None)
 
 
 class LeakyExtractor:
@@ -769,11 +780,217 @@ class ServiceFilterTestCase(unittest.TestCase):
             health = service.get_health()
 
             self.assertEqual(result["status"], "partial_error")
-            self.assertEqual(result["failure_categories"]["timeout"], 1)
+            self.assertEqual(result["failure_categories"]["temporary_error"], 1)
             self.assertEqual(health["status"], "degraded")
             self.assertTrue(health["ready"])
             self.assertIn("article_extraction_errors", health["degraded_reasons"])
             self.assertIn("extract", health["operations"])
+
+    def test_extract_articles_classifies_http_429_as_throttled_and_defers_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="venturebeat",
+                    source_name="VentureBeat",
+                    title="AI infrastructure story",
+                    url="https://venturebeat.com/ai/story",
+                    canonical_url="https://venturebeat.com/ai/story",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("AI infrastructure story", "A release update"),
+                    dedup_key=make_dedup_key("AI infrastructure story"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ThrottledExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+            queued = repository.list_articles_for_extraction(limit=10, force=False)
+            health = service.get_health()
+            stats = service.get_stats()
+
+            self.assertEqual(result["status"], "partial_error")
+            self.assertEqual(result["articles"][0]["status"], "throttled")
+            self.assertEqual(result["articles"][0]["error_category"], "throttled")
+            self.assertEqual(result["articles"][0]["http_status"], 429)
+            self.assertTrue(result["articles"][0]["next_retry_at"])
+            self.assertEqual(article["extraction_status"], "throttled")
+            self.assertEqual(article["extraction_error_category"], "throttled")
+            self.assertEqual(article["extraction_last_http_status"], 429)
+            self.assertEqual(article["extraction_attempts"], 1)
+            self.assertEqual(queued, [])
+            self.assertIn("article_extraction_throttled", health["degraded_reasons"])
+            self.assertEqual(health["stats"]["throttled_extractions"], 1)
+            self.assertEqual(stats["extraction_error_categories"]["throttled"], 1)
+
+    def test_extract_articles_classifies_http_403_as_blocked_without_requeue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="venturebeat",
+                    source_name="VentureBeat",
+                    title="Blocked AI story",
+                    url="https://venturebeat.com/ai/blocked-story",
+                    canonical_url="https://venturebeat.com/ai/blocked-story",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("Blocked AI story", "A release update"),
+                    dedup_key=make_dedup_key("Blocked AI story"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ForbiddenExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+            queued = repository.list_articles_for_extraction(limit=10, force=False)
+            health = service.get_health()
+            stats = service.get_stats()
+
+            self.assertEqual(result["articles"][0]["status"], "blocked")
+            self.assertEqual(result["articles"][0]["error_category"], "blocked")
+            self.assertEqual(result["articles"][0]["http_status"], 403)
+            self.assertEqual(article["extraction_status"], "blocked")
+            self.assertEqual(article["extraction_error_category"], "blocked")
+            self.assertEqual(article["extraction_last_http_status"], 403)
+            self.assertEqual(article["extraction_attempts"], 1)
+            self.assertEqual(queued, [])
+            self.assertIn("article_extraction_blocked", health["degraded_reasons"])
+            self.assertEqual(health["stats"]["blocked_extractions"], 1)
+            self.assertEqual(stats["extraction_error_categories"]["blocked"], 1)
+
+    def test_extract_articles_marks_short_body_as_permanent_error(self) -> None:
+        class ShortBodyExtractor:
+            def fetch_and_extract(self, url):
+                raise ValueError("extracted article text is too short")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="Short article",
+                    url="https://example.com/short",
+                    canonical_url="https://example.com/short",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash("Short article", "A release update"),
+                    dedup_key=make_dedup_key("Short article"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ShortBodyExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+
+            self.assertEqual(result["articles"][0]["status"], "permanent_error")
+            self.assertEqual(article["extraction_status"], "permanent_error")
+            self.assertEqual(article["extraction_error_category"], "permanent_error")
+            self.assertEqual(repository.list_articles_for_extraction(limit=10, force=False), [])
+
+    def test_retry_window_requeues_temporary_errors_after_deadline(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="Retry article",
+                    url="https://example.com/retry",
+                    canonical_url="https://example.com/retry",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash("Retry article", "A release update"),
+                    dedup_key=make_dedup_key("Retry article"),
+                    raw_payload={},
+                )
+            )
+            stored = repository.list_articles(limit=5, include_hidden=True)[0]
+            repository.mark_article_extraction_failure(
+                int(stored["id"]),
+                error=PUBLIC_ERROR_MESSAGE,
+                status="temporary_error",
+                error_category="temporary_error",
+                next_retry_at="2999-01-01T00:00:00+00:00",
+            )
+
+            self.assertEqual(repository.list_articles_for_extraction(limit=10, force=False), [])
+
+            with repository._connect() as connection:
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET extraction_next_retry_at = '2000-01-01T00:00:00+00:00'
+                    WHERE id = ?
+                    """,
+                    (int(stored["id"]),),
+                )
+
+            queued = repository.list_articles_for_extraction(limit=10, force=False)
+            self.assertEqual(len(queued), 1)
 
     def test_extract_articles_masks_internal_error_details(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

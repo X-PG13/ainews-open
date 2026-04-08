@@ -297,6 +297,10 @@ class ExtractionSkippedError(ValueError):
     pass
 
 
+class ExtractionBlockedError(ValueError):
+    pass
+
+
 class _FallbackContainerParser(HTMLParser):
     def __init__(self, rules: tuple[dict, ...], drop_tokens: tuple[str, ...]):
         super().__init__(convert_charrefs=True)
@@ -441,6 +445,8 @@ class ArticleContentExtractor:
         host = self._normalize_host(url)
         if self._should_skip_aggregate_shell(html, host):
             raise ExtractionSkippedError(GOOGLE_NEWS_SKIP_MESSAGE)
+        if self._looks_like_access_challenge(html, host):
+            raise ExtractionBlockedError("publisher blocked extraction with an anti-bot challenge")
         if BeautifulSoup is None:
             return self._fallback_extract_from_html(html, url=url)
 
@@ -627,6 +633,8 @@ class ArticleContentExtractor:
         host = self._normalize_host(url)
         if self._should_skip_aggregate_shell(raw_html, host):
             raise ExtractionSkippedError(GOOGLE_NEWS_SKIP_MESSAGE)
+        if self._looks_like_access_challenge(raw_html, host):
+            raise ExtractionBlockedError("publisher blocked extraction with an anti-bot challenge")
         title_match = TITLE_RE.search(raw_html)
         title = clean_text(html.unescape(title_match.group(1))) if title_match else ""
 
@@ -659,3 +667,25 @@ class ArticleContentExtractor:
             return False
         lowered = raw_html.lower()
         return "<title>google news</title>" in lowered or "dotssplashui" in lowered
+
+    @staticmethod
+    def _looks_like_access_challenge(raw_html: str, host: str) -> bool:
+        if not raw_html:
+            return False
+        lowered = raw_html.lower()
+        challenge_markers = (
+            "captcha",
+            "verify you are human",
+            "security check",
+            "access denied",
+            "cf-browser-verification",
+            "enable javascript and cookies",
+            "pardon the interruption",
+            "attention required",
+            "bot verification",
+        )
+        if any(marker in lowered for marker in challenge_markers):
+            return True
+        if host == "venturebeat.com" and "challenge-platform" in lowered:
+            return True
+        return False
