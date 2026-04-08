@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.1.1] - 2026-04-08
+
+### Added
+
+- A dedicated `Release Artifact Smoke` workflow that downloads published release assets, verifies checksums, installs both wheel and source archive, and runs minimal CLI plus `/health` smoke checks
+
+### Changed
+
+- Package version is now `1.1.1`
+- Release documentation now treats `Release Artifact Smoke` as a mandatory pass gate before a release is considered complete
+- PyPI publication is now opt-in by default through `AINEWS_ENABLE_PYPI_PUBLISH=true`, while manual workflow dispatch remains available
+
+### Fixed
+
+- Corrected release artifact checksum verification so the smoke workflow validates the published bundle paths exactly as recorded in `sha256sums.txt`
+
 ## [1.1.0] - 2026-04-08
 
 ### Added

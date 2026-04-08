@@ -16,6 +16,8 @@ The repository also includes a GitHub Actions validation workflow:
 
 It downloads the published release assets, verifies checksums, installs the wheel and source archive in clean jobs, and runs minimal CLI and `/health` smoke checks.
 
+Treat this workflow as a release-completion gate. Do not announce a new public tag until it passes.
+
 ## Download And Verify
 
 From a release page, download the wheel, source archive, and `sha256sums.txt`.

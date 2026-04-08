@@ -16,6 +16,8 @@
 
 它会下载已经发布的 release 资产，校验 checksum，在干净环境里分别安装 wheel 和 source archive，并执行最小 CLI 与 `/health` 烟雾测试。
 
+这条 workflow 应该被视为 release 完成前的强制门禁。它没通过之前，不要对外公告新 tag。
+
 ## 下载并校验
 
 从 Release 页面下载 wheel、source archive 和 `sha256sums.txt`。

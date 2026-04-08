@@ -38,6 +38,8 @@ Confirm:
 - `pypi-publish.yml` is present if PyPI publication is intended
 - required repository secrets are configured
 
+Release is not considered complete until `Release Artifact Smoke` passes for the published tag.
+
 ## GitHub Release
 
 1. Create and push the tag:
@@ -66,7 +68,7 @@ python -m ainews --help
 ## After Release
 
 1. Verify the release page and demo page are still reachable.
-2. Confirm `Release Artifact Smoke` passed for the published tag.
+2. Confirm `Release Artifact Smoke` passed for the published tag. This is a mandatory pass gate before you announce or close the release work.
 3. Confirm the package metadata on GitHub and PyPI looks correct.
 4. Confirm `Latest` points to the intended tag.
 5. Announce the release using `docs/releases/` copy if applicable.

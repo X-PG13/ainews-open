@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || vars.AINEWS_ENABLE_PYPI_PUBLISH == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:

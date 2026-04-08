@@ -38,6 +38,8 @@ make smoke
 - 如果需要发 PyPI，`pypi-publish.yml` 已配置
 - 仓库 secrets 已补齐
 
+如果已发布 tag 对应的 `Release Artifact Smoke` 还没通过，这次 release 就不算完成。
+
 ## GitHub Release
 
 1. 创建并推送 tag：
@@ -66,7 +68,7 @@ python -m ainews --help
 ## 发版后
 
 1. 检查 Release 页面和 demo 页面仍可访问。
-2. 检查已发布 tag 的 `Release Artifact Smoke` 是否通过。
+2. 检查已发布 tag 的 `Release Artifact Smoke` 是否通过。这一项必须通过后，才能对外公告或结束这次发版。
 3. 检查 GitHub / PyPI 上的包元信息是否正确。
 4. 检查 `Latest` 是否指向预期 tag。
 5. 如需对外公告，可直接复用 `docs/releases/` 里的文案。
