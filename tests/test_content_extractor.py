@@ -83,6 +83,18 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("责任编辑", content.text)
         self.assertNotIn("来源：钛媒体", content.text)
 
+    def test_prefers_jiqizhixin_article_body_and_drops_share_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("jiqizhixin.html"),
+            url="https://www.jiqizhixin.com/articles/2026-04-09-ops-stack",
+        )
+
+        self.assertIn("大模型项目从试验进入生产", content.text)
+        self.assertIn("是否足够可观测、可治理、可恢复", content.text)
+        self.assertNotIn("分享 微信 微博 收藏", content.text)
+        self.assertNotIn("原标题", content.text)
+
     def test_prefers_huggingface_blog_content_and_drops_author_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
@@ -145,6 +157,18 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Sign up for the TechCrunch AI newsletter", content.text)
         self.assertNotIn("Share this article", content.text)
 
+    def test_prefers_arstechnica_article_content_and_drops_related_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("arstechnica-article.html"),
+            url="https://arstechnica.com/ai/2026/04/why-ai-teams-are-rebuilding-their-observability-stacks/",
+        )
+
+        self.assertIn("teams deploying language models are replacing one-off dashboards", content.text)
+        self.assertIn("instrumentation and rollback paths matter almost as much as model quality", content.text)
+        self.assertNotIn("Related stories from Ars Technica", content.text)
+        self.assertNotIn("Stay tuned", content.text)
+
     def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
@@ -178,6 +202,30 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertIn("Reuters writes that enterprise buyers are shifting from pilot programs", content.text)
         self.assertIn("fit procurement, security review, and incident response processes", content.text)
         self.assertNotIn("Thomson Reuters Trust Principles", content.text)
+
+    def test_prefers_substack_body_and_drops_subscription_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("substack-article.html"),
+            url="https://latentops.substack.com/p/managed-ai-operations",
+        )
+
+        self.assertIn("the hardest work shifts from prompts to operating procedures", content.text)
+        self.assertIn("deployment lessons matter as much as research announcements", content.text)
+        self.assertNotIn("Subscribe now", content.text)
+        self.assertNotIn("Leave a comment", content.text)
+
+    def test_prefers_yahoo_syndication_body_and_drops_recirculation_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("yahoo-syndication.html"),
+            url="https://finance.yahoo.com/news/ai-deployment-discipline-board-level-topic-090000123.html",
+        )
+
+        self.assertIn("Yahoo syndication pages increasingly surface reporting", content.text)
+        self.assertIn("reliable AI products need observability and governance", content.text)
+        self.assertNotIn("Recommended Stories", content.text)
+        self.assertNotIn("Advertisement", content.text)
 
     def test_prefers_techcrunch_post_content_variant(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
