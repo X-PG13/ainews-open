@@ -67,6 +67,77 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertIn("OpenAI released a new model for enterprise deployment.", content.text)
         self.assertNotIn("site nav", content.text)
 
+    def test_prefers_tmtpost_article_and_drops_editor_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("tmtpost.html"), url="https://www.tmtpost.com/7944857.html"
+        )
+
+        self.assertIn("AI 原生安全公司今天发布了新的代理防护平台", content.text)
+        self.assertIn("AI 安全不再只是模型问题", content.text)
+        self.assertNotIn("相关推荐", content.text)
+        self.assertNotIn("责任编辑", content.text)
+        self.assertNotIn("来源：钛媒体", content.text)
+
+    def test_prefers_huggingface_blog_content_and_drops_author_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("huggingface-blog.html"), url="https://huggingface.co/blog/gemma4"
+        )
+
+        self.assertIn("The Gemma 4 family of multimodal models is now available", content.text)
+        self.assertIn("developers can move from experimentation to deployment", content.text)
+        self.assertNotIn("Back to Articles", content.text)
+        self.assertNotIn("Follow", content.text)
+        self.assertNotIn("Table of Contents", content.text)
+
+    def test_prefers_google_ai_blog_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("google-ai-blog.html"),
+            url="https://blog.google/innovation-and-ai/technology/developers-tools/introducing-flex-and-priority-inference/",
+        )
+
+        self.assertIn("Today, we are adding Flex and Priority inference to the Gemini API", content.text)
+        self.assertIn("AI features move from demos into workflows", content.text)
+        self.assertNotIn("Listen to article", content.text)
+        self.assertNotIn("Voice", content.text)
+        self.assertNotIn("POSTED IN", content.text)
+
+    def test_prefers_deepmind_blog_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("deepmind-blog.html"),
+            url="https://deepmind.google/blog/gemma-4-byte-for-byte-the-most-capable-open-models/",
+        )
+
+        self.assertIn("Today, we are introducing Gemma 4", content.text)
+        self.assertIn("enterprises increasingly want to evaluate model quality", content.text)
+        self.assertNotIn("Listen to article", content.text)
+        self.assertNotIn("Voice", content.text)
+        self.assertNotIn("POSTED IN", content.text)
+
+    def test_prefers_theverge_entry_body_and_drops_author_card(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("theverge-article.html"),
+            url="https://www.theverge.com/ai-artificial-intelligence/908114/anthropic-project-glasswing-cybersecurity",
+        )
+
+        self.assertIn("Anthropic is debuting a new AI model", content.text)
+        self.assertIn("AI vendors are increasingly packaging models as operational products", content.text)
+        self.assertNotIn("Posts from this author", content.text)
+        self.assertNotIn("Follow", content.text)
+
+    def test_rejects_google_news_aggregate_fixture(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+
+        with self.assertRaisesRegex(ValueError, "too short"):
+            extractor.extract_from_html(
+                _fixture("google-news-aggregate.html"),
+                url="https://news.google.com/rss/articles/demo?oc=5",
+            )
+
     def test_fallback_parser_extracts_text_without_regex_block_stripping(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         with patch("ainews.content_extractor.BeautifulSoup", None):
@@ -77,6 +148,17 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertIn("国内 AI 创业公司正在重新评估模型部署与推理成本", content.text)
         self.assertNotIn("推荐阅读", content.text)
         self.assertNotIn("点赞 收藏 分享", content.text)
+
+    def test_fallback_parser_extracts_huggingface_blog_fixture(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        with patch("ainews.content_extractor.BeautifulSoup", None):
+            content = extractor.extract_from_html(
+                _fixture("huggingface-blog.html"), url="https://huggingface.co/blog/gemma4"
+            )
+
+        self.assertIn("The Gemma 4 family of multimodal models is now available", content.text)
+        self.assertNotIn("Back to Articles", content.text)
+        self.assertNotIn("Follow", content.text)
 
 
 if __name__ == "__main__":
