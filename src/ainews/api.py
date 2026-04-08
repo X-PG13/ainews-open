@@ -90,6 +90,8 @@ class ArticleCurationRequest(BaseModel):
 
 logger = logging.getLogger("ainews.api")
 SANITIZED_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
+BAD_REQUEST_MESSAGE = "request could not be processed; inspect server logs with the response X-Request-ID"
+NOT_FOUND_MESSAGE = "requested resource was not found"
 
 
 def _sanitize_service_payload(payload: Any, *, error_context: bool = False) -> Any:
@@ -122,6 +124,52 @@ def _sanitize_service_payload(payload: Any, *, error_context: bool = False) -> A
     return sanitized
 
 
+def _request_id_from_state(request: Request) -> str:
+    return str(getattr(request.state, "request_id", "") or "")
+
+
+def _run_service_action(
+    request: Request,
+    action_name: str,
+    runner,
+) -> Any:
+    request_id = _request_id_from_state(request)
+    try:
+        return _sanitize_service_payload(runner())
+    except HTTPException:
+        raise
+    except LookupError:
+        logger.warning(
+            "requested resource was not found",
+            extra={
+                "event": "api.action_not_found",
+                "action": action_name,
+                "request_id": request_id,
+            },
+        )
+        raise HTTPException(status_code=404, detail=NOT_FOUND_MESSAGE)
+    except ValueError:
+        logger.warning(
+            "request could not be processed",
+            extra={
+                "event": "api.action_bad_request",
+                "action": action_name,
+                "request_id": request_id,
+            },
+        )
+        raise HTTPException(status_code=400, detail=BAD_REQUEST_MESSAGE)
+    except Exception:
+        logger.exception(
+            "service action failed",
+            extra={
+                "event": "api.action_error",
+                "action": action_name,
+                "request_id": request_id,
+            },
+        )
+        raise HTTPException(status_code=500, detail=SANITIZED_ERROR_MESSAGE)
+
+
 def create_app() -> FastAPI:
     settings = load_settings()
     configure_logging(level=settings.log_level, log_format=settings.log_format)
@@ -151,6 +199,7 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def request_logging(request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+        request.state.request_id = request_id
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -235,26 +284,39 @@ def create_app() -> FastAPI:
 
     @app.get("/digest/daily")
     def digest_daily(
+        request: Request,
         region: str = Query(default="all"),
         since_hours: int = Query(default=settings.default_lookback_hours, ge=1, le=720),
         limit: int = Query(default=50, ge=1, le=200),
         use_llm: bool = Query(default=False),
     ) -> dict:
-        return service.build_digest(
-            region=region,
-            since_hours=since_hours,
-            limit=limit,
-            use_llm=use_llm,
-            persist=False,
+        return _run_service_action(
+            request,
+            "digest_daily",
+            lambda: service.build_digest(
+                region=region,
+                since_hours=since_hours,
+                limit=limit,
+                use_llm=use_llm,
+                persist=False,
+            ),
         )
 
     @app.get("/admin/stats")
-    def admin_stats(_: None = Depends(require_admin)) -> dict:
-        return service.get_stats()
+    def admin_stats(request: Request, _: None = Depends(require_admin)) -> dict:
+        return _run_service_action(
+            request,
+            "admin_stats",
+            service.get_stats,
+        )
 
     @app.get("/admin/operations")
-    def admin_operations(_: None = Depends(require_admin)) -> dict:
-        return service.get_operations()
+    def admin_operations(request: Request, _: None = Depends(require_admin)) -> dict:
+        return _run_service_action(
+            request,
+            "admin_operations",
+            service.get_operations,
+        )
 
     @app.get("/admin/articles")
     def admin_articles(
@@ -278,88 +340,119 @@ def create_app() -> FastAPI:
         }
 
     @app.post("/admin/ingest")
-    def admin_ingest(request: IngestRequest, _: None = Depends(require_admin)) -> dict:
-        return service.ingest(
-            source_ids=request.source_ids,
-            max_items_per_source=request.max_items_per_source,
+    def admin_ingest(
+        payload: IngestRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        return _run_service_action(
+            request,
+            "admin_ingest",
+            lambda: service.ingest(
+                source_ids=payload.source_ids,
+                max_items_per_source=payload.max_items_per_source,
+            ),
         )
 
     @app.post("/admin/enrich")
-    def admin_enrich(request: EnrichRequest, _: None = Depends(require_admin)) -> dict:
-        return _sanitize_service_payload(
-            service.enrich_articles(
-                source_ids=request.source_ids,
-                article_ids=request.article_ids,
-                since_hours=request.since_hours,
-                limit=request.limit,
-                force=request.force,
-            )
+    def admin_enrich(
+        payload: EnrichRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        return _run_service_action(
+            request,
+            "admin_enrich",
+            lambda: service.enrich_articles(
+                source_ids=payload.source_ids,
+                article_ids=payload.article_ids,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                force=payload.force,
+            ),
         )
 
     @app.post("/admin/extract")
-    def admin_extract(request: ExtractRequest, _: None = Depends(require_admin)) -> dict:
-        return _sanitize_service_payload(
-            service.extract_articles(
-                source_ids=request.source_ids,
-                article_ids=request.article_ids,
-                since_hours=request.since_hours,
-                limit=request.limit,
-                force=request.force,
-            )
+    def admin_extract(
+        payload: ExtractRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        return _run_service_action(
+            request,
+            "admin_extract",
+            lambda: service.extract_articles(
+                source_ids=payload.source_ids,
+                article_ids=payload.article_ids,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                force=payload.force,
+            ),
         )
 
     @app.post("/admin/digests/generate")
     def admin_generate_digest(
-        request: DigestRequest,
+        payload: DigestRequest,
+        request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return service.build_digest(
-            region=request.region,
-            since_hours=request.since_hours,
-            limit=request.limit,
-            use_llm=request.use_llm,
-            persist=request.persist,
+        return _run_service_action(
+            request,
+            "admin_generate_digest",
+            lambda: service.build_digest(
+                region=payload.region,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                use_llm=payload.use_llm,
+                persist=payload.persist,
+            ),
         )
 
     @app.post("/admin/pipeline")
     def admin_pipeline(
-        request: PipelineRequest,
+        payload: PipelineRequest,
+        request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _sanitize_service_payload(
-            service.run_pipeline(
-                region=request.region,
-                since_hours=request.since_hours,
-                limit=request.limit,
-                max_items_per_source=request.max_items_per_source,
-                use_llm=request.use_llm,
-                persist=request.persist,
-                export=request.export,
-                publish=request.publish,
-                publish_targets=request.publish_targets,
-                wechat_submit=request.wechat_submit,
-                force_republish=request.force_republish,
-            )
+        return _run_service_action(
+            request,
+            "admin_pipeline",
+            lambda: service.run_pipeline(
+                region=payload.region,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                max_items_per_source=payload.max_items_per_source,
+                use_llm=payload.use_llm,
+                persist=payload.persist,
+                export=payload.export,
+                publish=payload.publish,
+                publish_targets=payload.publish_targets,
+                wechat_submit=payload.wechat_submit,
+                force_republish=payload.force_republish,
+            ),
         )
 
     @app.post("/admin/publish")
     def admin_publish(
-        request: PublishRequest,
+        payload: PublishRequest,
+        request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _sanitize_service_payload(
-            service.publish_digest(
-                digest_id=request.digest_id,
-                region=request.region,
-                since_hours=request.since_hours,
-                limit=request.limit,
-                use_llm=request.use_llm,
-                persist=request.persist,
-                export=request.export,
-                targets=request.targets,
-                wechat_submit=request.wechat_submit,
-                force_republish=request.force_republish,
-            )
+        return _run_service_action(
+            request,
+            "admin_publish",
+            lambda: service.publish_digest(
+                digest_id=payload.digest_id,
+                region=payload.region,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                use_llm=payload.use_llm,
+                persist=payload.persist,
+                export=payload.export,
+                targets=payload.targets,
+                wechat_submit=payload.wechat_submit,
+                force_republish=payload.force_republish,
+            ),
         )
 
     @app.get("/admin/digests")
@@ -389,17 +482,20 @@ def create_app() -> FastAPI:
 
     @app.post("/admin/publications/refresh")
     def admin_refresh_publications(
-        request: RefreshPublicationsRequest,
+        payload: RefreshPublicationsRequest,
+        request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _sanitize_service_payload(
-            service.refresh_publications(
-                publication_ids=request.publication_ids,
-                digest_id=request.digest_id,
-                target=request.target,
-                limit=request.limit,
-                only_pending=request.only_pending,
-            )
+        return _run_service_action(
+            request,
+            "admin_refresh_publications",
+            lambda: service.refresh_publications(
+                publication_ids=payload.publication_ids,
+                digest_id=payload.digest_id,
+                target=payload.target,
+                limit=payload.limit,
+                only_pending=payload.only_pending,
+            ),
         )
 
     @app.patch("/admin/articles/{article_id}")

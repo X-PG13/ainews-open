@@ -207,3 +207,71 @@ class ApiTestCase(unittest.TestCase):
             ],
             "operation failed; inspect server logs with the response X-Request-ID",
         )
+
+    def test_digest_daily_masks_internal_exception_details(self) -> None:
+        with patch(
+            "ainews.api.NewsService.build_digest",
+            side_effect=RuntimeError("internal path leaked: /tmp/private.db"),
+        ):
+            response = self.client.get("/digest/daily")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()["detail"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertNotIn("/tmp/private.db", response.text)
+        self.assertTrue(response.headers["X-Request-ID"])
+
+    def test_admin_stats_masks_internal_exception_details(self) -> None:
+        with patch(
+            "ainews.api.NewsService.get_stats",
+            side_effect=RuntimeError("stack secret: /srv/internal"),
+        ):
+            response = self.client.get(
+                "/admin/stats",
+                headers={"X-Admin-Token": "secret-token"},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()["detail"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertNotIn("/srv/internal", response.text)
+
+    def test_admin_ingest_masks_bad_request_details(self) -> None:
+        with patch(
+            "ainews.api.NewsService.ingest",
+            side_effect=ValueError("upstream validation failed: token abc123"),
+        ):
+            response = self.client.post(
+                "/admin/ingest",
+                headers={"X-Admin-Token": "secret-token"},
+                json={"source_ids": ["openai-news"]},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["detail"],
+            "request could not be processed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertNotIn("abc123", response.text)
+
+    def test_admin_publish_masks_internal_exception_details(self) -> None:
+        with patch(
+            "ainews.api.NewsService.publish_digest",
+            side_effect=RuntimeError("webhook secret leaked"),
+        ):
+            response = self.client.post(
+                "/admin/publish",
+                headers={"X-Admin-Token": "secret-token"},
+                json={"targets": ["static_site"]},
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json()["detail"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertNotIn("webhook secret leaked", response.text)
