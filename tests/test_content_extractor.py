@@ -169,6 +169,19 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related stories from Ars Technica", content.text)
         self.assertNotIn("Stay tuned", content.text)
 
+    def test_prefers_mit_technology_review_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("technologyreview-article.html"),
+            url="https://www.technologyreview.com/2026/04/09/1111111/ai-buyers-now-demand-observability-before-scale/",
+        )
+
+        self.assertIn("enterprise AI buyers increasingly want observability", content.text)
+        self.assertIn("deployment workflows can survive outages, policy changes, and retrieval regressions", content.text)
+        self.assertNotIn("Subscribe to The Algorithm", content.text)
+        self.assertNotIn("More from MIT Technology Review", content.text)
+        self.assertNotIn("Most Popular", content.text)
+
     def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
