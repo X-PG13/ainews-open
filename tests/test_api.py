@@ -79,6 +79,57 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("stats", response.json())
         self.assertTrue(response.headers["X-Request-ID"])
 
+    def test_metrics_route_exposes_prometheus_counters(self) -> None:
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.record_source_event(
+            source_id="venturebeat",
+            source_name="VentureBeat",
+            event_type="extract",
+            status="blocked",
+            error_category="blocked",
+            http_status=403,
+            message="blocked extraction",
+        )
+        repository.record_source_event(
+            source_id="venturebeat",
+            source_name="VentureBeat",
+            event_type="cooldown",
+            status="recovered",
+            message="recovered",
+        )
+        repository.upsert_source_state(
+            source_id="venturebeat",
+            source_name="VentureBeat",
+            cooldown_status="blocked",
+            cooldown_until="2999-01-01T00:00:00+00:00",
+            consecutive_failures=2,
+            last_error_category="blocked",
+            last_http_status=403,
+            last_error="blocked",
+            last_error_at=utc_now().isoformat(),
+        )
+        repository.save_alert_state(
+            alert_key="source_cooldown:venturebeat",
+            is_active=True,
+            fingerprint="blocked|2999-01-01T00:00:00+00:00",
+            last_status="active",
+            last_title="source cooldown active: VentureBeat",
+            last_message="entered cooldown",
+            sent_at=utc_now().isoformat(),
+            increment_delivery=True,
+        )
+
+        response = self.client.get("/metrics")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response.headers["content-type"])
+        body = response.text
+        self.assertIn('ainews_pipeline_runs_total{status="ok"} 0', body)
+        self.assertIn('ainews_extract_failures_total{category="blocked"} 1', body)
+        self.assertIn("ainews_source_cooldowns_active 1", body)
+        self.assertIn("ainews_source_recoveries_total 1", body)
+        self.assertIn("ainews_alert_sends_total 1", body)
+
     def test_admin_route_requires_token(self) -> None:
         unauthorized = self.client.get("/admin/stats")
         authorized = self.client.get(

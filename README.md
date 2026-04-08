@@ -90,6 +90,7 @@ make smoke
 - [Deployment Guide](docs/deployment.md)
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Monitoring](docs/monitoring.md)
 - [Use Cases](docs/use-cases.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
 - [Release Checklist](docs/release-checklist.md)

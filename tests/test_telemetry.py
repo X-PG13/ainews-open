@@ -21,6 +21,7 @@ class TelemetryTestCase(unittest.TestCase):
         self.assertGreaterEqual(record["duration_ms"], 0)
         self.assertEqual(snapshot["operations"]["pipeline"]["context"]["region"], "all")
         self.assertEqual(snapshot["failure_categories"]["timeout"], 1)
+        self.assertEqual(snapshot["operation_totals"]["pipeline"]["partial_error"], 1)
 
 
 if __name__ == "__main__":

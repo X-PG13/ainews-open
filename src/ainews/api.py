@@ -9,7 +9,7 @@ from typing import Any, List, Optional
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -17,6 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import __version__
 from .config import load_settings
 from .logging_utils import configure_logging
+from .metrics import render_metrics
 from .service import NewsService
 
 
@@ -394,6 +395,24 @@ def create_app() -> FastAPI:
                 **service.get_health(),
                 "version": __version__,
             })
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.get("/metrics", include_in_schema=False)
+    def metrics(request: Request) -> PlainTextResponse:
+        _begin_route_action(request, "metrics")
+        try:
+            payload = service.get_metrics_snapshot()
+            return PlainTextResponse(
+                render_metrics(payload),
+                media_type="text/plain; version=0.0.4; charset=utf-8",
+            )
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)
         except LookupError:

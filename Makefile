@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build sbom check serve test coverage smoke
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping lint build sbom check serve test coverage smoke
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -25,6 +25,9 @@ publications:
 
 refresh-publications:
 	$(PYTHON) -m ainews refresh-publications --target wechat --limit 20
+
+housekeeping:
+	$(PYTHON) -m ainews prune-source-runtime-history --retention-days 45
 
 lint:
 	$(PYTHON) -m ruff check src tests

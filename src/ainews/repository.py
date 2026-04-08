@@ -1546,6 +1546,63 @@ class ArticleRepository:
             ).fetchall()
         return [self._row_to_source_alert_dict(row) for row in rows]
 
+    def get_monitoring_counters(self) -> Dict[str, object]:
+        with self._connect() as connection:
+            extraction_rows = connection.execute(
+                """
+                SELECT
+                    error_category,
+                    COUNT(*) AS total
+                FROM (
+                    SELECT error_category
+                    FROM source_events
+                    WHERE event_type = 'extract'
+                      AND status NOT IN ('ok', 'skipped')
+                      AND error_category != ''
+                    UNION ALL
+                    SELECT error_category
+                    FROM source_events_archive
+                    WHERE event_type = 'extract'
+                      AND status NOT IN ('ok', 'skipped')
+                      AND error_category != ''
+                )
+                GROUP BY error_category
+                ORDER BY error_category ASC
+                """
+            ).fetchall()
+            source_recovery_row = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM (
+                    SELECT id
+                    FROM source_events
+                    WHERE event_type = 'cooldown'
+                      AND status = 'recovered'
+                    UNION ALL
+                    SELECT id
+                    FROM source_events_archive
+                    WHERE event_type = 'cooldown'
+                      AND status = 'recovered'
+                )
+                """
+            ).fetchone()
+            alert_sends_row = connection.execute(
+                """
+                SELECT COALESCE(SUM(delivery_count), 0) AS total
+                FROM alert_states
+                """
+            ).fetchone()
+
+        return {
+            "extract_failures_total": {
+                clean_text(str(row["error_category"])): int(row["total"] or 0)
+                for row in extraction_rows
+                if clean_text(str(row["error_category"]))
+            },
+            "source_recoveries_total": int(source_recovery_row["total"] or 0),
+            "alert_sends_total": int(alert_sends_row["total"] or 0),
+        }
+
     def prune_source_runtime_history(
         self,
         *,

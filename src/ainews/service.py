@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Dict, Iterable, List, Optional
 from urllib.error import HTTPError, URLError
 
+from . import __version__
 from .alerting import AlertNotifier
 from .config import Settings, load_settings
 from .content_extractor import (
@@ -114,6 +115,26 @@ class NewsService:
 
     def get_operations(self) -> Dict[str, object]:
         return self.telemetry.snapshot()
+
+    def get_metrics_snapshot(self) -> Dict[str, object]:
+        stats = self.repository.get_stats()
+        telemetry = self.telemetry.snapshot()
+        counters = self.repository.get_monitoring_counters()
+        return {
+            "build_version": __version__,
+            "pipeline_runs_total": dict(
+                telemetry.get("operation_totals", {}).get("pipeline", {})
+                if isinstance(telemetry.get("operation_totals"), dict)
+                else {}
+            ),
+            "operation_totals": dict(telemetry.get("operation_totals", {})),
+            "extract_failures_total": dict(counters.get("extract_failures_total", {})),
+            "source_cooldowns_active": int(stats.get("active_source_cooldowns") or 0),
+            "source_recoveries_total": int(counters.get("source_recoveries_total") or 0),
+            "alert_sends_total": int(counters.get("alert_sends_total") or 0),
+            "articles_total": int(stats.get("total_articles") or 0),
+            "publication_errors": int(stats.get("publication_errors") or 0),
+        }
 
     def list_source_alerts(
         self,

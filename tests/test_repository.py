@@ -567,6 +567,8 @@ class RepositoryTestCase(unittest.TestCase):
 
             self.assertEqual(str(archived_event_row["message"]), "old failure")
             self.assertEqual(str(archived_alert_row["message"]), "old cooldown alert")
+            counters = repository.get_monitoring_counters()
+            self.assertEqual(counters["extract_failures_total"]["blocked"], 1)
 
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -90,6 +90,7 @@ make smoke
 - [部署指南](docs/deployment.zh-CN.md)
 - [数据库迁移](docs/database-migrations.md)
 - [故障排查](docs/troubleshooting.zh-CN.md)
+- [监控接入](docs/monitoring.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)
 - [发版清单](docs/release-checklist.zh-CN.md)

@@ -24,6 +24,7 @@ class OperationTracker:
         self._lock = Lock()
         self._operations: Dict[str, Dict[str, object]] = {}
         self._failure_categories: Counter[str] = Counter()
+        self._operation_totals: Dict[str, Counter[str]] = {}
 
     def start(self, name: str, *, context: Optional[Dict[str, object]] = None) -> OperationToken:
         return OperationToken(
@@ -61,6 +62,8 @@ class OperationTracker:
             self._operations[token.name] = record
             if error_category:
                 self._failure_categories[error_category] += 1
+            totals = self._operation_totals.setdefault(token.name, Counter())
+            totals[status] += 1
         return dict(record)
 
     def snapshot(self) -> Dict[str, object]:
@@ -68,4 +71,7 @@ class OperationTracker:
             return {
                 "operations": {name: dict(payload) for name, payload in self._operations.items()},
                 "failure_categories": dict(self._failure_categories),
+                "operation_totals": {
+                    name: dict(counter) for name, counter in self._operation_totals.items()
+                },
             }
