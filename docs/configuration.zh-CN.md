@@ -24,6 +24,14 @@
 | `AINEWS_OUTPUT_DIR` | 否 | `output` | 导出 | Markdown / JSON 导出目录。 |
 | `AINEWS_STATIC_SITE_DIR` | 否 | `output/site` | 静态站点 | 静态站点输出目录。 |
 | `AINEWS_STATIC_SITE_BASE_URL` | 否 | 空 | 静态站点 | 静态站点对外访问基地址。 |
+| `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD` | 否 | `2` | 抽取运维 | 同一来源连续触发 `429/403/challenge` 多少次后进入冷却。 |
+| `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES` | 否 | `120` | 抽取运维 | 来源被限流时的基础冷却窗口。 |
+| `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES` | 否 | `720` | 抽取运维 | 来源被封锁时的基础冷却窗口。 |
+| `AINEWS_ALERT_TARGETS` | 否 | 空 | 运维告警 | 告警目标列表，逗号分隔，例如 `telegram,feishu`。 |
+| `AINEWS_ALERT_COOLDOWN_MINUTES` | 否 | `30` | 运维告警 | 同一活动告警指纹的最短重复发送间隔。 |
+| `AINEWS_ALERT_TELEGRAM_CHAT_ID` | 否 | 空 | 运维告警 | 告警专用 Telegram 目标，不填时回退到 `AINEWS_TELEGRAM_CHAT_ID`。 |
+| `AINEWS_ALERT_FEISHU_WEBHOOK` | 否 | 空 | 运维告警 | 告警专用飞书 webhook，不填时回退到 `AINEWS_FEISHU_WEBHOOK`。 |
+| `AINEWS_ALERT_FEISHU_SECRET` | 否 | 空 | 运维告警 | 告警专用飞书签名 secret。 |
 
 ## 正文抽取与 LLM
 

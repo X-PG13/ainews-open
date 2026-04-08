@@ -253,6 +253,52 @@ Relevant environment variables:
 - `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
 - `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
 
+## Alerts
+
+AI News Open can now send operational alerts to Telegram and Feishu.
+
+Supported alert triggers:
+
+- service health moving into `degraded`
+- active source cooldowns
+- publish failures
+- pipeline `partial_error` / `error`
+
+Alert behavior:
+
+- dedupe and cooldown are enforced per alert rule and fingerprint
+- recovery notifications are sent when a rule returns to a healthy state
+
+Relevant environment variables:
+
+- `AINEWS_ALERT_TARGETS`
+- `AINEWS_ALERT_COOLDOWN_MINUTES`
+- `AINEWS_ALERT_TELEGRAM_CHAT_ID`
+- `AINEWS_ALERT_FEISHU_WEBHOOK`
+- `AINEWS_ALERT_FEISHU_SECRET`
+
+Minimal Telegram alert profile:
+
+```env
+AINEWS_ALERT_TARGETS=telegram
+AINEWS_TELEGRAM_BOT_TOKEN=...
+AINEWS_ALERT_TELEGRAM_CHAT_ID=@ainews_ops
+```
+
+Minimal Feishu alert profile:
+
+```env
+AINEWS_ALERT_TARGETS=feishu
+AINEWS_ALERT_FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/...
+AINEWS_ALERT_FEISHU_SECRET=...
+```
+
+Operator notes:
+
+- alerts are deduped by rule and fingerprint, so repeated failures do not spam every run
+- recovery messages are emitted when health, cooldown state, publish, or pipeline status returns to normal
+- `/admin/sources` is the primary runtime panel for source cooldowns, recent success rate, failure mix, and recent operations
+
 ## Upgrade Checklist
 
 Before upgrading:

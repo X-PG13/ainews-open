@@ -250,6 +250,41 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(source["cooldown_status"], "blocked")
         self.assertTrue(source["cooldown_active"])
 
+    def test_admin_sources_includes_runtime_summary_metrics(self) -> None:
+        self._seed_article()
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.record_source_event(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            event_type="extract",
+            status="ok",
+            article_title="OpenAI launches a new model",
+        )
+        repository.record_source_event(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            event_type="extract",
+            status="error",
+            error_category="temporary_error",
+            http_status=503,
+            article_title="OpenAI launches a new model",
+            message="temporary failure",
+        )
+
+        response = self.client.get(
+            "/admin/sources",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        source = next(item for item in payload["sources"] if item["id"] == "openai-news")
+        self.assertEqual(source["recent_success_rate"], 50)
+        self.assertEqual(source["recent_failure_categories"]["temporary_error"], 1)
+        self.assertEqual(len(source["recent_operations"]), 2)
+        self.assertTrue(source["last_success_at"])
+        self.assertTrue(source["last_error_at"])
+
     def test_admin_reset_source_cooldowns_passes_filters(self) -> None:
         with patch(
             "ainews.api.NewsService.reset_source_cooldowns",

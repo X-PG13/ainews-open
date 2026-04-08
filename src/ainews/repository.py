@@ -35,7 +35,7 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 7
 
 
 class ArticleRepository:
@@ -134,6 +134,33 @@ class ArticleRepository:
                     last_success_at TEXT NOT NULL DEFAULT '',
                     updated_at TEXT NOT NULL DEFAULT ''
                 );
+
+                CREATE TABLE IF NOT EXISTS source_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_id TEXT NOT NULL,
+                    source_name TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    error_category TEXT NOT NULL DEFAULT '',
+                    http_status INTEGER NOT NULL DEFAULT 0,
+                    article_id INTEGER,
+                    article_title TEXT NOT NULL DEFAULT '',
+                    message TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS alert_states (
+                    alert_key TEXT PRIMARY KEY,
+                    is_active INTEGER NOT NULL DEFAULT 0,
+                    fingerprint TEXT NOT NULL DEFAULT '',
+                    last_status TEXT NOT NULL DEFAULT '',
+                    last_title TEXT NOT NULL DEFAULT '',
+                    last_message TEXT NOT NULL DEFAULT '',
+                    last_sent_at TEXT NOT NULL DEFAULT '',
+                    last_recovered_at TEXT NOT NULL DEFAULT '',
+                    delivery_count INTEGER NOT NULL DEFAULT 0,
+                    updated_at TEXT NOT NULL DEFAULT ''
+                );
                 """
             )
             self._ensure_article_migrations(connection)
@@ -181,6 +208,12 @@ class ArticleRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_source_states_cooldown_status
                     ON source_states(cooldown_status);
+
+                CREATE INDEX IF NOT EXISTS idx_source_events_source_created_at
+                    ON source_events(source_id, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_events_status_created_at
+                    ON source_events(status, created_at);
                 """
             )
             self._set_meta(connection, "schema_version", str(CURRENT_SCHEMA_VERSION))
@@ -243,6 +276,20 @@ class ArticleRepository:
         payload["last_http_status"] = int(payload.get("last_http_status") or 0)
         cooldown_until = clean_text(str(payload.get("cooldown_until") or ""))
         payload["cooldown_active"] = bool(cooldown_until and cooldown_until > utc_now().isoformat())
+        return payload
+
+    @staticmethod
+    def _row_to_source_event_dict(row: sqlite3.Row) -> Dict[str, object]:
+        payload = dict(row)
+        payload["http_status"] = int(payload.get("http_status") or 0)
+        payload["article_id"] = int(payload["article_id"]) if payload.get("article_id") is not None else None
+        return payload
+
+    @staticmethod
+    def _row_to_alert_state_dict(row: sqlite3.Row) -> Dict[str, object]:
+        payload = dict(row)
+        payload["is_active"] = bool(payload.get("is_active"))
+        payload["delivery_count"] = int(payload.get("delivery_count") or 0)
         return payload
 
     def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
@@ -815,6 +862,287 @@ class ArticleRepository:
                     [utc_now().isoformat(), *source_id_rows],
                 )
         return [state for source_id in source_id_rows if (state := self.get_source_state(source_id))]
+
+    def record_source_event(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+        event_type: str,
+        status: str,
+        error_category: str = "",
+        http_status: int = 0,
+        article_id: Optional[int] = None,
+        article_title: str = "",
+        message: str = "",
+    ) -> dict:
+        created_at = utc_now().isoformat()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO source_events (
+                    source_id,
+                    source_name,
+                    event_type,
+                    status,
+                    error_category,
+                    http_status,
+                    article_id,
+                    article_title,
+                    message,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source_id,
+                    source_name,
+                    event_type,
+                    status,
+                    error_category,
+                    http_status,
+                    article_id,
+                    article_title,
+                    message,
+                    created_at,
+                ),
+            )
+            event_id = int(cursor.lastrowid)
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    event_type,
+                    status,
+                    error_category,
+                    http_status,
+                    article_id,
+                    article_title,
+                    message,
+                    created_at
+                FROM source_events
+                WHERE id = ?
+                LIMIT 1
+                """,
+                (event_id,),
+            ).fetchone()
+        return self._row_to_source_event_dict(row) if row else {}
+
+    def list_source_events(
+        self,
+        *,
+        source_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[dict]:
+        clauses = []
+        params: List[object] = []
+        if source_id:
+            clauses.append("source_id = ?")
+            params.append(source_id)
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    event_type,
+                    status,
+                    error_category,
+                    http_status,
+                    article_id,
+                    article_title,
+                    message,
+                    created_at
+                FROM source_events
+                {where_sql}
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_source_event_dict(row) for row in rows]
+
+    def get_source_event_summaries(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        sample_size: int = 20,
+        limit_per_source: int = 5,
+    ) -> Dict[str, dict]:
+        requested_sources = [str(item) for item in (source_ids or []) if str(item)]
+        params: List[object] = []
+        where_sql = ""
+        if requested_sources:
+            placeholders = ",".join("?" for _ in requested_sources)
+            where_sql = f"WHERE source_id IN ({placeholders})"
+            params.extend(requested_sources)
+
+        fetch_limit = max(100, max(sample_size, limit_per_source) * max(1, len(requested_sources) or 12))
+        params.append(fetch_limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    event_type,
+                    status,
+                    error_category,
+                    http_status,
+                    article_id,
+                    article_title,
+                    message,
+                    created_at
+                FROM source_events
+                {where_sql}
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+
+        grouped: Dict[str, dict] = {}
+        for row in rows:
+            event = self._row_to_source_event_dict(row)
+            source_id = str(event["source_id"])
+            summary = grouped.setdefault(
+                source_id,
+                {
+                    "recent_operations": [],
+                    "sample": [],
+                    "last_success_at": "",
+                    "last_failure_at": "",
+                    "recent_failure_categories": {},
+                    "recent_success_rate": None,
+                },
+            )
+            if len(summary["recent_operations"]) < limit_per_source:
+                summary["recent_operations"].append(event)
+            if len(summary["sample"]) < sample_size:
+                summary["sample"].append(event)
+
+        for source_id, summary in grouped.items():
+            sample = list(summary.pop("sample"))
+            considered = [
+                event
+                for event in sample
+                if str(event.get("status", "")) not in {"skipped"}
+            ]
+            if considered:
+                success_total = sum(1 for event in considered if str(event.get("status", "")) == "ok")
+                summary["recent_success_rate"] = round((success_total / len(considered)) * 100, 1)
+            else:
+                summary["recent_success_rate"] = None
+
+            failure_categories: Dict[str, int] = {}
+            for event in sample:
+                if not summary["last_success_at"] and str(event.get("status", "")) == "ok":
+                    summary["last_success_at"] = str(event.get("created_at", ""))
+                if (
+                    not summary["last_failure_at"]
+                    and str(event.get("status", "")) not in {"ok", "skipped"}
+                ):
+                    summary["last_failure_at"] = str(event.get("created_at", ""))
+                category = clean_text(str(event.get("error_category", "")))
+                if category:
+                    failure_categories[category] = failure_categories.get(category, 0) + 1
+            summary["recent_failure_categories"] = failure_categories
+
+        return grouped
+
+    def get_alert_state(self, alert_key: str) -> Optional[dict]:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    alert_key,
+                    is_active,
+                    fingerprint,
+                    last_status,
+                    last_title,
+                    last_message,
+                    last_sent_at,
+                    last_recovered_at,
+                    delivery_count,
+                    updated_at
+                FROM alert_states
+                WHERE alert_key = ?
+                LIMIT 1
+                """,
+                (alert_key,),
+            ).fetchone()
+        return self._row_to_alert_state_dict(row) if row else None
+
+    def save_alert_state(
+        self,
+        *,
+        alert_key: str,
+        is_active: bool,
+        fingerprint: str = "",
+        last_status: str = "",
+        last_title: str = "",
+        last_message: str = "",
+        sent_at: str = "",
+        recovered_at: str = "",
+        increment_delivery: bool = False,
+    ) -> Optional[dict]:
+        updated_at = utc_now().isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO alert_states (
+                    alert_key,
+                    is_active,
+                    fingerprint,
+                    last_status,
+                    last_title,
+                    last_message,
+                    last_sent_at,
+                    last_recovered_at,
+                    delivery_count,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(alert_key) DO UPDATE SET
+                    is_active = excluded.is_active,
+                    fingerprint = excluded.fingerprint,
+                    last_status = excluded.last_status,
+                    last_title = excluded.last_title,
+                    last_message = excluded.last_message,
+                    last_sent_at = CASE
+                        WHEN excluded.last_sent_at != '' THEN excluded.last_sent_at
+                        ELSE alert_states.last_sent_at
+                    END,
+                    last_recovered_at = CASE
+                        WHEN excluded.last_recovered_at != '' THEN excluded.last_recovered_at
+                        ELSE alert_states.last_recovered_at
+                    END,
+                    delivery_count = CASE
+                        WHEN excluded.delivery_count > 0 THEN alert_states.delivery_count + excluded.delivery_count
+                        ELSE alert_states.delivery_count
+                    END,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    alert_key,
+                    1 if is_active else 0,
+                    fingerprint,
+                    last_status,
+                    last_title,
+                    last_message,
+                    sent_at,
+                    recovered_at,
+                    1 if increment_delivery else 0,
+                    updated_at,
+                ),
+            )
+        return self.get_alert_state(alert_key)
 
     def list_google_news_articles(
         self,

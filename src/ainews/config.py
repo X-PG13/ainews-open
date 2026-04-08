@@ -47,6 +47,11 @@ class Settings:
     source_cooldown_failure_threshold: int = 2
     source_throttle_cooldown_minutes: int = 120
     source_blocked_cooldown_minutes: int = 720
+    alert_targets: str = ""
+    alert_cooldown_minutes: int = 30
+    alert_telegram_chat_id: str = ""
+    alert_feishu_webhook: str = ""
+    alert_feishu_secret: str = ""
     llm_article_context_chars: int = 6000
     llm_provider: str = "openai_compatible"
     llm_base_url: str = ""
@@ -136,6 +141,11 @@ def load_settings() -> Settings:
         source_blocked_cooldown_minutes=int(
             os.getenv("AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES", "720")
         ),
+        alert_targets=os.getenv("AINEWS_ALERT_TARGETS", ""),
+        alert_cooldown_minutes=int(os.getenv("AINEWS_ALERT_COOLDOWN_MINUTES", "30")),
+        alert_telegram_chat_id=os.getenv("AINEWS_ALERT_TELEGRAM_CHAT_ID", ""),
+        alert_feishu_webhook=os.getenv("AINEWS_ALERT_FEISHU_WEBHOOK", ""),
+        alert_feishu_secret=os.getenv("AINEWS_ALERT_FEISHU_SECRET", ""),
         llm_article_context_chars=int(os.getenv("AINEWS_LLM_ARTICLE_CONTEXT_CHARS", "6000")),
         llm_provider=os.getenv("AINEWS_LLM_PROVIDER", "openai_compatible"),
         llm_base_url=os.getenv("AINEWS_LLM_BASE_URL", "").rstrip("/"),

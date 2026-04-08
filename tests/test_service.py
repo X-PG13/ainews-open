@@ -180,6 +180,15 @@ class StubPublisher:
         )
 
 
+class RecordingAlertNotifier:
+    def __init__(self):
+        self.calls = []
+
+    def notify_rule(self, alert_key, **kwargs):
+        self.calls.append((alert_key, kwargs))
+        return {"status": "sent", "alert_key": alert_key, "sent": True}
+
+
 class ServiceFilterTestCase(unittest.TestCase):
     def test_include_keywords_filter_non_ai_items(self) -> None:
         source = SourceDefinition(
@@ -960,6 +969,53 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertTrue(sources[0]["cooldown_active"])
             self.assertEqual(sources[0]["cooldown_status"], "blocked")
 
+    def test_source_cooldown_dispatches_runtime_alerts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_cooldown_failure_threshold=2,
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier()
+            now = utc_now()
+            for index in range(2):
+                repository.insert_if_new(
+                    ArticleRecord(
+                        source_id="venturebeat",
+                        source_name="VentureBeat",
+                        title=f"Alert cooldown story {index}",
+                        url=f"https://venturebeat.com/ai/alert-{index}",
+                        canonical_url=f"https://venturebeat.com/ai/alert-{index}",
+                        summary="A release update",
+                        published_at=now,
+                        discovered_at=now,
+                        language="en",
+                        region="international",
+                        country="US",
+                        topic="news",
+                        content_hash=make_content_hash(
+                            f"Alert cooldown story {index}", "A release update"
+                        ),
+                        dedup_key=make_dedup_key(f"Alert cooldown story {index}"),
+                        raw_payload={},
+                    )
+                )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ForbiddenExtractor(),
+                alert_notifier=alert_notifier,
+            )
+
+            service.extract_articles(limit=10)
+
+            keys = [item[0] for item in alert_notifier.calls]
+            self.assertIn("health_status", keys)
+            self.assertIn("source_cooldowns_active", keys)
+
     def test_source_cooldown_skips_remaining_articles_in_batch(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(
@@ -1034,6 +1090,108 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["cleared"], 1)
             self.assertEqual(state["cooldown_status"], "")
             self.assertEqual(state["cooldown_until"], "")
+
+    def test_pipeline_partial_error_dispatches_pipeline_alert(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier()
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="Pipeline alert article",
+                    url="https://example.com/pipeline-alert",
+                    canonical_url="https://example.com/pipeline-alert",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash("Pipeline alert article", "A release update"),
+                    dedup_key=make_dedup_key("Pipeline alert article"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=FailingExtractor(),
+                alert_notifier=alert_notifier,
+            )
+
+            service.run_pipeline(region="all", since_hours=24, limit=10, use_llm=True, persist=True)
+
+            keys = [item[0] for item in alert_notifier.calls]
+            self.assertIn("pipeline_status", keys)
+
+    def test_publish_partial_error_dispatches_publish_alert(self) -> None:
+        class FailingPublisher(StubPublisher):
+            def publish(self, payload, *, targets=None, wechat_submit=None):
+                return {
+                    "status": "partial_error",
+                    "targets": [
+                        {
+                            "target": "feishu",
+                            "status": "error",
+                            "message": "feishu webhook failed",
+                            "external_id": "",
+                            "response": {},
+                        }
+                    ],
+                    "published": 0,
+                    "errors": 1,
+                }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier()
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="Publish alert article",
+                    url="https://example.com/publish-alert",
+                    canonical_url="https://example.com/publish-alert",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash("Publish alert article", "A release update"),
+                    dedup_key=make_dedup_key("Publish alert article"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+                publisher=FailingPublisher(),
+                alert_notifier=alert_notifier,
+            )
+
+            service.publish_digest(region="all", since_hours=24, limit=10, use_llm=True, persist=True, targets=["feishu"])
+
+            keys = [item[0] for item in alert_notifier.calls]
+            self.assertIn("publish_status", keys)
 
     def test_extract_articles_marks_short_body_as_permanent_error(self) -> None:
         class ShortBodyExtractor:

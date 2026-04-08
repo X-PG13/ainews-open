@@ -125,6 +125,11 @@ function renderSources(sources) {
         <div class="publication-meta">
           <span>streak: ${escapeHtml(String(source.consecutive_failures || 0))}</span>
           ${
+            source.recent_success_rate !== null && source.recent_success_rate !== undefined
+              ? `<span>success_rate: ${escapeHtml(String(source.recent_success_rate))}%</span>`
+              : "<span>success_rate: n/a</span>"
+          }
+          ${
             source.cooldown_until
               ? `<span>cooldown_until: ${escapeHtml(source.cooldown_until)}</span>`
               : "<span>cooldown_until: none</span>"
@@ -152,6 +157,32 @@ function renderSources(sources) {
               : "<span>last_success_at: none</span>"
           }
         </div>
+        ${
+          Object.keys(source.recent_failure_categories || {}).length
+            ? `<p class="article-brief"><strong>failure_mix:</strong> ${escapeHtml(
+                Object.entries(source.recent_failure_categories)
+                  .map(([key, value]) => `${key}=${value}`)
+                  .join(", ")
+              )}</p>`
+            : ""
+        }
+        ${
+          (source.recent_operations || []).length
+            ? `<div class="source-ops-list">${source.recent_operations
+                .map(
+                  (event) => `
+                    <div class="source-op">
+                      <span class="chip ${event.status === "ok" ? "good" : event.status === "skipped" ? "" : "warn"}">${escapeHtml(
+                        event.event_type
+                      )}:${escapeHtml(event.status)}</span>
+                      <span class="muted">${escapeHtml(event.created_at || "")}</span>
+                      <div class="article-brief">${escapeHtml(event.article_title || event.message || "")}</div>
+                    </div>
+                  `
+                )
+                .join("")}</div>`
+            : ""
+        }
         ${
           source.cooldown_active
             ? `<div class="article-actions"><button class="button ghost" data-action="reset-source-cooldown" data-source-id="${escapeAttribute(source.id)}">解除冷却</button></div>`

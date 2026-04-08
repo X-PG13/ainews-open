@@ -104,6 +104,33 @@ API 示例：
 
 把这段 JSON 以 `POST` 方式发到 `/admin/sources/cooldowns/reset`，并带上 `X-Admin-Token`。
 
+## 告警没有发出，或者感觉太吵
+
+先检查：
+
+- `AINEWS_ALERT_TARGETS` 是否设成了 `telegram`、`feishu` 或两者
+- 告警专用目标是否真的配置了
+- Telegram 告警需要 `AINEWS_TELEGRAM_BOT_TOKEN`，以及 `AINEWS_ALERT_TELEGRAM_CHAT_ID` 或 `AINEWS_TELEGRAM_CHAT_ID`
+- 飞书告警需要 `AINEWS_ALERT_FEISHU_WEBHOOK` 或 `AINEWS_FEISHU_WEBHOOK`
+
+当前预期行为：
+
+- 同一活动告警会按规则和指纹去重
+- 重发窗口由 `AINEWS_ALERT_COOLDOWN_MINUTES` 控制
+- 故障恢复后，系统会补发恢复通知
+
+如果你认为应该发新告警却没收到：
+
+- 检查这次事件的指纹是否真的变化了
+- 结合 `/health` 和 `/admin/operations` 确认系统是否仍处于失败态
+- 查日志里的 `alert.target_error`
+
+如果你觉得告警太吵：
+
+- 调大 `AINEWS_ALERT_COOLDOWN_MINUTES`
+- 用 `AINEWS_ALERT_*` 单独配置告警目标，不要和业务发布目标混用
+- 到 `/admin/sources` 看看到底是哪个来源在重复触发冷却或 blocked 失败
+
 ## LLM 日报没有生成
 
 先检查：

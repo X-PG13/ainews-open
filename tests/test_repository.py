@@ -321,6 +321,57 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(state["cooldown_until"], "")
             self.assertEqual(state["consecutive_failures"], 0)
 
+    def test_repository_summarizes_recent_source_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            repository.record_source_event(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                event_type="extract",
+                status="ok",
+                article_id=1,
+                article_title="Success",
+                message="ok",
+            )
+            repository.record_source_event(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                event_type="extract",
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                article_id=2,
+                article_title="Blocked",
+                message="blocked",
+            )
+
+            summary = repository.get_source_event_summaries(source_ids=["venturebeat"])
+
+            self.assertIn("venturebeat", summary)
+            self.assertEqual(summary["venturebeat"]["recent_failure_categories"]["blocked"], 1)
+            self.assertEqual(len(summary["venturebeat"]["recent_operations"]), 2)
+            self.assertIsNotNone(summary["venturebeat"]["recent_success_rate"])
+
+    def test_repository_persists_alert_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+
+            repository.save_alert_state(
+                alert_key="pipeline_status",
+                is_active=True,
+                fingerprint="partial_error",
+                last_status="active",
+                last_title="pipeline status is partial_error",
+                last_message="extract=partial_error",
+                sent_at=utc_now().isoformat(),
+                increment_delivery=True,
+            )
+            state = repository.get_alert_state("pipeline_status")
+
+            self.assertTrue(state["is_active"])
+            self.assertEqual(state["delivery_count"], 1)
+            self.assertEqual(state["fingerprint"], "partial_error")
+
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")

@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Dict, Iterable, List, Optional
 from urllib.error import HTTPError, URLError
 
+from .alerting import AlertNotifier
 from .config import Settings, load_settings
 from .content_extractor import (
     ArticleContentExtractor,
@@ -41,6 +42,7 @@ class NewsService:
         content_extractor: Optional[ArticleContentExtractor] = None,
         publisher: Optional[DigestPublisher] = None,
         google_news_resolver: Optional[GoogleNewsURLResolver] = None,
+        alert_notifier: Optional[AlertNotifier] = None,
     ):
         self.settings = settings or load_settings()
         self.repository = repository or ArticleRepository(self.settings.database_path)
@@ -66,6 +68,7 @@ class NewsService:
         self.google_news_resolver = resolver
         self.publisher = publisher or DigestPublisher(self.settings)
         self.telemetry = OperationTracker()
+        self.alert_notifier = alert_notifier or AlertNotifier(self.settings, self.repository)
 
     def list_sources(self, *, include_runtime: bool = False) -> List[dict]:
         sources = self.source_registry.list_sources()
@@ -76,7 +79,19 @@ class NewsService:
             str(item["source_id"]): item
             for item in self.repository.list_source_states(limit=max(200, len(sources) * 2))
         }
-        return [self._present_source(source.to_dict(), source_states.get(source.id)) for source in sources]
+        source_summaries = self.repository.get_source_event_summaries(
+            source_ids=[source.id for source in sources],
+            sample_size=20,
+            limit_per_source=5,
+        )
+        return [
+            self._present_source(
+                source.to_dict(),
+                source_states.get(source.id),
+                source_summaries.get(source.id),
+            )
+            for source in sources
+        ]
 
     def get_stats(self) -> Dict[str, object]:
         payload = self.repository.get_stats()
@@ -87,6 +102,9 @@ class NewsService:
         payload["configured_publish_targets"] = self.publisher.normalize_targets(
             self.settings.publish_targets.split(",")
         )
+        payload["configured_alert_targets"] = [
+            item for item in clean_text(self.settings.alert_targets).split(",") if item
+        ]
         telemetry = self.telemetry.snapshot()
         payload["operations"] = telemetry["operations"]
         payload["failure_categories"] = telemetry["failure_categories"]
@@ -253,12 +271,27 @@ class NewsService:
                     else:
                         status["skipped"] += 1
                 inserted_total += status["inserted"]
+                self.repository.record_source_event(
+                    source_id=source.id,
+                    source_name=source.name,
+                    event_type="ingest",
+                    status="ok",
+                    message=f"fetched={status['fetched']} inserted={status['inserted']} skipped={status['skipped']}",
+                )
             except Exception as exc:  # pragma: no cover
                 category = self._classify_error(exc)
                 status["status"] = "error"
                 status["error"] = self._public_error_message(exc)
                 status["error_category"] = category
                 failure_categories[category] += 1
+                self.repository.record_source_event(
+                    source_id=source.id,
+                    source_name=source.name,
+                    event_type="ingest",
+                    status="error",
+                    error_category=category,
+                    message=self._public_error_message(exc),
+                )
                 logger.exception(
                     "ingest source failed",
                     extra={
@@ -304,6 +337,7 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        self._dispatch_runtime_alerts()
         return payload
 
     def resolve_google_news_urls(
@@ -570,6 +604,7 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        self._dispatch_runtime_alerts()
         return payload
 
     def extract_articles(
@@ -622,12 +657,23 @@ class NewsService:
                 source_state = self.repository.get_source_state(source_id)
                 source_state_cache[source_id] = source_state
             if self._source_cooldown_active(source_state):
+                cooldown_message = self._source_cooldown_message(source_state)
+                self.repository.record_source_event(
+                    source_id=source_id,
+                    source_name=source_name,
+                    event_type="extract",
+                    status="skipped",
+                    error_category="source_cooldown",
+                    article_id=int(article["id"]),
+                    article_title=str(article["title"]),
+                    message=cooldown_message,
+                )
                 results.append(
                     {
                         "article_id": article["id"],
                         "status": "skipped",
                         "title": article["title"],
-                        "message": self._source_cooldown_message(source_state),
+                        "message": cooldown_message,
                         "source_id": source_id,
                         "source_cooldown_until": str(source_state.get("cooldown_until", "")),
                     }
@@ -641,6 +687,15 @@ class NewsService:
                     source_state_cache[source_id] = self.repository.mark_source_success(
                         source_id=source_id,
                         source_name=source_name,
+                    )
+                    self.repository.record_source_event(
+                        source_id=source_id,
+                        source_name=source_name,
+                        event_type="extract",
+                        status="ok",
+                        article_id=int(article["id"]),
+                        article_title=str(article["title"]),
+                        message=f"extracted {len(extracted.text)} characters",
                     )
                 results.append(
                     {
@@ -657,6 +712,16 @@ class NewsService:
                     int(article["id"]),
                     error=message,
                 )
+                if source_id:
+                    self.repository.record_source_event(
+                        source_id=source_id,
+                        source_name=source_name,
+                        event_type="extract",
+                        status="skipped",
+                        article_id=int(article["id"]),
+                        article_title=str(article["title"]),
+                        message=message,
+                    )
                 results.append(
                     {
                         "article_id": article["id"],
@@ -678,6 +743,17 @@ class NewsService:
                         error=public_error,
                     )
                     source_state_cache[source_id] = source_state
+                    self.repository.record_source_event(
+                        source_id=source_id,
+                        source_name=source_name,
+                        event_type="extract",
+                        status=str(failure["status"]),
+                        error_category=str(failure["error_category"]),
+                        http_status=int(failure["http_status"]),
+                        article_id=int(article["id"]),
+                        article_title=str(article["title"]),
+                        message=public_error,
+                    )
                 logger.exception(
                     "article extraction failed",
                     extra={
@@ -738,6 +814,7 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        self._dispatch_runtime_alerts()
         return payload
 
     def retry_extractions(
@@ -783,6 +860,15 @@ class NewsService:
             source_ids=source_ids,
             active_only=active_only,
         )
+        for state in cleared_sources:
+            self.repository.record_source_event(
+                source_id=str(state["source_id"]),
+                source_name=str(state.get("source_name") or state["source_id"]),
+                event_type="cooldown",
+                status="cleared",
+                message="source cooldown cleared by operator",
+            )
+        self._dispatch_runtime_alerts()
         return {
             "status": "ok",
             "cleared": len(cleared_sources),
@@ -970,6 +1056,7 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        self._dispatch_runtime_alerts()
         return payload
 
     def run_pipeline(
@@ -1085,6 +1172,19 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        section_summaries = ", ".join(
+            f"{name}={result[name].get('status')}"
+            for name in ("ingest", "extract", "enrich", "publish")
+            if isinstance(result.get(name), dict)
+        )
+        self._dispatch_operation_alert(
+            "pipeline_status",
+            active=pipeline_status in {"partial_error", "error"},
+            title=f"pipeline status is {pipeline_status}",
+            message=f"{section_summaries or 'no sections'}; failure_categories={dict(failure_categories)}",
+            fingerprint=f"{pipeline_status}|{section_summaries}|{dict(failure_categories)}",
+        )
+        self._dispatch_runtime_alerts()
         return result
 
     def publish_digest(
@@ -1276,6 +1376,19 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        failure_summary = ", ".join(
+            f"{item.get('target')}={item.get('status')}"
+            for item in merged_targets
+            if clean_text(str(item.get("status", ""))).lower() not in {"ok", "skipped"}
+        )
+        self._dispatch_operation_alert(
+            "publish_status",
+            active=str(publish_result["status"]) in {"partial_error", "error"},
+            title=f"publish status is {publish_result['status']}",
+            message=f"{failure_summary or 'all targets completed successfully'}; failure_categories={dict(failure_categories)}",
+            fingerprint=f"{publish_result['status']}|{failure_summary}|{dict(failure_categories)}",
+        )
+        self._dispatch_runtime_alerts()
         return publish_result
 
     def build_digest(
@@ -1560,9 +1673,14 @@ class NewsService:
         return payload
 
     @staticmethod
-    def _present_source(source: dict, source_state: Optional[dict] = None) -> dict:
+    def _present_source(
+        source: dict,
+        source_state: Optional[dict] = None,
+        source_summary: Optional[dict] = None,
+    ) -> dict:
         payload = dict(source)
         runtime = dict(source_state or {})
+        summary = dict(source_summary or {})
         cooldown_until = clean_text(str(runtime.get("cooldown_until", "")))
         payload["cooldown_status"] = clean_text(str(runtime.get("cooldown_status", "")))
         payload["cooldown_until"] = cooldown_until
@@ -1572,6 +1690,13 @@ class NewsService:
         payload["last_http_status"] = int(runtime.get("last_http_status") or 0)
         payload["last_error_at"] = clean_text(str(runtime.get("last_error_at", "")))
         payload["last_success_at"] = clean_text(str(runtime.get("last_success_at", "")))
+        payload["recent_success_rate"] = summary.get("recent_success_rate")
+        payload["recent_failure_categories"] = dict(summary.get("recent_failure_categories", {}))
+        payload["recent_operations"] = list(summary.get("recent_operations", []))
+        if not payload["last_error_at"]:
+            payload["last_error_at"] = clean_text(str(summary.get("last_failure_at", "")))
+        if not payload["last_success_at"]:
+            payload["last_success_at"] = clean_text(str(summary.get("last_success_at", "")))
         return payload
 
     @staticmethod
@@ -1650,6 +1775,7 @@ class NewsService:
         category = clean_text(str(failure.get("error_category", "")))
         http_status = int(failure.get("http_status") or 0)
         previous = self.repository.get_source_state(source_id) or {}
+        previous_active = self._source_cooldown_active(previous)
         if category in SOURCE_COOLDOWN_CATEGORIES:
             consecutive_failures = int(previous.get("consecutive_failures") or 0) + 1
             cooldown_until = ""
@@ -1665,7 +1791,7 @@ class NewsService:
             cooldown_until = ""
             cooldown_status = ""
 
-        return self.repository.upsert_source_state(
+        state = self.repository.upsert_source_state(
             source_id=source_id,
             source_name=source_name,
             cooldown_status=cooldown_status,
@@ -1676,6 +1802,77 @@ class NewsService:
             last_error=error,
             last_error_at=utc_now().isoformat(),
         )
+        if state and self._source_cooldown_active(state) and not previous_active:
+            self.repository.record_source_event(
+                source_id=source_id,
+                source_name=source_name,
+                event_type="cooldown",
+                status="active",
+                error_category=category,
+                http_status=http_status,
+                message=self._source_cooldown_message(state),
+            )
+        return state
+
+    def _dispatch_runtime_alerts(self) -> None:
+        health = self.get_health()
+        health_status = clean_text(str(health.get("status", "ok")))
+        degraded_reasons = list(health.get("degraded_reasons", []))
+        self.alert_notifier.notify_rule(
+            "health_status",
+            active=health_status in {"degraded", "error"},
+            title=f"service health is {health_status or 'unknown'}",
+            message=(
+                f"status={health_status}; degraded_reasons={', '.join(degraded_reasons) or 'none'}; "
+                f"request ready={health.get('ready')}"
+            ),
+            fingerprint=f"{health_status}|{'|'.join(sorted(str(item) for item in degraded_reasons))}",
+            severity="warning",
+            recovery_title="service health recovered",
+            recovery_message="service health returned to ok",
+        )
+        cooldowns = list(health.get("source_cooldowns", []))
+        cooldown_fingerprint = "|".join(
+            sorted(
+                f"{item.get('source_id')}:{item.get('cooldown_status')}:{item.get('cooldown_until')}"
+                for item in cooldowns
+            )
+        )
+        self.alert_notifier.notify_rule(
+            "source_cooldowns_active",
+            active=bool(cooldowns),
+            title="source cooldowns are active",
+            message=self._source_cooldown_alert_message(cooldowns),
+            fingerprint=cooldown_fingerprint,
+            severity="warning",
+            recovery_title="source cooldowns cleared",
+            recovery_message="all source cooldowns have been cleared",
+        )
+
+    def _dispatch_operation_alert(self, rule_key: str, *, active: bool, title: str, message: str, fingerprint: str) -> None:
+        self.alert_notifier.notify_rule(
+            rule_key,
+            active=active,
+            title=title,
+            message=message,
+            fingerprint=fingerprint,
+            severity="critical" if active else "info",
+            recovery_title=f"{title} recovered",
+            recovery_message=f"{title} returned to ok",
+        )
+
+    @staticmethod
+    def _source_cooldown_alert_message(cooldowns: List[dict]) -> str:
+        if not cooldowns:
+            return "no active source cooldowns"
+        lines = [
+            f"{item.get('source_id')} status={item.get('cooldown_status')} until={item.get('cooldown_until')}"
+            for item in cooldowns[:6]
+        ]
+        remaining = len(cooldowns) - len(lines)
+        if remaining > 0:
+            lines.append(f"+{remaining} more source cooldown(s)")
+        return "\n".join(lines)
 
     @classmethod
     def _classify_error(cls, exc: Exception) -> str:

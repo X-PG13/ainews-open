@@ -243,6 +243,52 @@ python -m ainews reset-source-cooldowns --all
 - `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
 - `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
 
+## 告警策略
+
+AI News Open 现在可以把关键运维事件发到 Telegram 和飞书。
+
+当前支持的触发条件：
+
+- `/health` 从 `ok` 进入 `degraded`
+- 出现活动中的 `source_cooldowns_active`
+- 发布失败
+- pipeline 进入 `partial_error` 或 `error`
+
+当前行为：
+
+- 告警会按规则和指纹做去重，不会每次任务都刷屏
+- 同一类活动告警会遵守最小重复发送间隔
+- 当系统恢复正常时，会补发恢复通知
+
+相关环境变量：
+
+- `AINEWS_ALERT_TARGETS`
+- `AINEWS_ALERT_COOLDOWN_MINUTES`
+- `AINEWS_ALERT_TELEGRAM_CHAT_ID`
+- `AINEWS_ALERT_FEISHU_WEBHOOK`
+- `AINEWS_ALERT_FEISHU_SECRET`
+
+最小 Telegram 告警配置：
+
+```env
+AINEWS_ALERT_TARGETS=telegram
+AINEWS_TELEGRAM_BOT_TOKEN=...
+AINEWS_ALERT_TELEGRAM_CHAT_ID=@ainews_ops
+```
+
+最小飞书告警配置：
+
+```env
+AINEWS_ALERT_TARGETS=feishu
+AINEWS_ALERT_FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/...
+AINEWS_ALERT_FEISHU_SECRET=...
+```
+
+运维建议：
+
+- 来源级冷却、最近成功率、失败分类分布、最近操作摘要，优先看 `/admin/sources`
+- 告警是通知入口，不是排障终点；收到告警后优先结合 `/health` 和 `/admin/operations` 看上下文
+
 ## 升级前检查
 
 升级前建议先做：

@@ -123,6 +123,16 @@ HOST_SELECTORS = {
         ".entry-content",
         ".article-content__content-group",
     ),
+    "wired.com": (
+        ".body__inner-container",
+        ".article__body",
+        ".ContentBodyWrapper",
+    ),
+    "reuters.com": (
+        ".article-body__content__17Yit",
+        ".article-body__content",
+        "[data-testid='paragraph-0']",
+    ),
 }
 HOST_DROP_SELECTORS = {
     "36kr.com": (
@@ -182,6 +192,18 @@ HOST_DROP_SELECTORS = {
         ".share-this",
         ".related-story-list",
     ),
+    "wired.com": (
+        ".summary__dek",
+        ".recirc-list-wrapper",
+        ".newsletter-promo",
+        ".paywall-barrier",
+    ),
+    "reuters.com": (
+        ".article-footer",
+        ".recirc-list",
+        ".related-news",
+        ".article-topics",
+    ),
 }
 HOST_NOISE_LINE_PATTERNS = {
     "36kr.com": (
@@ -221,6 +243,15 @@ HOST_NOISE_LINE_PATTERNS = {
     "venturebeat.com": (
         re.compile(r"^Subscribe to VB Daily$"),
         re.compile(r"^Join the event that brings together.+$"),
+    ),
+    "wired.com": (
+        re.compile(r"^Most Popular$"),
+        re.compile(r"^Read More$"),
+        re.compile(r"^You can support our work by subscribing\.$"),
+    ),
+    "reuters.com": (
+        re.compile(r"^Our Standards: The Thomson Reuters Trust Principles$"),
+        re.compile(r"^Reporting by .+$"),
     ),
 }
 FALLBACK_HOST_RULES = {
@@ -263,6 +294,16 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-content__content-group"}},
+    ),
+    "wired.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"body__inner-container"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"contentbodywrapper"}},
+    ),
+    "reuters.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body__content__17yit"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
+        {"tags": {"div", "section"}, "id_tokens": {"paragraph-0"}},
     ),
 }
 TEXT_BLOCK_TAGS = {

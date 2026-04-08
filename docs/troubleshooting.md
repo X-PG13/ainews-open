@@ -102,6 +102,33 @@ API:
 
 POST it to `/admin/sources/cooldowns/reset` with `X-Admin-Token`.
 
+## Alerts do not fire, or they seem too noisy
+
+First checks:
+
+- confirm `AINEWS_ALERT_TARGETS` is set to `telegram`, `feishu`, or both
+- confirm the alert-specific destination is configured
+- Telegram alerts need `AINEWS_TELEGRAM_BOT_TOKEN` plus either `AINEWS_ALERT_TELEGRAM_CHAT_ID` or `AINEWS_TELEGRAM_CHAT_ID`
+- Feishu alerts need either `AINEWS_ALERT_FEISHU_WEBHOOK` or `AINEWS_FEISHU_WEBHOOK`
+
+Expected behavior:
+
+- repeated active failures are deduped by alert rule and fingerprint
+- the resend window is controlled by `AINEWS_ALERT_COOLDOWN_MINUTES`
+- when the condition clears, AI News Open sends a recovery notification
+
+If you expect a new alert and did not receive one:
+
+- check whether the fingerprint actually changed
+- inspect `/health` and `/admin/operations` to confirm the system is still in the failing state
+- inspect logs for `alert.target_error`
+
+If alerts feel too noisy:
+
+- increase `AINEWS_ALERT_COOLDOWN_MINUTES`
+- separate publish targets from alert targets by using the `AINEWS_ALERT_*` overrides
+- use `/admin/sources` to inspect which source is repeatedly driving cooldowns or blocked failures
+
 ## LLM digest generation does not happen
 
 Checks:

@@ -157,6 +157,50 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Subscribe to VB Daily", content.text)
         self.assertNotIn("Related stories", content.text)
 
+    def test_prefers_wired_body_container_and_drops_recirculation_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("wired-article.html"),
+            url="https://www.wired.com/story/ai-infrastructure-feature/",
+        )
+
+        self.assertIn("Wired reports that AI teams are rebuilding evaluation stacks", content.text)
+        self.assertIn("observability, fallback paths, and governance", content.text)
+        self.assertNotIn("Most Popular", content.text)
+
+    def test_prefers_reuters_article_body_and_drops_standards_footer(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("reuters-blog.html"),
+            url="https://www.reuters.com/world/us/enterprise-ai-operations-2026-04-08/",
+        )
+
+        self.assertIn("Reuters writes that enterprise buyers are shifting from pilot programs", content.text)
+        self.assertIn("fit procurement, security review, and incident response processes", content.text)
+        self.assertNotIn("Thomson Reuters Trust Principles", content.text)
+
+    def test_prefers_techcrunch_post_content_variant(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("techcrunch-variant.html"),
+            url="https://techcrunch.com/2026/04/08/ai-infra-startups-follow-up/",
+        )
+
+        self.assertIn("AI infrastructure startups are increasingly selling cost controls", content.text)
+        self.assertIn("routing, caching, and observability layers", content.text)
+        self.assertNotIn("Sign up for the TechCrunch AI newsletter", content.text)
+
+    def test_prefers_venturebeat_content_group_variant(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("venturebeat-variant.html"),
+            url="https://venturebeat.com/ai/ai-operations-discipline/",
+        )
+
+        self.assertIn("AI operations teams are maturing from experimentation", content.text)
+        self.assertIn("dashboards for latency, refusals, retrieval quality", content.text)
+        self.assertNotIn("Related stories", content.text)
+
     def test_skips_google_news_aggregate_fixture(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
 

@@ -22,6 +22,14 @@
 | `AINEWS_OUTPUT_DIR` | No | `output` | digest/export | Markdown and JSON export directory. |
 | `AINEWS_STATIC_SITE_DIR` | No | `output/site` | static publish | Static site output directory. |
 | `AINEWS_STATIC_SITE_BASE_URL` | No | empty | static publish | Canonical base URL inserted into static publish responses. |
+| `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD` | No | `2` | extraction ops | Consecutive `429/403/challenge` failures before a source enters cooldown. |
+| `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES` | No | `120` | extraction ops | Base cooldown window for throttled sources. |
+| `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES` | No | `720` | extraction ops | Base cooldown window for blocked sources. |
+| `AINEWS_ALERT_TARGETS` | No | empty | operations | Comma-separated alert targets such as `telegram,feishu`. |
+| `AINEWS_ALERT_COOLDOWN_MINUTES` | No | `30` | operations | Minimum resend window for the same active alert fingerprint. |
+| `AINEWS_ALERT_TELEGRAM_CHAT_ID` | No | empty | operations | Optional Telegram destination override for alerts. Falls back to `AINEWS_TELEGRAM_CHAT_ID`. |
+| `AINEWS_ALERT_FEISHU_WEBHOOK` | No | empty | operations | Optional Feishu webhook override for alerts. Falls back to `AINEWS_FEISHU_WEBHOOK`. |
+| `AINEWS_ALERT_FEISHU_SECRET` | No | empty | operations | Optional Feishu signing secret for alert delivery. |
 
 ## Extraction And LLM
 
