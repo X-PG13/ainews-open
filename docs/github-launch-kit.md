@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.1.0`
+`v1.1.1`
 
 ### Suggested Title
 
-`AI News Open v1.1.0 · Operations And Monitoring Update`
+`AI News Open v1.1.1 · Release Hardening Patch`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.1.0
+## AI News Open v1.1.1
 
-AI News Open `v1.1.0` expands the stable workflow with source runtime controls, alerting, Google News resolution, and direct Prometheus/Grafana monitoring assets.
+AI News Open `v1.1.1` hardens the release process itself with published-artifact smoke checks and stricter release-completion rules.
 
 ### What it does
 
@@ -40,10 +40,10 @@ AI News Open `v1.1.0` expands the stable workflow with source runtime controls, 
 
 ### Highlights in this release
 
-- Source cooldown, maintenance mode, acknowledgement, snooze, and automatic recovery lifecycle
-- Google News wrapper resolution before ingest, with historical backfill and stronger deduplication
-- Runtime alerting for degraded health, publication failures, pipeline errors, and source cooldown transitions
-- Prometheus `/metrics`, housekeeping workflow, and Docker Compose monitoring profile with Prometheus and Grafana assets
+- Dedicated published-artifact smoke validation for wheels and source archives
+- Checksum verification against the actual GitHub Release bundle
+- `Release Artifact Smoke` is now part of the release-completion gate
+- PyPI publication is opt-in by default until trusted publishing is configured
 
 ### Quick start
 
