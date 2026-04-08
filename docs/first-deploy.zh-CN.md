@@ -105,8 +105,8 @@ python -m ainews publish --target static_site --persist --export
 
 ## 出问题时先看哪里
 
-- [troubleshooting.md](./troubleshooting.md)
-- [configuration.md](./configuration.md)
+- [troubleshooting.zh-CN.md](./troubleshooting.zh-CN.md)
+- [configuration.zh-CN.md](./configuration.zh-CN.md)
 - API 响应头里的 `X-Request-ID`
 
 ## 下一步

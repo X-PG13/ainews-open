@@ -92,6 +92,7 @@ make smoke
 - [Troubleshooting](docs/troubleshooting.md)
 - [Use Cases](docs/use-cases.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
+- [Release Checklist](docs/release-checklist.md)
 - [Support Policy](SUPPORT.md)
 - [Roadmap](ROADMAP.md)
 

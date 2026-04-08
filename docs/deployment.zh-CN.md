@@ -9,7 +9,7 @@
 
 如果你只是第一次部署，建议先看更短的 [first-deploy.zh-CN.md](./first-deploy.zh-CN.md)。
 
-变量级配置说明见 [configuration.md](./configuration.md)。
+变量级配置说明见 [configuration.zh-CN.md](./configuration.zh-CN.md)。
 
 ## 15 分钟本地跑通
 

@@ -26,3 +26,4 @@ data/*.sqlite
 output/*.json
 output/*.md
 output/site/
+.ainews-smoke/

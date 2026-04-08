@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple
+from urllib.parse import parse_qs, urlparse
 
 from ainews.config import Settings
+from ainews.http import fetch_json, post_json, post_multipart
 from ainews.llm import OpenAICompatibleLLMClient
 from ainews.publisher import DigestPublisher
 
@@ -18,6 +20,7 @@ class RequestRecord:
     path: str
     headers: Dict[str, str]
     body: object
+    raw_body: bytes
 
 
 class LocalJsonServer:
@@ -49,7 +52,7 @@ class LocalJsonServer:
                 raw_body = self.rfile.read(length) if length else b""
                 try:
                     parsed_body: object = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-                except json.JSONDecodeError:
+                except (UnicodeDecodeError, json.JSONDecodeError):
                     parsed_body = raw_body.decode("utf-8", errors="replace")
 
                 record = RequestRecord(
@@ -57,6 +60,7 @@ class LocalJsonServer:
                     path=self.path,
                     headers={key: value for key, value in self.headers.items()},
                     body=parsed_body,
+                    raw_body=raw_body,
                 )
                 owner.requests.append(record)
                 route = owner.routes.get((self.command, self.path))
@@ -278,6 +282,144 @@ class HttpIntegrationTestCase(unittest.TestCase):
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["targets"][0]["status"], "ok")
         self.assertEqual(result["targets"][0]["message"], "sent feishu card message")
+
+    def test_telegram_publish_uses_real_http_round_trip(self) -> None:
+        def telegram_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            self.assertEqual(record.body["chat_id"], "@demo-channel")
+            self.assertIn("AI Daily Digest", record.body["text"])
+            return 200, {"ok": True, "result": {"message_id": 42}}, None
+
+        with tempfile.TemporaryDirectory() as temp_dir, LocalJsonServer(
+            {("POST", "/telegram/sendMessage"): telegram_handler}
+        ) as server:
+            settings = _settings(
+                temp_dir,
+                telegram_bot_token="demo-token",
+                telegram_chat_id="@demo-channel",
+            )
+
+            def routed_post(url: str, payload: Dict[str, object], **kwargs) -> Dict[str, object]:
+                parsed = urlparse(url)
+                if parsed.netloc == "api.telegram.org":
+                    mapped = f"{server.base_url}/telegram/sendMessage"
+                    return post_json(mapped, payload, **kwargs)
+                return post_json(url, payload, **kwargs)
+
+            publisher = DigestPublisher(settings, json_post=routed_post)
+
+            result = publisher.publish(_sample_publish_payload(), targets=["telegram"])
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["targets"][0]["external_id"], "42")
+
+    def test_wechat_publish_and_refresh_use_real_http_round_trip(self) -> None:
+        def token_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            parsed = urlparse(record.path)
+            params = parse_qs(parsed.query)
+            self.assertEqual(params["grant_type"], ["client_credential"])
+            self.assertEqual(params["appid"], ["wx-app-id"])
+            self.assertEqual(params["secret"], ["wx-app-secret"])
+            return 200, {"access_token": "ACCESS123", "expires_in": 7200}, None
+
+        def material_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            parsed = urlparse(record.path)
+            params = parse_qs(parsed.query)
+            self.assertEqual(params["access_token"], ["ACCESS123"])
+            self.assertEqual(params["type"], ["thumb"])
+            self.assertIn(b'filename="cover.jpg"', record.raw_body)
+            return 200, {"errcode": 0, "media_id": "THUMB123"}, None
+
+        def draft_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            article = record.body["articles"][0]
+            self.assertEqual(article["thumb_media_id"], "THUMB123")
+            self.assertEqual(article["author"], "AI News Open")
+            return 200, {"errcode": 0, "media_id": "MEDIA123"}, None
+
+        def submit_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            self.assertEqual(record.body["media_id"], "MEDIA123")
+            return 200, {"errcode": 0, "publish_id": "PUBLISH123"}, None
+
+        def status_handler(record: RequestRecord) -> Tuple[int, Dict[str, object], Optional[str]]:
+            self.assertEqual(record.body["publish_id"], "PUBLISH123")
+            return (
+                200,
+                {
+                    "publish_id": "PUBLISH123",
+                    "publish_status": 0,
+                    "article_detail": {
+                        "count": 1,
+                        "item": [{"idx": 1, "article_url": "https://mp.weixin.qq.com/s/demo"}],
+                    },
+                },
+                None,
+            )
+
+        routes = {
+            ("GET", "/wechat/token?grant_type=client_credential&appid=wx-app-id&secret=wx-app-secret"): token_handler,
+            ("POST", "/wechat/material/add_material?access_token=ACCESS123&type=thumb"): material_handler,
+            ("POST", "/wechat/draft/add?access_token=ACCESS123"): draft_handler,
+            ("POST", "/wechat/freepublish/submit?access_token=ACCESS123"): submit_handler,
+            ("POST", "/wechat/freepublish/get?access_token=ACCESS123"): status_handler,
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir, LocalJsonServer(routes) as server:
+            cover_path = Path(temp_dir) / "cover.jpg"
+            cover_path.write_bytes(b"\xff\xd8\xff" + (b"\x00" * 100))
+
+            settings = _settings(
+                temp_dir,
+                wechat_app_id="wx-app-id",
+                wechat_app_secret="wx-app-secret",
+                wechat_thumb_image_path=str(cover_path),
+                wechat_thumb_upload_type="thumb",
+                wechat_author="AI News Open",
+            )
+
+            def routed_get(url: str, **kwargs) -> Dict[str, object]:
+                parsed = urlparse(url)
+                if parsed.netloc == "api.weixin.qq.com":
+                    mapped = f"{server.base_url}/wechat{parsed.path[len('/cgi-bin') :]}?{parsed.query}"
+                    return fetch_json(mapped, **kwargs)
+                return fetch_json(url, **kwargs)
+
+            def routed_post(url: str, payload: Dict[str, object], **kwargs) -> Dict[str, object]:
+                parsed = urlparse(url)
+                if parsed.netloc == "api.weixin.qq.com":
+                    mapped = f"{server.base_url}/wechat{parsed.path[len('/cgi-bin') :]}?{parsed.query}"
+                    return post_json(mapped, payload, **kwargs)
+                return post_json(url, payload, **kwargs)
+
+            def routed_multipart(url: str, files, **kwargs) -> Dict[str, object]:
+                parsed = urlparse(url)
+                if parsed.netloc == "api.weixin.qq.com":
+                    mapped = f"{server.base_url}/wechat{parsed.path[len('/cgi-bin') :]}?{parsed.query}"
+                    return post_multipart(mapped, files=files, **kwargs)
+                return post_multipart(url, files=files, **kwargs)
+
+            publisher = DigestPublisher(
+                settings,
+                json_post=routed_post,
+                json_get=routed_get,
+                multipart_post=routed_multipart,
+            )
+
+            publish_result = publisher.publish(
+                _sample_publish_payload(),
+                targets=["wechat"],
+                wechat_submit=True,
+            )
+            refresh_result = publisher.refresh_publication(
+                {
+                    "target": "wechat",
+                    "external_id": "PUBLISH123",
+                    "response_payload": {"publish": {"publish_id": "PUBLISH123"}},
+                }
+            )
+
+        self.assertEqual(publish_result["status"], "ok")
+        self.assertEqual(publish_result["targets"][0]["external_id"], "PUBLISH123")
+        self.assertEqual(refresh_result.status, "ok")
+        self.assertEqual(refresh_result.external_id, "PUBLISH123")
 
 
 if __name__ == "__main__":

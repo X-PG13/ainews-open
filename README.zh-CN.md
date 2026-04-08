@@ -85,13 +85,14 @@ make smoke
 ## v1.0 就绪文档
 
 - [兼容性约定](docs/compatibility.md)
-- [配置矩阵](docs/configuration.md)
+- [配置矩阵](docs/configuration.zh-CN.md)
 - [首次部署指南](docs/first-deploy.zh-CN.md)
 - [部署指南](docs/deployment.zh-CN.md)
 - [数据库迁移](docs/database-migrations.md)
-- [故障排查](docs/troubleshooting.md)
+- [故障排查](docs/troubleshooting.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)
+- [发版清单](docs/release-checklist.zh-CN.md)
 - [支持策略](SUPPORT.md)
 - [路线图](ROADMAP.md)
 
