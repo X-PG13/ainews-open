@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -89,6 +89,37 @@ class ArticleCurationRequest(BaseModel):
 
 
 logger = logging.getLogger("ainews.api")
+SANITIZED_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
+
+
+def _sanitize_service_payload(payload: Any, *, error_context: bool = False) -> Any:
+    if isinstance(payload, list):
+        return [
+            _sanitize_service_payload(item, error_context=error_context) for item in payload
+        ]
+
+    if not isinstance(payload, dict):
+        return payload
+
+    status = str(payload.get("status", "")).strip().lower()
+    dict_error_context = error_context or status == "error"
+    sanitized: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key == "error" and isinstance(value, str) and value.strip():
+            sanitized[key] = SANITIZED_ERROR_MESSAGE
+            continue
+        if key.endswith("_error"):
+            if isinstance(value, str) and value.strip():
+                sanitized[key] = SANITIZED_ERROR_MESSAGE
+                continue
+            sanitized[key] = _sanitize_service_payload(value, error_context=True)
+            continue
+        if key == "message" and dict_error_context and isinstance(value, str) and value.strip():
+            sanitized[key] = SANITIZED_ERROR_MESSAGE
+            continue
+        child_error_context = dict_error_context or key.endswith("_error")
+        sanitized[key] = _sanitize_service_payload(value, error_context=child_error_context)
+    return sanitized
 
 
 def create_app() -> FastAPI:
@@ -255,22 +286,26 @@ def create_app() -> FastAPI:
 
     @app.post("/admin/enrich")
     def admin_enrich(request: EnrichRequest, _: None = Depends(require_admin)) -> dict:
-        return service.enrich_articles(
-            source_ids=request.source_ids,
-            article_ids=request.article_ids,
-            since_hours=request.since_hours,
-            limit=request.limit,
-            force=request.force,
+        return _sanitize_service_payload(
+            service.enrich_articles(
+                source_ids=request.source_ids,
+                article_ids=request.article_ids,
+                since_hours=request.since_hours,
+                limit=request.limit,
+                force=request.force,
+            )
         )
 
     @app.post("/admin/extract")
     def admin_extract(request: ExtractRequest, _: None = Depends(require_admin)) -> dict:
-        return service.extract_articles(
-            source_ids=request.source_ids,
-            article_ids=request.article_ids,
-            since_hours=request.since_hours,
-            limit=request.limit,
-            force=request.force,
+        return _sanitize_service_payload(
+            service.extract_articles(
+                source_ids=request.source_ids,
+                article_ids=request.article_ids,
+                since_hours=request.since_hours,
+                limit=request.limit,
+                force=request.force,
+            )
         )
 
     @app.post("/admin/digests/generate")
@@ -291,18 +326,20 @@ def create_app() -> FastAPI:
         request: PipelineRequest,
         _: None = Depends(require_admin),
     ) -> dict:
-        return service.run_pipeline(
-            region=request.region,
-            since_hours=request.since_hours,
-            limit=request.limit,
-            max_items_per_source=request.max_items_per_source,
-            use_llm=request.use_llm,
-            persist=request.persist,
-            export=request.export,
-            publish=request.publish,
-            publish_targets=request.publish_targets,
-            wechat_submit=request.wechat_submit,
-            force_republish=request.force_republish,
+        return _sanitize_service_payload(
+            service.run_pipeline(
+                region=request.region,
+                since_hours=request.since_hours,
+                limit=request.limit,
+                max_items_per_source=request.max_items_per_source,
+                use_llm=request.use_llm,
+                persist=request.persist,
+                export=request.export,
+                publish=request.publish,
+                publish_targets=request.publish_targets,
+                wechat_submit=request.wechat_submit,
+                force_republish=request.force_republish,
+            )
         )
 
     @app.post("/admin/publish")
@@ -310,17 +347,19 @@ def create_app() -> FastAPI:
         request: PublishRequest,
         _: None = Depends(require_admin),
     ) -> dict:
-        return service.publish_digest(
-            digest_id=request.digest_id,
-            region=request.region,
-            since_hours=request.since_hours,
-            limit=request.limit,
-            use_llm=request.use_llm,
-            persist=request.persist,
-            export=request.export,
-            targets=request.targets,
-            wechat_submit=request.wechat_submit,
-            force_republish=request.force_republish,
+        return _sanitize_service_payload(
+            service.publish_digest(
+                digest_id=request.digest_id,
+                region=request.region,
+                since_hours=request.since_hours,
+                limit=request.limit,
+                use_llm=request.use_llm,
+                persist=request.persist,
+                export=request.export,
+                targets=request.targets,
+                wechat_submit=request.wechat_submit,
+                force_republish=request.force_republish,
+            )
         )
 
     @app.get("/admin/digests")
@@ -353,12 +392,14 @@ def create_app() -> FastAPI:
         request: RefreshPublicationsRequest,
         _: None = Depends(require_admin),
     ) -> dict:
-        return service.refresh_publications(
-            publication_ids=request.publication_ids,
-            digest_id=request.digest_id,
-            target=request.target,
-            limit=request.limit,
-            only_pending=request.only_pending,
+        return _sanitize_service_payload(
+            service.refresh_publications(
+                publication_ids=request.publication_ids,
+                digest_id=request.digest_id,
+                target=request.target,
+                limit=request.limit,
+                only_pending=request.only_pending,
+            )
         )
 
     @app.patch("/admin/articles/{article_id}")

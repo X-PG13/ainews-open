@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ainews.content_extractor import ArticleContentExtractor
 
@@ -55,6 +56,17 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertIn("国内外厂商正在密集发布新的 AI 终端与模型服务", content.text)
         self.assertNotIn("首页 > 科技", content.text)
         self.assertNotIn("相关推荐 热门标签", content.text)
+
+    def test_fallback_parser_extracts_text_without_regex_block_stripping(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        with patch("ainews.content_extractor.BeautifulSoup", None):
+            content = extractor.extract_from_html(
+                _fixture("36kr.html"), url="https://36kr.com/p/123456789"
+            )
+
+        self.assertIn("国内 AI 创业公司正在重新评估模型部署与推理成本", content.text)
+        self.assertNotIn("推荐阅读", content.text)
+        self.assertNotIn("点赞 收藏 分享", content.text)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ainews import __version__
 from ainews.models import ArticleRecord
@@ -127,3 +128,82 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("operations", payload)
         self.assertIn("publish", payload["operations"])
         self.assertEqual(payload["operations"]["publish"]["status"], "ok")
+
+    def test_admin_extract_sanitizes_internal_error_message(self) -> None:
+        with patch(
+            "ainews.api.NewsService.extract_articles",
+            return_value={
+                "status": "partial_error",
+                "errors": 1,
+                "articles": [
+                    {
+                        "article_id": 1,
+                        "status": "error",
+                        "error": "database path leaked: /tmp/private.db",
+                        "error_category": "unexpected",
+                    }
+                ],
+            },
+        ):
+            response = self.client.post(
+                "/admin/extract",
+                headers={"X-Admin-Token": "secret-token"},
+                json={"limit": 1},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["articles"][0]["error"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+
+    def test_admin_refresh_publications_sanitizes_nested_error_message(self) -> None:
+        with patch(
+            "ainews.api.NewsService.refresh_publications",
+            return_value={
+                "status": "partial_error",
+                "errors": 1,
+                "publications": [
+                    {
+                        "publication_id": 1,
+                        "target": "wechat",
+                        "status": "error",
+                        "message": "token expired for tenant secret abc123",
+                        "publication": {
+                            "id": 1,
+                            "target": "wechat",
+                            "status": "error",
+                            "message": "token expired for tenant secret abc123",
+                            "response_payload": {
+                                "status_query_error": {
+                                    "message": "token expired for tenant secret abc123"
+                                }
+                            },
+                        },
+                    }
+                ],
+            },
+        ):
+            response = self.client.post(
+                "/admin/publications/refresh",
+                headers={"X-Admin-Token": "secret-token"},
+                json={"limit": 1},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["publications"][0]["message"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertEqual(
+            payload["publications"][0]["publication"]["message"],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )
+        self.assertEqual(
+            payload["publications"][0]["publication"]["response_payload"]["status_query_error"][
+                "message"
+            ],
+            "operation failed; inspect server logs with the response X-Request-ID",
+        )

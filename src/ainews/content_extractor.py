@@ -55,11 +55,6 @@ DROP_TAGS = (
     "aside",
     "iframe",
 )
-STRIP_BLOCK_RE = re.compile(
-    r"<(?:script|style|noscript|svg|header|footer|nav|form|aside|iframe)\b.*?</(?:script|style|noscript|svg|header|footer|nav|form|aside|iframe)>",
-    re.IGNORECASE | re.DOTALL,
-)
-TAG_RE = re.compile(r"<[^>]+>")
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 NOISE_LINE_PATTERNS = (
     re.compile(r"^(责任编辑|责编|编辑)[:：]"),
@@ -232,6 +227,42 @@ class _FallbackContainerParser(HTMLParser):
                 continue
             return True
         return False
+
+
+class _FallbackTextParser(HTMLParser):
+    def __init__(self, drop_tokens: tuple[str, ...]):
+        super().__init__(convert_charrefs=True)
+        self.drop_tokens = drop_tokens
+        self.stack: List[bool] = []
+        self.buffer: List[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attrs_dict = {key.lower(): (value or "") for key, value in attrs}
+        attrs_blob = " ".join([attrs_dict.get("id", ""), attrs_dict.get("class", "")]).lower()
+        parent_skip = self.stack[-1] if self.stack else False
+        local_skip = tag.lower() in DROP_TAGS or tag.lower() in {"head", "title", "meta", "link"}
+        if not local_skip and attrs_blob:
+            local_skip = any(hint in attrs_blob for hint in DROP_HINTS) or any(
+                token and token in attrs_blob for token in self.drop_tokens
+            )
+        should_skip = parent_skip or local_skip
+        self.stack.append(should_skip)
+        if not should_skip and tag.lower() in TEXT_BLOCK_TAGS:
+            self.buffer.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self.stack:
+            return
+        should_skip = self.stack.pop()
+        if not should_skip and tag.lower() in TEXT_BLOCK_TAGS:
+            self.buffer.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self.stack and not self.stack[-1]:
+            self.buffer.append(data)
+
+    def text(self) -> str:
+        return "".join(self.buffer)
 
 
 class ArticleContentExtractor:
@@ -444,9 +475,10 @@ class ArticleContentExtractor:
             if len(best_text) >= MIN_EXTRACTED_TEXT_LENGTH:
                 return ExtractedContent(text=best_text, title=title)
 
-        text = STRIP_BLOCK_RE.sub(" ", raw_html)
-        text = TAG_RE.sub(" ", text)
-        text = self._normalize_extracted_text(html.unescape(text), host)
+        parser = _FallbackTextParser(self._host_drop_tokens(host))
+        parser.feed(raw_html)
+        parser.close()
+        text = self._normalize_extracted_text(html.unescape(parser.text()), host)
         text = self._trim(text)
         if len(text) < MIN_EXTRACTED_TEXT_LENGTH:
             raise ValueError("extracted article text is too short")
