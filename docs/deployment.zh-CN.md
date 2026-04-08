@@ -228,6 +228,8 @@ AI News Open 会把这个来源打入冷却窗口。冷却期间：
 - `/admin/sources` 和控制台会展示受影响来源以及冷却截止时间
 - `/admin/source-alerts` 和控制台会展示最近的来源级告警与恢复历史
 - 维护者可以直接确认告警、临时静默告警，或把来源切到维护模式
+- 当来源连续成功达到恢复阈值后，系统会自动清掉旧的冷却和确认痕迹
+- 如果静默窗口到期后问题还在，来源会在下一次运行态扫描时重新具备发送活动告警的资格
 
 手动解除冷却示例：
 
@@ -253,11 +255,17 @@ python -m ainews snooze-source-alerts --source venturebeat --minutes 60
 python -m ainews set-source-maintenance --source venturebeat
 ```
 
+```bash
+python -m ainews prune-source-runtime-history --retention-days 45
+```
+
 相关环境变量：
 
 - `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD`
+- `AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD`
 - `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
 - `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
+- `AINEWS_SOURCE_RUNTIME_RETENTION_DAYS`
 
 ## 告警策略
 
@@ -306,6 +314,8 @@ AINEWS_ALERT_FEISHU_SECRET=...
 - 来源级告警激活和恢复通知历史，优先看 `/admin/source-alerts`
 - 已确认的来源告警，在同一次冷却事件里不会再重复发活动告警
 - 处于静默窗口或维护模式的来源，会暂停来源级告警投递；维护模式还会暂停默认抽取队列
+- 静默到期后，如果来源仍处于未解决状态，下一次运行态扫描会重新发活动告警
+- `prune-source-runtime-history` 默认会先把旧的 `source_events` / `source_alerts` 归档，再从在线表里裁掉
 - 告警是通知入口，不是排障终点；收到告警后优先结合 `/health` 和 `/admin/operations` 看上下文
 
 ## 升级前检查

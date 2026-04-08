@@ -23,8 +23,10 @@
 | `AINEWS_STATIC_SITE_DIR` | No | `output/site` | static publish | Static site output directory. |
 | `AINEWS_STATIC_SITE_BASE_URL` | No | empty | static publish | Canonical base URL inserted into static publish responses. |
 | `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD` | No | `2` | extraction ops | Consecutive `429/403/challenge` failures before a source enters cooldown. |
+| `AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD` | No | `2` | extraction ops | Consecutive successful extractions required before stale cooldown and acknowledgement traces are cleared automatically. |
 | `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES` | No | `120` | extraction ops | Base cooldown window for throttled sources. |
 | `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES` | No | `720` | extraction ops | Base cooldown window for blocked sources. |
+| `AINEWS_SOURCE_RUNTIME_RETENTION_DAYS` | No | `45` | extraction ops | Default retention window for live `source_events` and `source_alerts` rows before archival pruning. |
 | `AINEWS_ALERT_TARGETS` | No | empty | operations | Comma-separated alert targets such as `telegram,feishu`. |
 | `AINEWS_ALERT_COOLDOWN_MINUTES` | No | `30` | operations | Minimum resend window for the same active alert fingerprint. |
 | `AINEWS_ALERT_TELEGRAM_CHAT_ID` | No | empty | operations | Optional Telegram destination override for alerts. Falls back to `AINEWS_TELEGRAM_CHAT_ID`. |
@@ -73,5 +75,6 @@
 
 - Local demo: `AINEWS_LOG_FORMAT=text`, no publish targets, no LLM required.
 - Operator API: set `AINEWS_ADMIN_TOKEN`, `AINEWS_LOG_FORMAT=json`, and `AINEWS_PUBLISH_TARGETS`.
+- Extraction operations: tune `AINEWS_SOURCE_*` values to control cooldown entry, recovery after consecutive successes, and source runtime history retention.
 - LLM digest pipeline: configure the `AINEWS_LLM_*` group plus at least one publish target or export directory.
 - WeChat publishing: prefer `AINEWS_WECHAT_APP_ID` + `AINEWS_WECHAT_APP_SECRET` over a long-lived access token.

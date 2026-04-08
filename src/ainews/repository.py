@@ -35,9 +35,11 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 9
+CURRENT_SCHEMA_VERSION = 10
 
 SOURCE_STATE_EXTRA_COLUMNS = {
+    "consecutive_successes": "INTEGER NOT NULL DEFAULT 0",
+    "last_recovered_at": "TEXT NOT NULL DEFAULT ''",
     "silenced_until": "TEXT NOT NULL DEFAULT ''",
     "maintenance_mode": "INTEGER NOT NULL DEFAULT 0",
     "acknowledged_at": "TEXT NOT NULL DEFAULT ''",
@@ -134,11 +136,13 @@ class ArticleRepository:
                     cooldown_status TEXT NOT NULL DEFAULT '',
                     cooldown_until TEXT NOT NULL DEFAULT '',
                     consecutive_failures INTEGER NOT NULL DEFAULT 0,
+                    consecutive_successes INTEGER NOT NULL DEFAULT 0,
                     last_error_category TEXT NOT NULL DEFAULT '',
                     last_http_status INTEGER NOT NULL DEFAULT 0,
                     last_error TEXT NOT NULL DEFAULT '',
                     last_error_at TEXT NOT NULL DEFAULT '',
                     last_success_at TEXT NOT NULL DEFAULT '',
+                    last_recovered_at TEXT NOT NULL DEFAULT '',
                     silenced_until TEXT NOT NULL DEFAULT '',
                     maintenance_mode INTEGER NOT NULL DEFAULT 0,
                     acknowledged_at TEXT NOT NULL DEFAULT '',
@@ -158,6 +162,21 @@ class ArticleRepository:
                     article_title TEXT NOT NULL DEFAULT '',
                     message TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS source_events_archive (
+                    id INTEGER PRIMARY KEY,
+                    source_id TEXT NOT NULL,
+                    source_name TEXT NOT NULL DEFAULT '',
+                    event_type TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    error_category TEXT NOT NULL DEFAULT '',
+                    http_status INTEGER NOT NULL DEFAULT 0,
+                    article_id INTEGER,
+                    article_title TEXT NOT NULL DEFAULT '',
+                    message TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL,
+                    archived_at TEXT NOT NULL DEFAULT ''
                 );
 
                 CREATE TABLE IF NOT EXISTS alert_states (
@@ -185,6 +204,21 @@ class ArticleRepository:
                     fingerprint TEXT NOT NULL DEFAULT '',
                     targets TEXT NOT NULL DEFAULT '[]',
                     created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS source_alerts_archive (
+                    id INTEGER PRIMARY KEY,
+                    source_id TEXT NOT NULL,
+                    source_name TEXT NOT NULL DEFAULT '',
+                    alert_key TEXT NOT NULL,
+                    alert_status TEXT NOT NULL,
+                    severity TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    message TEXT NOT NULL DEFAULT '',
+                    fingerprint TEXT NOT NULL DEFAULT '',
+                    targets TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL,
+                    archived_at TEXT NOT NULL DEFAULT ''
                 );
                 """
             )
@@ -247,6 +281,9 @@ class ArticleRepository:
                 CREATE INDEX IF NOT EXISTS idx_source_events_status_created_at
                     ON source_events(status, created_at);
 
+                CREATE INDEX IF NOT EXISTS idx_source_events_archive_source_created_at
+                    ON source_events_archive(source_id, created_at);
+
                 CREATE INDEX IF NOT EXISTS idx_source_alerts_source_created_at
                     ON source_alerts(source_id, created_at);
 
@@ -255,6 +292,9 @@ class ArticleRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_source_alerts_alert_key_created_at
                     ON source_alerts(alert_key, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_alerts_archive_source_created_at
+                    ON source_alerts_archive(source_id, created_at);
                 """
             )
             self._set_meta(connection, "schema_version", str(CURRENT_SCHEMA_VERSION))
@@ -327,6 +367,7 @@ class ArticleRepository:
     def _row_to_source_state_dict(row: sqlite3.Row) -> Dict[str, object]:
         payload = dict(row)
         payload["consecutive_failures"] = int(payload.get("consecutive_failures") or 0)
+        payload["consecutive_successes"] = int(payload.get("consecutive_successes") or 0)
         payload["last_http_status"] = int(payload.get("last_http_status") or 0)
         payload["maintenance_mode"] = bool(payload.get("maintenance_mode"))
         cooldown_until = clean_text(str(payload.get("cooldown_until") or ""))
@@ -756,11 +797,13 @@ class ArticleRepository:
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
+                    consecutive_successes,
                     last_error_category,
                     last_http_status,
                     last_error,
                     last_error_at,
                     last_success_at,
+                    last_recovered_at,
                     silenced_until,
                     maintenance_mode,
                     acknowledged_at,
@@ -800,11 +843,13 @@ class ArticleRepository:
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
+                    consecutive_successes,
                     last_error_category,
                     last_http_status,
                     last_error,
                     last_error_at,
                     last_success_at,
+                    last_recovered_at,
                     silenced_until,
                     maintenance_mode,
                     acknowledged_at,
@@ -827,11 +872,13 @@ class ArticleRepository:
         cooldown_status: str = "",
         cooldown_until: str = "",
         consecutive_failures: int = 0,
+        consecutive_successes: int = 0,
         last_error_category: str = "",
         last_http_status: int = 0,
         last_error: str = "",
         last_error_at: str = "",
         last_success_at: str = "",
+        last_recovered_at: str = "",
         silenced_until: Optional[str] = None,
         maintenance_mode: Optional[bool] = None,
         acknowledged_at: Optional[str] = None,
@@ -871,22 +918,25 @@ class ArticleRepository:
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
+                    consecutive_successes,
                     last_error_category,
                     last_http_status,
                     last_error,
                     last_error_at,
                     last_success_at,
+                    last_recovered_at,
                     silenced_until,
                     maintenance_mode,
                     acknowledged_at,
                     ack_note,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(source_id) DO UPDATE SET
                     source_name = excluded.source_name,
                     cooldown_status = excluded.cooldown_status,
                     cooldown_until = excluded.cooldown_until,
                     consecutive_failures = excluded.consecutive_failures,
+                    consecutive_successes = excluded.consecutive_successes,
                     last_error_category = excluded.last_error_category,
                     last_http_status = excluded.last_http_status,
                     last_error = excluded.last_error,
@@ -897,6 +947,10 @@ class ArticleRepository:
                     last_success_at = CASE
                         WHEN excluded.last_success_at != '' THEN excluded.last_success_at
                         ELSE source_states.last_success_at
+                    END,
+                    last_recovered_at = CASE
+                        WHEN excluded.last_recovered_at != '' THEN excluded.last_recovered_at
+                        ELSE source_states.last_recovered_at
                     END,
                     silenced_until = excluded.silenced_until,
                     maintenance_mode = excluded.maintenance_mode,
@@ -910,11 +964,13 @@ class ArticleRepository:
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
+                    consecutive_successes,
                     last_error_category,
                     last_http_status,
                     last_error,
                     last_error_at,
                     last_success_at,
+                    last_recovered_at,
                     effective_silenced_until,
                     1 if effective_maintenance_mode else 0,
                     effective_acknowledged_at,
@@ -929,16 +985,39 @@ class ArticleRepository:
         *,
         source_id: str,
         source_name: str,
+        recovery_success_threshold: int = 2,
     ) -> Optional[dict]:
+        current = self.get_source_state(source_id) or {}
+        timestamp = utc_now().isoformat()
+        threshold = max(1, int(recovery_success_threshold))
+        next_successes = min(
+            threshold,
+            int(current.get("consecutive_successes") or 0) + 1,
+        )
+        recovery_pending = bool(
+            clean_text(str(current.get("cooldown_status", "")))
+            or clean_text(str(current.get("acknowledged_at", "")))
+            or clean_text(str(current.get("ack_note", "")))
+        )
+        recovered = recovery_pending and next_successes >= threshold
+        last_recovered_at = timestamp if recovered else ""
         return self.upsert_source_state(
             source_id=source_id,
             source_name=source_name,
-            cooldown_status="",
-            cooldown_until="",
+            cooldown_status="" if recovered else str(current.get("cooldown_status", "")),
+            cooldown_until="" if recovered else str(current.get("cooldown_until", "")),
             consecutive_failures=0,
-            last_success_at=utc_now().isoformat(),
-            acknowledged_at="",
-            ack_note="",
+            consecutive_successes=next_successes,
+            last_error_category="" if recovered else str(current.get("last_error_category", "")),
+            last_http_status=0 if recovered else int(current.get("last_http_status") or 0),
+            last_error="" if recovered else str(current.get("last_error", "")),
+            last_error_at=str(current.get("last_error_at", "")),
+            last_success_at=timestamp,
+            last_recovered_at=last_recovered_at,
+            silenced_until=str(current.get("silenced_until", "")),
+            maintenance_mode=bool(current.get("maintenance_mode")),
+            acknowledged_at="" if recovered else str(current.get("acknowledged_at", "")),
+            ack_note="" if recovered else str(current.get("ack_note", "")),
         )
 
     def reset_source_cooldowns(
@@ -982,6 +1061,7 @@ class ArticleRepository:
                         cooldown_status = '',
                         cooldown_until = '',
                         consecutive_failures = 0,
+                        consecutive_successes = 0,
                         acknowledged_at = '',
                         ack_note = '',
                         updated_at = ?
@@ -1012,11 +1092,13 @@ class ArticleRepository:
             cooldown_status=str(current.get("cooldown_status", "")),
             cooldown_until=str(current.get("cooldown_until", "")),
             consecutive_failures=int(current.get("consecutive_failures") or 0),
+            consecutive_successes=int(current.get("consecutive_successes") or 0),
             last_error_category=str(current.get("last_error_category", "")),
             last_http_status=int(current.get("last_http_status") or 0),
             last_error=str(current.get("last_error", "")),
             last_error_at=str(current.get("last_error_at", "")),
             last_success_at=str(current.get("last_success_at", "")),
+            last_recovered_at=str(current.get("last_recovered_at", "")),
             silenced_until=silenced_until,
             maintenance_mode=maintenance_mode,
             acknowledged_at=acknowledged_at,
@@ -1463,6 +1545,139 @@ class ArticleRepository:
                 params,
             ).fetchall()
         return [self._row_to_source_alert_dict(row) for row in rows]
+
+    def prune_source_runtime_history(
+        self,
+        *,
+        retention_days: int,
+        archive: bool = True,
+    ) -> Dict[str, object]:
+        retention = max(1, int(retention_days))
+        cutoff = (utc_now() - timedelta(days=retention)).isoformat()
+        archived_at = utc_now().isoformat()
+        with self._connect() as connection:
+            event_row = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM source_events
+                WHERE created_at < ?
+                """,
+                (cutoff,),
+            ).fetchone()
+            alert_row = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM source_alerts
+                WHERE created_at < ?
+                """,
+                (cutoff,),
+            ).fetchone()
+            event_total = int((event_row or {})["total"] or 0)
+            alert_total = int((alert_row or {})["total"] or 0)
+
+            if archive and event_total:
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO source_events_archive (
+                        id,
+                        source_id,
+                        source_name,
+                        event_type,
+                        status,
+                        error_category,
+                        http_status,
+                        article_id,
+                        article_title,
+                        message,
+                        created_at,
+                        archived_at
+                    )
+                    SELECT
+                        id,
+                        source_id,
+                        source_name,
+                        event_type,
+                        status,
+                        error_category,
+                        http_status,
+                        article_id,
+                        article_title,
+                        message,
+                        created_at,
+                        ?
+                    FROM source_events
+                    WHERE created_at < ?
+                    """,
+                    (archived_at, cutoff),
+                )
+            if archive and alert_total:
+                connection.execute(
+                    """
+                    INSERT OR REPLACE INTO source_alerts_archive (
+                        id,
+                        source_id,
+                        source_name,
+                        alert_key,
+                        alert_status,
+                        severity,
+                        title,
+                        message,
+                        fingerprint,
+                        targets,
+                        created_at,
+                        archived_at
+                    )
+                    SELECT
+                        id,
+                        source_id,
+                        source_name,
+                        alert_key,
+                        alert_status,
+                        severity,
+                        title,
+                        message,
+                        fingerprint,
+                        targets,
+                        created_at,
+                        ?
+                    FROM source_alerts
+                    WHERE created_at < ?
+                    """,
+                    (archived_at, cutoff),
+                )
+            deleted_events = connection.execute(
+                """
+                DELETE FROM source_events
+                WHERE created_at < ?
+                """,
+                (cutoff,),
+            ).rowcount
+            deleted_alerts = connection.execute(
+                """
+                DELETE FROM source_alerts
+                WHERE created_at < ?
+                """,
+                (cutoff,),
+            ).rowcount
+            archive_event_row = connection.execute(
+                "SELECT COUNT(*) AS total FROM source_events_archive"
+            ).fetchone()
+            archive_alert_row = connection.execute(
+                "SELECT COUNT(*) AS total FROM source_alerts_archive"
+            ).fetchone()
+        return {
+            "retention_days": retention,
+            "cutoff": cutoff,
+            "archive": archive,
+            "events_considered": event_total,
+            "alerts_considered": alert_total,
+            "events_archived": event_total if archive else 0,
+            "alerts_archived": alert_total if archive else 0,
+            "events_deleted": int(deleted_events or 0),
+            "alerts_deleted": int(deleted_alerts or 0),
+            "archived_events_total": int((archive_event_row or {})["total"] or 0),
+            "archived_alerts_total": int((archive_alert_row or {})["total"] or 0),
+        }
 
     def list_google_news_articles(
         self,
@@ -2545,10 +2760,12 @@ class ArticleRepository:
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
+                    consecutive_successes,
                     last_error_category,
                     last_http_status,
                     last_error_at,
                     last_success_at,
+                    last_recovered_at,
                     silenced_until,
                     maintenance_mode,
                     acknowledged_at,

@@ -1316,6 +1316,149 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertTrue(source["silenced_active"])
             self.assertTrue(source["maintenance_mode"])
 
+    def test_source_auto_recovery_requires_consecutive_successes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_recovery_success_threshold=2,
+            )
+            repository = ArticleRepository(settings.database_path)
+            published = utc_now()
+            for index in range(2):
+                repository.insert_if_new(
+                    ArticleRecord(
+                        source_id="venturebeat",
+                        source_name="VentureBeat",
+                        title=f"Recovery story {index}",
+                        url=f"https://venturebeat.com/ai/recovery-{index}",
+                        canonical_url=f"https://venturebeat.com/ai/recovery-{index}",
+                        summary="Recovery validation story",
+                        published_at=published,
+                        discovered_at=published,
+                        language="en",
+                        region="international",
+                        country="US",
+                        topic="news",
+                        content_hash=make_content_hash(
+                            f"Recovery story {index}", "Recovery validation story"
+                        ),
+                        dedup_key=make_dedup_key(f"Recovery story {index}"),
+                        raw_payload={},
+                    )
+                )
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2000-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error=PUBLIC_ERROR_MESSAGE,
+                last_error_at=utc_now().isoformat(),
+                acknowledged_at="2026-04-08T00:00:00+00:00",
+                ack_note="owned by on-call",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+            )
+
+            result = service.extract_articles(limit=10)
+            state = repository.get_source_state("venturebeat")
+            events = repository.list_source_events(source_id="venturebeat", limit=10)
+            recovered_event = next(
+                event for event in events if event["event_type"] == "cooldown" and event["status"] == "recovered"
+            )
+
+            self.assertEqual(result["updated"], 2)
+            self.assertEqual(state["cooldown_status"], "")
+            self.assertEqual(state["acknowledged_at"], "")
+            self.assertEqual(state["ack_note"], "")
+            self.assertEqual(state["consecutive_successes"], 2)
+            self.assertTrue(state["last_recovered_at"])
+            self.assertIn("recovered after 2 consecutive successful extractions", recovered_event["message"])
+
+    def test_source_alert_reactivates_after_snooze_expires(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier(repository)
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error=PUBLIC_ERROR_MESSAGE,
+                last_error_at=utc_now().isoformat(),
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                alert_notifier=alert_notifier,
+            )
+
+            service._dispatch_runtime_alerts()
+            service.snooze_source_alerts(source_ids=["venturebeat"], minutes=60)
+            repository.update_source_runtime_controls(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                silenced_until="2000-01-01T00:00:00+00:00",
+            )
+
+            service._dispatch_runtime_alerts()
+            alert_history = service.list_source_alerts(source_id="venturebeat", limit=10)
+            source_alert_calls = [
+                item for item in alert_notifier.calls if item[0] == "source_cooldown:venturebeat"
+            ]
+
+            self.assertEqual(len(source_alert_calls), 2)
+            self.assertEqual(len(alert_history), 2)
+            self.assertEqual(alert_history[0]["alert_status"], "sent")
+            self.assertEqual(alert_history[1]["alert_status"], "sent")
+
+    def test_prune_source_runtime_history_uses_default_retention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_runtime_retention_days=21,
+            )
+            repository = ArticleRepository(settings.database_path)
+            repository.record_source_event(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                event_type="extract",
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                message="old event",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+            )
+
+            with patch.object(repository, "prune_source_runtime_history", wraps=repository.prune_source_runtime_history) as prune_runtime:
+                result = service.prune_source_runtime_history()
+
+            prune_runtime.assert_called_once_with(retention_days=21, archive=True)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["retention_days"], 21)
+            self.assertIn("operation", result)
+
     def test_pipeline_partial_error_dispatches_pipeline_alert(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(

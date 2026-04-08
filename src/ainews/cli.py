@@ -142,6 +142,25 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     set_source_maintenance_parser.add_argument("--disable", action="store_true")
 
+    prune_source_runtime_parser = subparsers.add_parser(
+        "prune-source-runtime-history",
+        help="Archive and prune old source event and alert history rows",
+    )
+    prune_source_runtime_parser.add_argument("--retention-days", type=int, default=None)
+    prune_source_runtime_parser.set_defaults(archive=True)
+    prune_source_runtime_parser.add_argument(
+        "--archive",
+        dest="archive",
+        action="store_true",
+        help="Archive old rows before pruning them",
+    )
+    prune_source_runtime_parser.add_argument(
+        "--no-archive",
+        dest="archive",
+        action="store_false",
+        help="Delete old rows without copying them to archive tables",
+    )
+
     resolve_google_news_parser = subparsers.add_parser(
         "resolve-google-news",
         help="Resolve stored Google News wrapper URLs to direct article URLs",
@@ -325,6 +344,15 @@ def main(argv: list[str] | None = None) -> int:
             service.set_source_maintenance(
                 source_ids=args.sources,
                 enabled=not args.disable,
+            )
+        )
+        return 0
+
+    if args.command == "prune-source-runtime-history":
+        _json_dump(
+            service.prune_source_runtime_history(
+                retention_days=args.retention_days,
+                archive=args.archive,
             )
         )
         return 0

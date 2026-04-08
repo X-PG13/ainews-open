@@ -131,6 +131,7 @@ function renderSources(sources) {
         </div>
         <div class="publication-meta">
           <span>streak: ${escapeHtml(String(source.consecutive_failures || 0))}</span>
+          <span>recovery_streak: ${escapeHtml(String(source.consecutive_successes || 0))}</span>
           ${
             source.recent_success_rate !== null && source.recent_success_rate !== undefined
               ? `<span>success_rate: ${escapeHtml(String(source.recent_success_rate))}%</span>`
@@ -162,6 +163,11 @@ function renderSources(sources) {
             source.last_success_at
               ? `<span>last_success_at: ${escapeHtml(source.last_success_at)}</span>`
               : "<span>last_success_at: none</span>"
+          }
+          ${
+            source.last_recovered_at
+              ? `<span>last_recovered_at: ${escapeHtml(source.last_recovered_at)}</span>`
+              : "<span>last_recovered_at: none</span>"
           }
         </div>
         <div class="publication-meta">

@@ -1,6 +1,7 @@
 import sqlite3
 import tempfile
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 from ainews.models import ArticleRecord, DailyDigest
@@ -437,6 +438,135 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertTrue(updated["silenced_active"])
             self.assertEqual(updated["ack_note"], "known issue")
             self.assertEqual(updated["acknowledged_at"], "2026-04-08T00:00:00+00:00")
+
+    def test_repository_marks_source_success_after_recovery_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error="blocked",
+                last_error_at=utc_now().isoformat(),
+                acknowledged_at="2026-04-08T00:00:00+00:00",
+                ack_note="owned by on-call",
+            )
+
+            first = repository.mark_source_success(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                recovery_success_threshold=2,
+            )
+            second = repository.mark_source_success(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                recovery_success_threshold=2,
+            )
+
+            self.assertEqual(first["consecutive_successes"], 1)
+            self.assertEqual(first["cooldown_status"], "blocked")
+            self.assertEqual(first["acknowledged_at"], "2026-04-08T00:00:00+00:00")
+            self.assertEqual(second["consecutive_successes"], 2)
+            self.assertEqual(second["cooldown_status"], "")
+            self.assertEqual(second["cooldown_until"], "")
+            self.assertEqual(second["acknowledged_at"], "")
+            self.assertEqual(second["ack_note"], "")
+            self.assertEqual(second["last_error_category"], "")
+            self.assertEqual(second["last_http_status"], 0)
+            self.assertTrue(second["last_recovered_at"])
+
+    def test_repository_prunes_and_archives_old_source_runtime_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            old_timestamp = (utc_now() - timedelta(days=90)).isoformat()
+            recent_timestamp = utc_now().isoformat()
+
+            old_event = repository.record_source_event(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                event_type="extract",
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                message="old failure",
+            )
+            recent_event = repository.record_source_event(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                event_type="extract",
+                status="ok",
+                message="recent success",
+            )
+            old_alert = repository.record_source_alert(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                alert_key="source_cooldown:venturebeat",
+                alert_status="sent",
+                severity="warning",
+                title="source cooldown active: VentureBeat",
+                message="old cooldown alert",
+                fingerprint="blocked",
+                targets=[{"target": "telegram", "status": "ok"}],
+            )
+            recent_alert = repository.record_source_alert(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                alert_key="source_cooldown:venturebeat",
+                alert_status="recovered",
+                severity="info",
+                title="source cooldown cleared: VentureBeat",
+                message="recent recovery",
+                fingerprint="",
+                targets=[{"target": "telegram", "status": "ok"}],
+            )
+
+            with repository._connect() as connection:
+                connection.execute(
+                    "UPDATE source_events SET created_at = ? WHERE id = ?",
+                    (old_timestamp, int(old_event["id"])),
+                )
+                connection.execute(
+                    "UPDATE source_events SET created_at = ? WHERE id = ?",
+                    (recent_timestamp, int(recent_event["id"])),
+                )
+                connection.execute(
+                    "UPDATE source_alerts SET created_at = ? WHERE id = ?",
+                    (old_timestamp, int(old_alert["id"])),
+                )
+                connection.execute(
+                    "UPDATE source_alerts SET created_at = ? WHERE id = ?",
+                    (recent_timestamp, int(recent_alert["id"])),
+                )
+
+            result = repository.prune_source_runtime_history(retention_days=30, archive=True)
+            remaining_events = repository.list_source_events(source_id="venturebeat", limit=10)
+            remaining_alerts = repository.list_source_alerts(source_id="venturebeat", limit=10)
+
+            self.assertEqual(result["events_deleted"], 1)
+            self.assertEqual(result["alerts_deleted"], 1)
+            self.assertEqual(result["events_archived"], 1)
+            self.assertEqual(result["alerts_archived"], 1)
+            self.assertEqual(len(remaining_events), 1)
+            self.assertEqual(remaining_events[0]["message"], "recent success")
+            self.assertEqual(len(remaining_alerts), 1)
+            self.assertEqual(remaining_alerts[0]["message"], "recent recovery")
+
+            with repository._connect() as connection:
+                archived_event_row = connection.execute(
+                    "SELECT message FROM source_events_archive WHERE id = ?",
+                    (int(old_event["id"]),),
+                ).fetchone()
+                archived_alert_row = connection.execute(
+                    "SELECT message FROM source_alerts_archive WHERE id = ?",
+                    (int(old_alert["id"]),),
+                ).fetchone()
+
+            self.assertEqual(str(archived_event_row["message"]), "old failure")
+            self.assertEqual(str(archived_alert_row["message"]), "old cooldown alert")
 
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

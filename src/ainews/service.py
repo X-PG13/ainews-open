@@ -694,10 +694,21 @@ class NewsService:
                 extracted = self.content_extractor.fetch_and_extract(str(article["url"]))
                 self._store_extracted_article(article, extracted)
                 if source_id:
+                    previous_source_state = dict(source_state or {})
                     source_state_cache[source_id] = self.repository.mark_source_success(
                         source_id=source_id,
                         source_name=source_name,
+                        recovery_success_threshold=self.settings.source_recovery_success_threshold,
                     )
+                    recovered_state = source_state_cache[source_id] or {}
+                    if self._source_just_recovered(previous_source_state, recovered_state):
+                        self.repository.record_source_event(
+                            source_id=source_id,
+                            source_name=source_name,
+                            event_type="cooldown",
+                            status="recovered",
+                            message=self._source_recovery_event_message(recovered_state),
+                        )
                     self.repository.record_source_event(
                         source_id=source_id,
                         source_name=source_name,
@@ -1007,6 +1018,39 @@ class NewsService:
             "maintenance_mode": enabled,
             "sources": updated,
         }
+
+    def prune_source_runtime_history(
+        self,
+        *,
+        retention_days: Optional[int] = None,
+        archive: bool = True,
+    ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "source_runtime_prune",
+            context={
+                "retention_days": retention_days,
+                "archive": archive,
+            },
+        )
+        effective_retention = max(
+            1,
+            int(retention_days or self.settings.source_runtime_retention_days),
+        )
+        result = self.repository.prune_source_runtime_history(
+            retention_days=effective_retention,
+            archive=archive,
+        )
+        operation_record = self.telemetry.finish(
+            operation,
+            status="ok",
+            metrics={
+                "events_deleted": int(result.get("events_deleted") or 0),
+                "alerts_deleted": int(result.get("alerts_deleted") or 0),
+            },
+        )
+        result["status"] = "ok"
+        result["operation"] = operation_record
+        return result
 
     def curate_article(
         self,
@@ -1818,10 +1862,12 @@ class NewsService:
         payload["cooldown_until"] = cooldown_until
         payload["cooldown_active"] = bool(cooldown_until and cooldown_until > utc_now().isoformat())
         payload["consecutive_failures"] = int(runtime.get("consecutive_failures") or 0)
+        payload["consecutive_successes"] = int(runtime.get("consecutive_successes") or 0)
         payload["last_error_category"] = clean_text(str(runtime.get("last_error_category", "")))
         payload["last_http_status"] = int(runtime.get("last_http_status") or 0)
         payload["last_error_at"] = clean_text(str(runtime.get("last_error_at", "")))
         payload["last_success_at"] = clean_text(str(runtime.get("last_success_at", "")))
+        payload["last_recovered_at"] = clean_text(str(runtime.get("last_recovered_at", "")))
         payload["silenced_until"] = clean_text(str(runtime.get("silenced_until", "")))
         payload["silenced_active"] = bool(runtime.get("silenced_active"))
         payload["maintenance_mode"] = bool(runtime.get("maintenance_mode"))
@@ -1907,6 +1953,26 @@ class NewsService:
         return bool(clean_text(str(source_state.get("acknowledged_at", ""))))
 
     @staticmethod
+    def _source_recovery_pending(source_state: Optional[dict]) -> bool:
+        if not isinstance(source_state, dict):
+            return False
+        return bool(
+            clean_text(str(source_state.get("cooldown_status", "")))
+            or clean_text(str(source_state.get("acknowledged_at", "")))
+            or clean_text(str(source_state.get("ack_note", "")))
+        )
+
+    @classmethod
+    def _source_just_recovered(cls, previous: Optional[dict], current: Optional[dict]) -> bool:
+        if not cls._source_recovery_pending(previous):
+            return False
+        if not isinstance(current, dict):
+            return False
+        previous_recovered = clean_text(str((previous or {}).get("last_recovered_at", "")))
+        current_recovered = clean_text(str(current.get("last_recovered_at", "")))
+        return bool(current_recovered and current_recovered != previous_recovered)
+
+    @staticmethod
     def _source_cooldown_message(source_state: Optional[dict]) -> str:
         if not isinstance(source_state, dict):
             return "source cooldown is active"
@@ -1949,6 +2015,7 @@ class NewsService:
             cooldown_status=cooldown_status,
             cooldown_until=cooldown_until,
             consecutive_failures=consecutive_failures,
+            consecutive_successes=0,
             last_error_category=category,
             last_http_status=http_status,
             last_error=error,
@@ -2151,6 +2218,22 @@ class NewsService:
         if http_status:
             parts.append(f"http={http_status}")
         return "; ".join(parts)
+
+    @staticmethod
+    def _source_recovery_event_message(source_state: Optional[dict]) -> str:
+        if not isinstance(source_state, dict):
+            return "source recovered after consecutive successful extractions"
+        source_name = clean_text(str(source_state.get("source_name", "")))
+        source_id = clean_text(str(source_state.get("source_id", "")))
+        source_label = source_name or source_id or "unknown source"
+        successes = max(1, int(source_state.get("consecutive_successes") or 0))
+        recovered_at = clean_text(str(source_state.get("last_recovered_at", "")))
+        if recovered_at:
+            return (
+                f"{source_label} recovered after {successes} consecutive successful extractions "
+                f"at {recovered_at}"
+            )
+        return f"{source_label} recovered after {successes} consecutive successful extractions"
 
     def _source_name_for_id(self, source_id: str) -> str:
         source_list = self.source_registry.list_sources(source_ids=[source_id])

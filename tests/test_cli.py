@@ -248,6 +248,32 @@ class CliTestCase(unittest.TestCase):
         )
         self.assertIn('"updated": 1', stdout.getvalue())
 
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_prune_source_runtime_history_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.prune_source_runtime_history.return_value = {"status": "ok", "events_deleted": 4}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(
+                ["prune-source-runtime-history", "--retention-days", "14", "--no-archive"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        service.prune_source_runtime_history.assert_called_once_with(
+            retention_days=14,
+            archive=False,
+        )
+        self.assertIn('"events_deleted": 4', stdout.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

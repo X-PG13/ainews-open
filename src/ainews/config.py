@@ -45,8 +45,10 @@ class Settings:
     log_format: str = "text"
     extraction_text_limit: int = 12000
     source_cooldown_failure_threshold: int = 2
+    source_recovery_success_threshold: int = 2
     source_throttle_cooldown_minutes: int = 120
     source_blocked_cooldown_minutes: int = 720
+    source_runtime_retention_days: int = 45
     alert_targets: str = ""
     alert_cooldown_minutes: int = 30
     alert_telegram_chat_id: str = ""
@@ -135,11 +137,17 @@ def load_settings() -> Settings:
         source_cooldown_failure_threshold=int(
             os.getenv("AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD", "2")
         ),
+        source_recovery_success_threshold=int(
+            os.getenv("AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD", "2")
+        ),
         source_throttle_cooldown_minutes=int(
             os.getenv("AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES", "120")
         ),
         source_blocked_cooldown_minutes=int(
             os.getenv("AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES", "720")
+        ),
+        source_runtime_retention_days=int(
+            os.getenv("AINEWS_SOURCE_RUNTIME_RETENTION_DAYS", "45")
         ),
         alert_targets=os.getenv("AINEWS_ALERT_TARGETS", ""),
         alert_cooldown_minutes=int(os.getenv("AINEWS_ALERT_COOLDOWN_MINUTES", "30")),

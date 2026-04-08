@@ -26,6 +26,8 @@ class ConfigTestCase(unittest.TestCase):
             os.environ["AINEWS_OUTPUT_DIR"] = "exports"
             os.environ["AINEWS_STATIC_SITE_DIR"] = "exports/site"
             os.environ["AINEWS_LOG_LEVEL"] = "debug"
+            os.environ["AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD"] = "3"
+            os.environ["AINEWS_SOURCE_RUNTIME_RETENTION_DAYS"] = "60"
 
             settings = load_settings()
 
@@ -39,6 +41,8 @@ class ConfigTestCase(unittest.TestCase):
             self.assertEqual(settings.log_level, "DEBUG")
             self.assertEqual(settings.log_format, "json")
             self.assertTrue(settings.telegram_disable_notification)
+            self.assertEqual(settings.source_recovery_success_threshold, 3)
+            self.assertEqual(settings.source_runtime_retention_days, 60)
 
 
 if __name__ == "__main__":

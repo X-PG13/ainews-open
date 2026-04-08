@@ -238,6 +238,8 @@ AI News Open can put the source into a cooldown window. During that cooldown:
 - `/admin/sources` and the console show the affected source and cooldown deadline
 - `/admin/source-alerts` and the console show the latest source-level alert and recovery history
 - operators can acknowledge a source alert, snooze it temporarily, or put the source into maintenance mode
+- stale cooldown and acknowledgement traces are cleared automatically after the source records enough consecutive successful extractions
+- if a snooze window expires and the cooldown is still active, the source becomes eligible for a fresh active alert on the next runtime dispatch
 
 Manual reset examples:
 
@@ -263,11 +265,17 @@ python -m ainews snooze-source-alerts --source venturebeat --minutes 60
 python -m ainews set-source-maintenance --source venturebeat
 ```
 
+```bash
+python -m ainews prune-source-runtime-history --retention-days 45
+```
+
 Relevant environment variables:
 
 - `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD`
+- `AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD`
 - `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
 - `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
+- `AINEWS_SOURCE_RUNTIME_RETENTION_DAYS`
 
 ## Alerts
 
@@ -317,6 +325,8 @@ Operator notes:
 - `/admin/source-alerts` is the history panel for source cooldown activation and recovery notifications
 - acknowledged alerts suppress repeated active source alerts for the current cooldown incident
 - snoozed or maintenance-mode sources suppress source-level alert delivery until the mute window ends or maintenance is removed
+- after a snooze expires, an unresolved source cooldown becomes eligible for a fresh active alert on the next runtime dispatch
+- `prune-source-runtime-history` archives old `source_events` and `source_alerts` rows before deleting them from the live tables by default
 
 ## Upgrade Checklist
 

@@ -135,6 +135,8 @@ If alerts feel too noisy:
 - acknowledge the active source alert if the team already owns the incident
 - snooze the source temporarily when you expect short-lived rate limits
 - move the source into maintenance mode when you want the extraction queue and source alerts to pause together
+- if a snooze expires and the source is still unhealthy, expect a fresh active alert on the next runtime dispatch
+- if old source runtime history is making the SQLite file noisy, archive and prune it with `prune-source-runtime-history`
 
 CLI examples:
 
@@ -143,6 +145,7 @@ python -m ainews ack-source-alerts --source venturebeat --note "owned by on-call
 python -m ainews snooze-source-alerts --source venturebeat --minutes 120
 python -m ainews set-source-maintenance --source venturebeat
 python -m ainews set-source-maintenance --source venturebeat --disable
+python -m ainews prune-source-runtime-history --retention-days 45
 ```
 
 ## LLM digest generation does not happen

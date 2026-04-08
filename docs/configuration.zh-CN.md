@@ -25,8 +25,10 @@
 | `AINEWS_STATIC_SITE_DIR` | 否 | `output/site` | 静态站点 | 静态站点输出目录。 |
 | `AINEWS_STATIC_SITE_BASE_URL` | 否 | 空 | 静态站点 | 静态站点对外访问基地址。 |
 | `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD` | 否 | `2` | 抽取运维 | 同一来源连续触发 `429/403/challenge` 多少次后进入冷却。 |
+| `AINEWS_SOURCE_RECOVERY_SUCCESS_THRESHOLD` | 否 | `2` | 抽取运维 | 来源连续成功多少次后，自动清掉旧的冷却与确认痕迹。 |
 | `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES` | 否 | `120` | 抽取运维 | 来源被限流时的基础冷却窗口。 |
 | `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES` | 否 | `720` | 抽取运维 | 来源被封锁时的基础冷却窗口。 |
+| `AINEWS_SOURCE_RUNTIME_RETENTION_DAYS` | 否 | `45` | 抽取运维 | `source_events` 和 `source_alerts` 在线保留多久后进入归档裁剪。 |
 | `AINEWS_ALERT_TARGETS` | 否 | 空 | 运维告警 | 告警目标列表，逗号分隔，例如 `telegram,feishu`。 |
 | `AINEWS_ALERT_COOLDOWN_MINUTES` | 否 | `30` | 运维告警 | 同一活动告警指纹的最短重复发送间隔。 |
 | `AINEWS_ALERT_TELEGRAM_CHAT_ID` | 否 | 空 | 运维告警 | 告警专用 Telegram 目标，不填时回退到 `AINEWS_TELEGRAM_CHAT_ID`。 |
@@ -75,5 +77,6 @@
 
 - 本地体验：`AINEWS_LOG_FORMAT=text`，不开发布目标，不配 LLM 也能跑。
 - 运维 API：设置 `AINEWS_ADMIN_TOKEN`、`AINEWS_LOG_FORMAT=json`，并配置 `AINEWS_PUBLISH_TARGETS`。
+- 抽取运维：优先把 `AINEWS_SOURCE_*` 一组配齐，用它控制来源冷却、自动恢复阈值和运行态历史保留窗口。
 - LLM 日报流：配置一组 `AINEWS_LLM_*`，外加至少一个发布目标或导出目录。
 - 微信发布：优先使用 `AINEWS_WECHAT_APP_ID + AINEWS_WECHAT_APP_SECRET`，不要长期依赖手填 access token。
