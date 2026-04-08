@@ -10,7 +10,7 @@ from ainews.content_extractor import ExtractedContent, ExtractionSkippedError
 from ainews.models import ArticleEnrichment, ArticleRecord, DailyDigest, SourceDefinition
 from ainews.publisher import PublicationResult
 from ainews.repository import ArticleRepository
-from ainews.service import PUBLIC_ERROR_MESSAGE, NewsService
+from ainews.service import PUBLIC_ERROR_MESSAGE, PUBLIC_SKIPPED_MESSAGE, NewsService
 from ainews.source_registry import SourceRegistry
 from ainews.utils import make_content_hash, make_dedup_key, utc_now
 
@@ -1449,10 +1449,13 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["skipped"], 1)
             self.assertEqual(result["errors"], 0)
             self.assertEqual(result["articles"][0]["status"], "skipped")
+            self.assertEqual(result["articles"][0]["message"], PUBLIC_SKIPPED_MESSAGE)
             self.assertEqual(article["extraction_status"], "skipped")
+            self.assertEqual(article["extraction_error"], PUBLIC_SKIPPED_MESSAGE)
             self.assertEqual(health["status"], "ok")
             self.assertNotIn("article_extraction_errors", health["degraded_reasons"])
             self.assertEqual(stats["skipped_extractions"], 1)
+            self.assertNotIn("direct article URL required", json.dumps(result))
 
     def test_extract_articles_persists_resolved_google_news_target_url(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

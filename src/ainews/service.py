@@ -27,6 +27,7 @@ from .utils import clean_text, format_local_date, matches_keywords, truncate_tex
 
 EXPORT_SCHEMA_VERSION = "1.0"
 PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
+PUBLIC_SKIPPED_MESSAGE = "extraction skipped by extractor policy"
 logger = logging.getLogger("ainews.service")
 SOURCE_COOLDOWN_CATEGORIES = {"throttled", "blocked"}
 
@@ -706,8 +707,16 @@ class NewsService:
                     }
                 )
                 updated += 1
-            except ExtractionSkippedError as exc:
-                message = str(exc)
+            except ExtractionSkippedError:
+                logger.info(
+                    "article extraction skipped",
+                    extra={
+                        "event": "extract.article_skipped",
+                        "article_id": int(article["id"]),
+                        "source_id": source_id,
+                    },
+                )
+                message = PUBLIC_SKIPPED_MESSAGE
                 self.repository.mark_article_extraction_skipped(
                     int(article["id"]),
                     error=message,
