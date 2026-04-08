@@ -189,13 +189,47 @@ def _log_api_exception(request: Request, *, event: str, message: str) -> None:
     )
 
 
-def _run_service_action(
-    request: Request,
-    action_name: str,
-    runner,
-) -> Any:
+def _begin_route_action(request: Request, action_name: str) -> None:
     request.state.action_name = action_name
-    return _sanitize_service_payload(runner())
+
+
+def _handle_route_http_exception(request: Request, exc: HTTPException) -> JSONResponse:
+    _log_api_warning(
+        request,
+        event="api.action_http_error",
+        message="service action returned an http error",
+        status_code=exc.status_code,
+    )
+    return _sanitize_http_exception(exc)
+
+
+def _handle_route_lookup_error(request: Request) -> JSONResponse:
+    _log_api_warning(
+        request,
+        event="api.action_not_found",
+        message="requested resource was not found",
+        status_code=404,
+    )
+    return _error_response(404, NOT_FOUND_MESSAGE)
+
+
+def _handle_route_value_error(request: Request) -> JSONResponse:
+    _log_api_warning(
+        request,
+        event="api.action_bad_request",
+        message="request could not be processed",
+        status_code=400,
+    )
+    return _error_response(400, BAD_REQUEST_MESSAGE)
+
+
+def _handle_route_unexpected_error(request: Request) -> JSONResponse:
+    _log_api_exception(
+        request,
+        event="api.action_error",
+        message="service action failed",
+    )
+    return _error_response(500, SANITIZED_ERROR_MESSAGE)
 
 
 def create_app() -> FastAPI:
@@ -338,22 +372,34 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     def health(request: Request) -> dict:
-        return _run_service_action(
-            request,
-            "health",
-            lambda: {
+        _begin_route_action(request, "health")
+        try:
+            return _sanitize_service_payload({
                 **service.get_health(),
                 "version": __version__,
-            },
-        )
+            })
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/sources")
     def list_sources(request: Request) -> dict:
-        return _run_service_action(
-            request,
-            "list_sources",
-            lambda: {"sources": service.list_sources()},
-        )
+        _begin_route_action(request, "list_sources")
+        try:
+            return _sanitize_service_payload({"sources": service.list_sources()})
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/ingest")
     def ingest(
@@ -362,14 +408,20 @@ def create_app() -> FastAPI:
         max_items_per_source: Optional[int] = Query(default=None, ge=1, le=200),
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "ingest",
-            lambda: service.ingest(
+        _begin_route_action(request, "ingest")
+        try:
+            return _sanitize_service_payload(service.ingest(
                 source_ids=source_id,
                 max_items_per_source=max_items_per_source,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/articles")
     def list_articles(
@@ -383,10 +435,9 @@ def create_app() -> FastAPI:
         since_hours: int = Query(default=settings.default_lookback_hours, ge=1, le=720),
         limit: int = Query(default=50, ge=1, le=200),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "list_articles",
-            lambda: {
+        _begin_route_action(request, "list_articles")
+        try:
+            return _sanitize_service_payload({
                 "articles": service.list_articles(
                     region=region,
                     language=language,
@@ -398,8 +449,15 @@ def create_app() -> FastAPI:
                     limit=limit,
                     include_hidden=False,
                 )
-            },
-        )
+            })
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/digest/daily")
     def digest_daily(
@@ -409,41 +467,65 @@ def create_app() -> FastAPI:
         limit: int = Query(default=50, ge=1, le=200),
         use_llm: bool = Query(default=False),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "digest_daily",
-            lambda: service.build_digest(
+        _begin_route_action(request, "digest_daily")
+        try:
+            return _sanitize_service_payload(service.build_digest(
                 region=region,
                 since_hours=since_hours,
                 limit=limit,
                 use_llm=use_llm,
                 persist=False,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/stats")
     def admin_stats(request: Request, _: None = Depends(require_admin)) -> dict:
-        return _run_service_action(
-            request,
-            "admin_stats",
-            service.get_stats,
-        )
+        _begin_route_action(request, "admin_stats")
+        try:
+            return _sanitize_service_payload(service.get_stats())
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/operations")
     def admin_operations(request: Request, _: None = Depends(require_admin)) -> dict:
-        return _run_service_action(
-            request,
-            "admin_operations",
-            service.get_operations,
-        )
+        _begin_route_action(request, "admin_operations")
+        try:
+            return _sanitize_service_payload(service.get_operations())
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/sources")
     def admin_sources(request: Request, _: None = Depends(require_admin)) -> dict:
-        return _run_service_action(
-            request,
-            "admin_sources",
-            lambda: {"sources": service.list_sources(include_runtime=True)},
-        )
+        _begin_route_action(request, "admin_sources")
+        try:
+            return _sanitize_service_payload({"sources": service.list_sources(include_runtime=True)})
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/articles")
     def admin_articles(
@@ -459,10 +541,9 @@ def create_app() -> FastAPI:
         include_hidden: bool = Query(default=True),
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_articles",
-            lambda: {
+        _begin_route_action(request, "admin_articles")
+        try:
+            return _sanitize_service_payload({
                 "articles": service.list_articles(
                     region=region,
                     language=language,
@@ -474,8 +555,15 @@ def create_app() -> FastAPI:
                     limit=limit,
                     include_hidden=include_hidden,
                 )
-            },
-        )
+            })
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/ingest")
     def admin_ingest(
@@ -483,14 +571,20 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_ingest",
-            lambda: service.ingest(
+        _begin_route_action(request, "admin_ingest")
+        try:
+            return _sanitize_service_payload(service.ingest(
                 source_ids=payload.source_ids,
                 max_items_per_source=payload.max_items_per_source,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/enrich")
     def admin_enrich(
@@ -498,17 +592,23 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_enrich",
-            lambda: service.enrich_articles(
+        _begin_route_action(request, "admin_enrich")
+        try:
+            return _sanitize_service_payload(service.enrich_articles(
                 source_ids=payload.source_ids,
                 article_ids=payload.article_ids,
                 since_hours=payload.since_hours,
                 limit=payload.limit,
                 force=payload.force,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/extract")
     def admin_extract(
@@ -516,17 +616,23 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_extract",
-            lambda: service.extract_articles(
+        _begin_route_action(request, "admin_extract")
+        try:
+            return _sanitize_service_payload(service.extract_articles(
                 source_ids=payload.source_ids,
                 article_ids=payload.article_ids,
                 since_hours=payload.since_hours,
                 limit=payload.limit,
                 force=payload.force,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/sources/cooldowns/reset")
     def admin_reset_source_cooldowns(
@@ -534,14 +640,20 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_reset_source_cooldowns",
-            lambda: service.reset_source_cooldowns(
+        _begin_route_action(request, "admin_reset_source_cooldowns")
+        try:
+            return _sanitize_service_payload(service.reset_source_cooldowns(
                 source_ids=payload.source_ids,
                 active_only=payload.active_only,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/extract/retry")
     def admin_retry_extractions(
@@ -549,10 +661,9 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_retry_extractions",
-            lambda: service.retry_extractions(
+        _begin_route_action(request, "admin_retry_extractions")
+        try:
+            return _sanitize_service_payload(service.retry_extractions(
                 source_ids=payload.source_ids,
                 article_ids=payload.article_ids,
                 since_hours=payload.since_hours,
@@ -560,8 +671,15 @@ def create_app() -> FastAPI:
                 extraction_error_category=payload.extraction_error_category,
                 due_only=payload.due_only,
                 limit=payload.limit,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/digests/generate")
     def admin_generate_digest(
@@ -569,17 +687,23 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_generate_digest",
-            lambda: service.build_digest(
+        _begin_route_action(request, "admin_generate_digest")
+        try:
+            return _sanitize_service_payload(service.build_digest(
                 region=payload.region,
                 since_hours=payload.since_hours,
                 limit=payload.limit,
                 use_llm=payload.use_llm,
                 persist=payload.persist,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/pipeline")
     def admin_pipeline(
@@ -587,10 +711,9 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_pipeline",
-            lambda: service.run_pipeline(
+        _begin_route_action(request, "admin_pipeline")
+        try:
+            return _sanitize_service_payload(service.run_pipeline(
                 region=payload.region,
                 since_hours=payload.since_hours,
                 limit=payload.limit,
@@ -602,8 +725,15 @@ def create_app() -> FastAPI:
                 publish_targets=payload.publish_targets,
                 wechat_submit=payload.wechat_submit,
                 force_republish=payload.force_republish,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/publish")
     def admin_publish(
@@ -611,10 +741,9 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_publish",
-            lambda: service.publish_digest(
+        _begin_route_action(request, "admin_publish")
+        try:
+            return _sanitize_service_payload(service.publish_digest(
                 digest_id=payload.digest_id,
                 region=payload.region,
                 since_hours=payload.since_hours,
@@ -625,8 +754,15 @@ def create_app() -> FastAPI:
                 targets=payload.targets,
                 wechat_submit=payload.wechat_submit,
                 force_republish=payload.force_republish,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/digests")
     def admin_digests(
@@ -635,11 +771,17 @@ def create_app() -> FastAPI:
         limit: int = Query(default=20, ge=1, le=100),
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_digests",
-            lambda: {"digests": service.list_digests(region=region, limit=limit)},
-        )
+        _begin_route_action(request, "admin_digests")
+        try:
+            return _sanitize_service_payload({"digests": service.list_digests(region=region, limit=limit)})
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.get("/admin/publications")
     def admin_publications(
@@ -650,18 +792,24 @@ def create_app() -> FastAPI:
         limit: int = Query(default=20, ge=1, le=100),
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_publications",
-            lambda: {
+        _begin_route_action(request, "admin_publications")
+        try:
+            return _sanitize_service_payload({
                 "publications": service.list_publications(
                     digest_id=digest_id,
                     target=target,
                     status=status,
                     limit=limit,
                 )
-            },
-        )
+            })
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.post("/admin/publications/refresh")
     def admin_refresh_publications(
@@ -669,17 +817,23 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_refresh_publications",
-            lambda: service.refresh_publications(
+        _begin_route_action(request, "admin_refresh_publications")
+        try:
+            return _sanitize_service_payload(service.refresh_publications(
                 publication_ids=payload.publication_ids,
                 digest_id=payload.digest_id,
                 target=payload.target,
                 limit=payload.limit,
                 only_pending=payload.only_pending,
-            ),
-        )
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     @app.patch("/admin/articles/{article_id}")
     def admin_curate_article(
@@ -688,10 +842,16 @@ def create_app() -> FastAPI:
         request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        return _run_service_action(
-            request,
-            "admin_curate_article",
-            lambda: curate_article_payload(article_id, payload),
-        )
+        _begin_route_action(request, "admin_curate_article")
+        try:
+            return _sanitize_service_payload(curate_article_payload(article_id, payload))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
 
     return app
