@@ -221,6 +221,10 @@ def create_app() -> FastAPI:
     def admin_stats(_: None = Depends(require_admin)) -> dict:
         return service.get_stats()
 
+    @app.get("/admin/operations")
+    def admin_operations(_: None = Depends(require_admin)) -> dict:
+        return service.get_operations()
+
     @app.get("/admin/articles")
     def admin_articles(
         region: str = Query(default="all"),

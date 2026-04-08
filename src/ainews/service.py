@@ -14,6 +14,7 @@ from .models import ArticleRecord, DailyDigest
 from .publisher import DigestPublisher
 from .repository import ArticleRepository
 from .source_registry import SourceRegistry
+from .telemetry import OperationTracker
 from .utils import clean_text, format_local_date, matches_keywords, truncate_text
 
 EXPORT_SCHEMA_VERSION = "1.0"
@@ -41,6 +42,7 @@ class NewsService:
             text_limit=self.settings.extraction_text_limit,
         )
         self.publisher = publisher or DigestPublisher(self.settings)
+        self.telemetry = OperationTracker()
 
     def list_sources(self) -> List[dict]:
         return [source.to_dict() for source in self.source_registry.list_sources()]
@@ -50,16 +52,68 @@ class NewsService:
         payload["llm_configured"] = self.llm_client.is_configured()
         payload["llm_provider"] = self.settings.llm_provider
         payload["llm_model"] = self.settings.llm_model
+        payload["source_count"] = len(self.source_registry.list_sources())
+        payload["configured_publish_targets"] = self.publisher.normalize_targets(
+            self.settings.publish_targets.split(",")
+        )
+        telemetry = self.telemetry.snapshot()
+        payload["operations"] = telemetry["operations"]
+        payload["failure_categories"] = telemetry["failure_categories"]
         return payload
 
+    def get_operations(self) -> Dict[str, object]:
+        return self.telemetry.snapshot()
+
     def get_health(self) -> Dict[str, object]:
+        stats = self.repository.get_stats()
         schema_version = self.repository.get_schema_version()
+        configured_targets = self.publisher.normalize_targets(self.settings.publish_targets.split(","))
+        source_count = len(self.source_registry.list_sources())
+        telemetry = self.telemetry.snapshot()
+        degraded_reasons: List[str] = []
+        if stats["extraction_errors"]:
+            degraded_reasons.append("article_extraction_errors")
+        if stats["llm_errors"]:
+            degraded_reasons.append("llm_enrichment_errors")
+        if stats["publication_errors"]:
+            degraded_reasons.append("publication_errors")
+        pipeline_status = (
+            telemetry["operations"].get("pipeline", {}).get("status")
+            if isinstance(telemetry.get("operations"), dict)
+            else None
+        )
+        if pipeline_status in {"partial_error", "error"}:
+            degraded_reasons.append("recent_pipeline_errors")
+
+        database_check = "ok" if schema_version >= 1 else "error"
+        sources_check = "ok" if source_count > 0 else "error"
+        readiness = database_check == "ok" and sources_check == "ok"
+        if not readiness:
+            status = "error"
+        elif degraded_reasons:
+            status = "degraded"
+        else:
+            status = "ok"
         return {
-            "status": "ok",
+            "status": status,
+            "ready": readiness,
             "checks": {
-                "database": "ok",
+                "database": database_check,
+                "sources": sources_check,
+                "llm": "ok" if self.llm_client.is_configured() else "warning",
+                "publish_targets": "ok" if configured_targets else "warning",
             },
             "schema_version": schema_version,
+            "degraded_reasons": degraded_reasons,
+            "stats": {
+                "total_articles": stats["total_articles"],
+                "extraction_errors": stats["extraction_errors"],
+                "llm_errors": stats["llm_errors"],
+                "pending_publications": stats["pending_publications"],
+                "publication_errors": stats["publication_errors"],
+            },
+            "operations": telemetry["operations"],
+            "failure_categories": telemetry["failure_categories"],
         }
 
     def ingest(
@@ -68,15 +122,24 @@ class NewsService:
         source_ids: Optional[Iterable[str]] = None,
         max_items_per_source: Optional[int] = None,
     ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "ingest",
+            context={
+                "source_ids": list(source_ids or []),
+                "max_items_per_source": max_items_per_source,
+            },
+        )
         logger.info(
             "starting ingest",
             extra={
                 "event": "ingest.start",
+                "operation_id": operation.operation_id,
             },
         )
         results = []
         inserted_total = 0
         fetched_total = 0
+        failure_categories: Counter[str] = Counter()
 
         for source in self.source_registry.list_sources(source_ids=source_ids):
             status = {
@@ -111,29 +174,50 @@ class NewsService:
                         status["skipped"] += 1
                 inserted_total += status["inserted"]
             except Exception as exc:  # pragma: no cover
+                category = self._classify_error(exc)
                 status["status"] = "error"
                 status["error"] = str(exc)
+                status["error_category"] = category
+                failure_categories[category] += 1
                 logger.warning(
                     "ingest source failed",
                     extra={
                         "event": "ingest.source_error",
                         "target": source.id,
+                        "operation_id": operation.operation_id,
+                        "error_category": category,
                     },
                 )
             results.append(status)
 
         payload = {
+            "status": "partial_error" if failure_categories else "ok",
             "sources": results,
             "fetched_total": fetched_total,
             "inserted_total": inserted_total,
             "stored_total": self.repository.count_articles(),
+            "failure_categories": dict(failure_categories),
         }
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(payload["status"]),
+            metrics={
+                "requested": len(results),
+                "fetched_total": fetched_total,
+                "inserted_total": inserted_total,
+                "stored_total": payload["stored_total"],
+            },
+            error_category=self._top_failure_category(failure_categories),
+        )
+        payload["operation"] = operation_record
         logger.info(
             "completed ingest",
             extra={
                 "event": "ingest.finish",
+                "operation_id": operation.operation_id,
                 "requested": len(results),
                 "stored_total": payload["stored_total"],
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return payload
@@ -167,14 +251,30 @@ class NewsService:
         limit: int = 20,
         force: bool = False,
     ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "enrich",
+            context={
+                "source_ids": list(source_ids or []),
+                "article_ids": list(article_ids or []),
+                "since_hours": since_hours,
+                "limit": limit,
+                "force": force,
+            },
+        )
         if not self.llm_client.is_configured():
-            return {
+            payload = {
                 "status": "skipped",
                 "reason": "llm_not_configured",
                 "updated": 0,
                 "errors": 0,
                 "articles": [],
             }
+            payload["operation"] = self.telemetry.finish(
+                operation,
+                status="skipped",
+                metrics={"requested": 0, "updated": 0, "errors": 0},
+            )
+            return payload
 
         candidates = self.repository.list_articles_for_enrichment(
             source_ids=source_ids,
@@ -186,6 +286,7 @@ class NewsService:
         results = []
         updated = 0
         errors = 0
+        failure_categories: Counter[str] = Counter()
 
         for article in candidates:
             try:
@@ -211,6 +312,7 @@ class NewsService:
                 )
                 updated += 1
             except Exception as exc:
+                category = self._classify_error(exc)
                 self.repository.mark_article_enrichment_error(
                     int(article["id"]),
                     provider=self.settings.llm_provider,
@@ -223,24 +325,36 @@ class NewsService:
                         "status": "error",
                         "title": article["title"],
                         "error": str(exc),
+                        "error_category": category,
                     }
                 )
                 errors += 1
+                failure_categories[category] += 1
 
         payload = {
-            "status": "ok",
+            "status": "partial_error" if errors else "ok",
             "requested": len(candidates),
             "updated": updated,
             "errors": errors,
             "articles": results,
+            "failure_categories": dict(failure_categories),
         }
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(payload["status"]),
+            metrics={"requested": len(candidates), "updated": updated, "errors": errors},
+            error_category=self._top_failure_category(failure_categories),
+        )
+        payload["operation"] = operation_record
         logger.info(
             "completed enrichment",
             extra={
                 "event": "enrich.finish",
+                "operation_id": operation.operation_id,
                 "requested": len(candidates),
                 "updated": updated,
                 "errors": errors,
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return payload
@@ -254,6 +368,16 @@ class NewsService:
         limit: int = 20,
         force: bool = False,
     ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "extract",
+            context={
+                "source_ids": list(source_ids or []),
+                "article_ids": list(article_ids or []),
+                "since_hours": since_hours,
+                "limit": limit,
+                "force": force,
+            },
+        )
         candidates = self.repository.list_articles_for_extraction(
             source_ids=source_ids,
             article_ids=article_ids,
@@ -264,6 +388,7 @@ class NewsService:
         results = []
         updated = 0
         errors = 0
+        failure_categories: Counter[str] = Counter()
 
         for article in candidates:
             try:
@@ -282,6 +407,7 @@ class NewsService:
                 )
                 updated += 1
             except Exception as exc:
+                category = self._classify_error(exc)
                 self.repository.mark_article_extraction_error(
                     int(article["id"]),
                     error=str(exc),
@@ -292,24 +418,36 @@ class NewsService:
                         "status": "error",
                         "title": article["title"],
                         "error": str(exc),
+                        "error_category": category,
                     }
                 )
                 errors += 1
+                failure_categories[category] += 1
 
         payload = {
-            "status": "ok",
+            "status": "partial_error" if errors else "ok",
             "requested": len(candidates),
             "updated": updated,
             "errors": errors,
             "articles": results,
+            "failure_categories": dict(failure_categories),
         }
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(payload["status"]),
+            metrics={"requested": len(candidates), "updated": updated, "errors": errors},
+            error_category=self._top_failure_category(failure_categories),
+        )
+        payload["operation"] = operation_record
         logger.info(
             "completed extraction",
             extra={
                 "event": "extract.finish",
+                "operation_id": operation.operation_id,
                 "requested": len(candidates),
                 "updated": updated,
                 "errors": errors,
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return payload
@@ -359,6 +497,16 @@ class NewsService:
         limit: int = 20,
         only_pending: bool = True,
     ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "refresh_publications",
+            context={
+                "publication_ids": list(publication_ids or []),
+                "digest_id": digest_id,
+                "target": target,
+                "limit": limit,
+                "only_pending": only_pending,
+            },
+        )
         publications = self.repository.list_publications(
             publication_ids=publication_ids,
             digest_id=digest_id,
@@ -369,6 +517,7 @@ class NewsService:
         refreshed = 0
         skipped = 0
         errors = 0
+        failure_categories: Counter[str] = Counter()
 
         for publication in publications:
             if not self.publisher.can_refresh_publication(publication):
@@ -418,6 +567,7 @@ class NewsService:
                 )
                 refreshed += 1
             except Exception as exc:
+                category = self._classify_error(exc)
                 stored = self.repository.update_publication(
                     int(publication["id"]),
                     status="error",
@@ -433,10 +583,12 @@ class NewsService:
                         "target": publication["target"],
                         "status": "error",
                         "message": str(exc),
+                        "error_category": category,
                         "publication": stored or publication,
                     }
                 )
                 errors += 1
+                failure_categories[category] += 1
 
         payload = {
             "status": "ok" if errors == 0 else "partial_error",
@@ -445,14 +597,29 @@ class NewsService:
             "skipped": skipped,
             "errors": errors,
             "publications": results,
+            "failure_categories": dict(failure_categories),
         }
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(payload["status"]),
+            metrics={
+                "requested": len(publications),
+                "refreshed": refreshed,
+                "skipped": skipped,
+                "errors": errors,
+            },
+            error_category=self._top_failure_category(failure_categories),
+        )
+        payload["operation"] = operation_record
         logger.info(
             "completed publication refresh",
             extra={
                 "event": "publish.refresh_finish",
+                "operation_id": operation.operation_id,
                 "requested": len(publications),
                 "updated": refreshed,
                 "errors": errors,
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return payload
@@ -474,10 +641,22 @@ class NewsService:
     ) -> Dict[str, object]:
         lookback = since_hours or self.settings.default_lookback_hours
         effective_persist = persist or publish
+        operation = self.telemetry.start(
+            "pipeline",
+            context={
+                "region": region,
+                "since_hours": lookback,
+                "limit": limit,
+                "publish": publish,
+                "export": export,
+                "use_llm": use_llm,
+            },
+        )
         logger.info(
             "starting pipeline",
             extra={
                 "event": "pipeline.start",
+                "operation_id": operation.operation_id,
                 "region": region,
                 "since_hours": lookback,
                 "limit": limit,
@@ -512,14 +691,50 @@ class NewsService:
                 wechat_submit=wechat_submit,
                 force_republish=force_republish,
             )
+        failure_categories: Counter[str] = Counter()
+        for section_name in ("ingest", "extract", "enrich", "publish"):
+            section = result.get(section_name)
+            if not isinstance(section, dict):
+                continue
+            for name, total in dict(section.get("failure_categories", {})).items():
+                failure_categories[str(name)] += int(total)
+        section_statuses = [
+            str(result[name].get("status", "ok"))
+            for name in ("ingest", "extract", "enrich", "publish")
+            if isinstance(result.get(name), dict)
+        ]
+        pipeline_status = "ok"
+        if any(status == "error" for status in section_statuses):
+            pipeline_status = "error"
+        elif any(status == "partial_error" for status in section_statuses):
+            pipeline_status = "partial_error"
+        result["status"] = pipeline_status
+        result["failure_categories"] = dict(failure_categories)
+        operation_record = self.telemetry.finish(
+            operation,
+            status=pipeline_status,
+            metrics={
+                "published": int(
+                    result.get("publish", {}).get("published", 0)
+                    if isinstance(result.get("publish"), dict)
+                    else 0
+                ),
+                "exported_files": len(exported_files),
+                "total_articles": int(digest_result.get("total_articles", 0)),
+            },
+            error_category=self._top_failure_category(failure_categories),
+        )
+        result["operation"] = operation_record
         logger.info(
             "completed pipeline",
             extra={
                 "event": "pipeline.finish",
+                "operation_id": operation.operation_id,
                 "region": region,
                 "since_hours": lookback,
                 "limit": limit,
                 "generation_mode": digest_result.get("generation_mode"),
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return result
@@ -574,12 +789,19 @@ class NewsService:
         wechat_submit: Optional[bool] = None,
         force_republish: bool = False,
     ) -> Dict[str, object]:
+        requested_targets = self.publisher.normalize_targets(targets)
+        operation = self.telemetry.start(
+            "publish",
+            context={
+                "requested_targets": list(requested_targets),
+                "force_republish": force_republish,
+            },
+        )
         digest_id = None
         stored_digest = payload.get("stored_digest")
         if isinstance(stored_digest, dict) and stored_digest.get("id") is not None:
             digest_id = int(stored_digest["id"])
 
-        requested_targets = self.publisher.normalize_targets(targets)
         if not requested_targets:
             requested_targets = self.publisher.normalize_targets(
                 self.settings.publish_targets.split(",")
@@ -591,6 +813,11 @@ class NewsService:
                 wechat_submit=wechat_submit,
             )
             publish_result["publication_records"] = []
+            publish_result["operation"] = self.telemetry.finish(
+                operation,
+                status=str(publish_result.get("status", "skipped")),
+                metrics={"requested": 0, "published": 0, "errors": 0, "skipped": 0},
+            )
             return publish_result
 
         already_published: Dict[str, dict] = {}
@@ -629,6 +856,7 @@ class NewsService:
         }
         records = []
         merged_targets = []
+        failure_categories: Counter[str] = Counter()
         for target in requested_targets:
             if target in already_published:
                 existing = already_published[target]
@@ -649,6 +877,11 @@ class NewsService:
             item = published_by_target.get(target)
             if item is None:
                 continue
+            item_status = clean_text(str(item.get("status", ""))).lower()
+            if item_status and item_status != "ok":
+                category = self._classify_error_message(str(item.get("message", "")))
+                item["error_category"] = category
+                failure_categories[category] += 1
             merged_targets.append(item)
             record = self.repository.save_publication(
                 digest_id=digest_id,
@@ -670,13 +903,29 @@ class NewsService:
         else:
             publish_result["status"] = "ok"
         publish_result["publication_records"] = records
+        publish_result["failure_categories"] = dict(failure_categories)
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(publish_result["status"]),
+            metrics={
+                "requested": len(requested_targets),
+                "published": int(publish_result.get("published", 0)),
+                "errors": int(publish_result.get("errors", 0)),
+                "skipped": int(publish_result.get("skipped", 0)),
+                "digest_id": digest_id or 0,
+            },
+            error_category=self._top_failure_category(failure_categories),
+        )
+        publish_result["operation"] = operation_record
         logger.info(
             "completed publish",
             extra={
                 "event": "publish.finish",
+                "operation_id": operation.operation_id,
                 "published": publish_result.get("published", 0),
                 "errors": publish_result.get("errors", 0),
                 "requested": len(requested_targets),
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return publish_result
@@ -691,6 +940,16 @@ class NewsService:
         persist: bool = False,
     ) -> Dict[str, object]:
         lookback = since_hours or self.settings.default_lookback_hours
+        operation = self.telemetry.start(
+            "digest",
+            context={
+                "region": region,
+                "since_hours": lookback,
+                "limit": limit,
+                "use_llm": use_llm,
+                "persist": persist,
+            },
+        )
         articles = self.repository.list_articles(
             region=region,
             since_hours=lookback,
@@ -764,15 +1023,30 @@ class NewsService:
                 source_count=len({article["source_id"] for article in presented_articles}),
             )
 
+        operation_record = self.telemetry.finish(
+            operation,
+            status="ok",
+            metrics={
+                "region": region,
+                "since_hours": lookback,
+                "total_articles": len(presented_articles),
+                "stored": 1 if payload.get("stored_digest") else 0,
+                "generation_mode": generation_mode,
+                "digest_id": int(payload.get("stored_digest", {}).get("id") or 0),
+            },
+        )
+        payload["operation"] = operation_record
         logger.info(
             "built digest",
             extra={
                 "event": "digest.finish",
+                "operation_id": operation.operation_id,
                 "region": region,
                 "since_hours": lookback,
                 "limit": limit,
                 "generation_mode": generation_mode,
                 "schema_version": EXPORT_SCHEMA_VERSION,
+                "duration_ms": operation_record["duration_ms"],
             },
         )
         return payload
@@ -891,6 +1165,44 @@ class NewsService:
         ):
             return True
         return publication.get("status") == "pending"
+
+    @classmethod
+    def _classify_error(cls, exc: Exception) -> str:
+        return cls._classify_error_message(str(exc))
+
+    @staticmethod
+    def _classify_error_message(message: str) -> str:
+        value = clean_text(message).lower()
+        if not value:
+            return "unexpected"
+        if "429" in value or "rate limit" in value or "too many requests" in value:
+            return "rate_limited"
+        if "401" in value or "403" in value or "unauthorized" in value or "forbidden" in value:
+            return "auth"
+        if "timeout" in value or "timed out" in value:
+            return "timeout"
+        if (
+            "connection" in value
+            or "network" in value
+            or "dns" in value
+            or "temporarily unavailable" in value
+            or "ssl" in value
+        ):
+            return "network"
+        if (
+            "validation" in value
+            or "invalid" in value
+            or "missing" in value
+            or "unsupported" in value
+        ):
+            return "validation"
+        return "unexpected"
+
+    @staticmethod
+    def _top_failure_category(categories: Counter[str]) -> str:
+        if not categories:
+            return ""
+        return categories.most_common(1)[0][0]
 
     @staticmethod
     def _build_fallback_digest(

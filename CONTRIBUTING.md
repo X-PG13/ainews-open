@@ -15,8 +15,17 @@ make check
 
 - Run `make lint` before opening a pull request.
 - Run `make test` for behavior changes.
+- Run `make coverage` when behavior or contracts change.
 - Run `make build` when packaging, entry points, or included assets change.
+- Run `make sbom` when supply chain or release files change.
 - Keep CI green on all supported Python versions before merging.
+
+## Contributor Playbook
+
+- Add feeds in `src/ainews/sources.default.json` and keep source ids stable.
+- Add extraction fixtures under `tests/fixtures/extraction/` when site-specific cleanup is needed.
+- Route new publish targets through `src/ainews/publisher.py`, CLI, API, and docs together.
+- Use [docs/contributor-playbook.md](docs/contributor-playbook.md) for step-by-step extension guidance.
 
 ## Source Changes
 
@@ -41,9 +50,11 @@ make check
 - Keep source configuration changes documented in `README.md`.
 - Do not remove existing sources without documenting the reason.
 - Use the pull request template and summarize validation clearly.
+- Prefer existing labels such as `good first issue`, `help wanted`, `source`, `extractor`, and `publisher`.
 
 ## Issues And Security
 
 - Use the GitHub issue templates for bugs and feature requests.
 - Do not report vulnerabilities through public issues; follow `SECURITY.md`.
 - Private vulnerability reports should go through the GitHub Security Advisory channel configured in `.github/ISSUE_TEMPLATE/config.yml`.
+- Read `SUPPORT.md` before opening broad usage questions or support requests.

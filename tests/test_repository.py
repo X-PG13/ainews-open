@@ -137,6 +137,9 @@ class RepositoryTestCase(unittest.TestCase):
             )
             self.assertEqual(len(filtered), 1)
             self.assertEqual(filtered[0]["external_id"], "PUBLISH123")
+            stats = repository.get_stats()
+            self.assertEqual(stats["publication_status_counts"]["ok"], 2)
+            self.assertEqual(stats["pending_publications"], 0)
 
     def test_repository_migrates_legacy_schema_and_sets_version(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

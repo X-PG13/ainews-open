@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 jobs:
   build-and-release:
@@ -34,6 +36,30 @@ jobs:
 
       - name: Build package
         run: python -m build
+
+      - name: Generate artifact checksums
+        run: sha256sum dist/* > dist/sha256sums.txt
+
+      - name: Generate SBOM
+        run: |
+          PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
+          python -m cyclonedx_py environment "${PYTHON_BIN}" \
+            --pyproject pyproject.toml \
+            --mc-type application \
+            --output-reproducible \
+            --of JSON \
+            -o "dist/${GITHUB_REF_NAME}-sbom.json"
+
+      - name: Upload release bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: dist/*
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
 
       - name: Prepare release notes
         run: |

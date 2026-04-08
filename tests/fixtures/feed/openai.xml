@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>OpenAI News</title>
+    <item>
+      <title>OpenAI launches a new enterprise reasoning model</title>
+      <link>https://example.com/news/openai-enterprise?utm_source=newsletter</link>
+      <description><![CDATA[<p>Detailed summary from the feed.</p>]]></description>
+      <pubDate>Tue, 07 Apr 2026 08:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

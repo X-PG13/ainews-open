@@ -1,0 +1,27 @@
+- name: good first issue
+  color: "7057ff"
+  description: Small, well-scoped work suitable for first-time contributors.
+- name: help wanted
+  color: "008672"
+  description: Maintainers would like community help on this item.
+- name: v1.x
+  color: "1d76db"
+  description: Planned for the current stable major line.
+- name: source
+  color: "d4c5f9"
+  description: Feed source additions, fixes, or removals.
+- name: extractor
+  color: "fbca04"
+  description: Article extraction quality and cleanup work.
+- name: publisher
+  color: "c2e0c6"
+  description: Multi-channel publishing integrations and behavior.
+- name: docs
+  color: "0e8a16"
+  description: Documentation improvements.
+- name: operations
+  color: "5319e7"
+  description: CI, release, Docker, logging, and runtime operations.
+- name: discussion
+  color: "bfd4f2"
+  description: Better suited for design discussion than immediate implementation.

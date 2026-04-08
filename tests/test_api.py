@@ -65,9 +65,12 @@ class ApiTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
+        self.assertTrue(response.json()["ready"])
         self.assertEqual(response.json()["version"], __version__)
         self.assertEqual(response.json()["checks"]["database"], "ok")
+        self.assertEqual(response.json()["checks"]["sources"], "ok")
         self.assertGreaterEqual(response.json()["schema_version"], 1)
+        self.assertIn("stats", response.json())
         self.assertTrue(response.headers["X-Request-ID"])
 
     def test_admin_route_requires_token(self) -> None:
@@ -105,3 +108,22 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(second_payload["skipped"], 1)
         self.assertEqual(second_payload["targets"][0]["status"], "skipped")
         self.assertEqual(second_payload["publication_records"], [])
+
+    def test_admin_operations_returns_recent_runs(self) -> None:
+        self._seed_article()
+        self.client.post(
+            "/admin/publish",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"targets": ["static_site"], "use_llm": False, "persist": True},
+        )
+
+        response = self.client.get(
+            "/admin/operations",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("operations", payload)
+        self.assertIn("publish", payload["operations"])
+        self.assertEqual(payload["operations"]["publish"]["status"], "ok")

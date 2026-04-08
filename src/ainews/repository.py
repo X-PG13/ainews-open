@@ -1021,6 +1021,14 @@ class ArticleRepository:
             publication_row = connection.execute(
                 "SELECT COUNT(*) AS total_publications FROM publications"
             ).fetchone()
+            publication_status_rows = connection.execute(
+                """
+                SELECT status, COUNT(*) AS total
+                FROM publications
+                GROUP BY status
+                ORDER BY total DESC
+                """
+            ).fetchall()
             region_rows = connection.execute(
                 """
                 SELECT region, COUNT(*) AS total
@@ -1029,6 +1037,9 @@ class ArticleRepository:
                 ORDER BY total DESC
                 """
             ).fetchall()
+        publication_status_counts = {
+            str(row["status"]): int(row["total"] or 0) for row in publication_status_rows
+        }
 
         return {
             "schema_version": self.get_schema_version(),
@@ -1042,6 +1053,9 @@ class ArticleRepository:
             "llm_errors": int(totals_row["llm_errors"] or 0),
             "total_digests": int(digest_row["total_digests"] or 0),
             "total_publications": int(publication_row["total_publications"] or 0),
+            "publication_status_counts": publication_status_counts,
+            "pending_publications": int(publication_status_counts.get("pending", 0)),
+            "publication_errors": int(publication_status_counts.get("error", 0)),
             "counts_by_region": {
                 str(row["region"]): int(row["total"] or 0) for row in region_rows
             },

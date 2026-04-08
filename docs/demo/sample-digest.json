@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "region": "all",
+  "since_hours": 48,
+  "total_articles": 12,
+  "counts_by_region": {
+    "domestic": 5,
+    "international": 7
+  },
+  "generation_mode": "llm",
+  "digest": {
+    "title": "2026-04-08 全网 AI 新闻日报",
+    "overview": "最近 48 小时共收录 12 条 AI 相关新闻。",
+    "highlights": [
+      "OpenAI 发布面向企业部署的新模型",
+      "国内厂商继续推进端侧 AI 与推理优化",
+      "多家平台开始强化智能体工作流能力"
+    ],
+    "sections": [
+      {
+        "title": "国际动态",
+        "items": [
+          "OpenAI 发布面向企业部署的新模型，重点优化推理、平台工具和可控性。",
+          "海外团队继续压缩推理成本，并将模型能力更深地嵌入工作流产品。"
+        ]
+      },
+      {
+        "title": "国内动态",
+        "items": [
+          "国内厂商继续推进端侧 AI 与云侧推理协同，新的产品形态开始进入规模化试用。",
+          "内容和效率团队开始把知识库、检索和 Agent 编排作为统一工作流来运营。"
+        ]
+      }
+    ],
+    "closing": "以上内容建议发布前人工复核。",
+    "provider": "demo",
+    "model": "demo-model"
+  }
+}

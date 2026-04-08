@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build check serve test coverage
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications lint build sbom check serve test coverage
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -31,6 +31,10 @@ lint:
 
 build:
 	$(PYTHON) -m build
+
+sbom:
+	PYTHON_BIN="$$( $(PYTHON) -c 'import sys; print(sys.executable)' )"; \
+	$(PYTHON) -m cyclonedx_py environment "$$PYTHON_BIN" --pyproject pyproject.toml --mc-type application --output-reproducible --of JSON -o sbom.json
 
 check: lint test build
 

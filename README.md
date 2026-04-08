@@ -11,7 +11,8 @@
   <p>
     <a href="https://github.com/X-PG13/ainews-open">Repository</a> ·
     <a href="https://github.com/X-PG13/ainews-open/releases">Releases</a> ·
-    <a href="docs/github-launch-kit.md">Launch Kit</a>
+    <a href="docs/github-launch-kit.md">Launch Kit</a> ·
+    <a href="docs/demo/index.html">Demo</a>
   </p>
 </div>
 
@@ -62,6 +63,12 @@ python -m ainews serve --port 8000
 - 查看新闻池、日报存档、发布历史和微信发布状态
 - 直接从控制台触发抓取、翻译、生成日报和发布
 
+### Public Demo
+
+- Sample demo page: [docs/demo/index.html](docs/demo/index.html)
+- Sample digest markdown: [docs/demo/sample-digest.md](docs/demo/sample-digest.md)
+- Sample digest JSON: [docs/demo/sample-digest.json](docs/demo/sample-digest.json)
+
 ### Maintainer Flow
 
 ```bash
@@ -74,9 +81,13 @@ make coverage
 ### v1.0 Readiness Docs
 
 - [Compatibility Contract](docs/compatibility.md)
+- [Configuration Matrix](docs/configuration.md)
 - [Deployment Guide](docs/deployment.md)
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Contributor Playbook](docs/contributor-playbook.md)
+- [Support Policy](SUPPORT.md)
+- [Roadmap](ROADMAP.md)
 
 ## What You Get
 
@@ -187,6 +198,8 @@ python -m pip install -e ".[dev]"
 - 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
 - 自动化：CI、tag release workflow、CodeQL、Dependabot
 - 打包与运行：非 root Docker 运行、`HEALTHCHECK`、`compose.yaml`、`.dockerignore`、`.editorconfig`
+- 供应链：release checksums、CycloneDX SBOM、build provenance、PyPI trusted publishing workflow
+- Demo：示例站内容、GitHub Pages 工作流、样例 digest/JSON 输出
 
 发布仓库前你还应该确认两件事：
 
@@ -197,6 +210,12 @@ python -m pip install -e ".[dev]"
 
 - `docs/github-launch-kit.md`
 - `docs/project-intro.md`
+
+社区协作建议配套：
+
+- `ROADMAP.md`
+- `SUPPORT.md`
+- `.github/labels.yml`
 
 ## LLM 翻译与日报
 

@@ -12,16 +12,46 @@ license = "MIT"
 authors = [
   { name = "Open Source Contributors" }
 ]
+maintainers = [
+  { name = "X-PG13", email = "2720174336@qq.com" }
+]
+keywords = ["ai", "news", "digest", "fastapi", "rss", "telegram", "feishu", "wechat"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Text Processing :: Markup",
+]
 dependencies = [
   "beautifulsoup4>=4.12.0,<5.0.0",
   "fastapi>=0.115.0,<1.0.0",
   "uvicorn>=0.32.0,<1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/X-PG13/ainews-open"
+Repository = "https://github.com/X-PG13/ainews-open"
+Documentation = "https://github.com/X-PG13/ainews-open#readme"
+Issues = "https://github.com/X-PG13/ainews-open/issues"
+Changelog = "https://github.com/X-PG13/ainews-open/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
   "build>=1.2.2,<2.0.0",
   "coverage[toml]>=7.6.0,<8.0.0",
+  "cyclonedx-bom>=7.3.0,<8.0.0",
   "httpx>=0.27.0,<1.0.0",
   "pre-commit>=4.2.0,<5.0.0",
   "pytest>=8.3.0,<9.0.0",

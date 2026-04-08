@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI News Open Demo</title>
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --ink: #182126;
+        --muted: #5b6670;
+        --card: rgba(255, 255, 255, 0.8);
+        --accent: #0f766e;
+        --line: rgba(24, 33, 38, 0.12);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "PingFang SC", "Noto Sans SC", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 36%),
+          linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 72px;
+      }
+      .hero {
+        display: grid;
+        gap: 24px;
+        align-items: center;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .eyebrow {
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 10px 0 14px;
+        font-size: clamp(32px, 6vw, 56px);
+        line-height: 1.02;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 24px;
+        background: var(--card);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 18px 50px rgba(24, 33, 38, 0.08);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .actions a {
+        text-decoration: none;
+        color: white;
+        background: var(--ink);
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-weight: 600;
+      }
+      .actions a.secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--line);
+      }
+      img {
+        width: 100%;
+        border-radius: 18px;
+        display: block;
+        border: 1px solid var(--line);
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-top: 28px;
+      }
+      .metric {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 8px;
+      }
+      ul {
+        padding-left: 18px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Public Demo</div>
+          <h1>AI News Open Demo Output</h1>
+          <p>
+            这不是截图集合，而是仓库自带的公开示例页。它展示了一份样例日报、导出 JSON
+            结构，以及管理控制台的真实界面，用来降低首次试用门槛。
+          </p>
+          <div class="actions">
+            <a href="./sample-digest.md">View Sample Digest</a>
+            <a class="secondary" href="./sample-digest.json">Open JSON Payload</a>
+          </div>
+        </div>
+        <div class="card">
+          <img src="../assets/console-real.png" alt="AI News Open console screenshot" />
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <p class="metric">12</p>
+          <p>示例日报收录文章数，覆盖国内与国际 AI 新闻。</p>
+        </article>
+        <article class="card">
+          <p class="metric">4</p>
+          <p>同一套工作流支持的主要交付面：CLI、API、管理台、发布层。</p>
+        </article>
+        <article class="card">
+          <p class="metric">1.0</p>
+          <p>导出 payload 的 schema 版本，方便下游工具固定兼容行为。</p>
+        </article>
+      </section>
+
+      <section class="card" style="margin-top: 24px;">
+        <h2>What This Demo Shows</h2>
+        <ul>
+          <li>Digest Markdown 输出长什么样。</li>
+          <li>下游系统可以依赖的 JSON 顶层结构。</li>
+          <li>项目在 GitHub Pages 上公开承载示例站的方式。</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

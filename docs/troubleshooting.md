@@ -86,6 +86,29 @@ Checks:
 - set `AINEWS_LOG_LEVEL=INFO` or `DEBUG`
 - set `AINEWS_LOG_FORMAT=json` for container or log pipeline deployments
 - look for `X-Request-ID` in API responses and match it to request logs
+- inspect `/health` for `ready`, `degraded_reasons`, recent operation timings, and failure categories
+- inspect `/admin/operations` for the last tracked `ingest`, `extract`, `enrich`, `digest`, `publish`, and `pipeline` runs
+
+## Health is `degraded`
+
+Meaning:
+
+- the service is still responding
+- the database and sources are available
+- one or more operator-visible failure categories were observed
+
+Typical degraded reasons:
+
+- `article_extraction_errors`
+- `llm_enrichment_errors`
+- `publication_errors`
+- `recent_pipeline_errors`
+
+Start with:
+
+- `python -m ainews stats`
+- `curl http://127.0.0.1:8000/health`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/operations`
 
 ## Contributors or GitHub stats look wrong
 

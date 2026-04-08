@@ -70,6 +70,11 @@ class StubExtractor:
         )
 
 
+class FailingExtractor:
+    def fetch_and_extract(self, url):
+        raise TimeoutError("request timed out while fetching article")
+
+
 class StubPublisher:
     def __init__(self):
         self.publish_calls = 0
@@ -668,6 +673,86 @@ class ServiceFilterTestCase(unittest.TestCase):
             refreshed = repository.get_publication(int(publication["id"]))
             self.assertEqual(refreshed["status"], "ok")
             self.assertIn("status_query", refreshed["response_payload"])
+
+    def test_health_degrades_after_operational_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="OpenAI launches a new model",
+                    url="https://example.com/openai-model",
+                    canonical_url="https://example.com/openai-model",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches a new model", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches a new model"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="openai-news",
+                            name="OpenAI News",
+                            url="https://openai.com/news/rss.xml",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="company",
+                        )
+                    ]
+                ),
+                llm_client=StubLLMClient(),
+                content_extractor=FailingExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            health = service.get_health()
+
+            self.assertEqual(result["status"], "partial_error")
+            self.assertEqual(result["failure_categories"]["timeout"], 1)
+            self.assertEqual(health["status"], "degraded")
+            self.assertTrue(health["ready"])
+            self.assertIn("article_extraction_errors", health["degraded_reasons"])
+            self.assertIn("extract", health["operations"])
+
+    def test_stats_include_operation_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+            )
+
+            service.build_digest(region="all", since_hours=24, limit=10, use_llm=False, persist=False)
+            stats = service.get_stats()
+
+            self.assertIn("operations", stats)
+            self.assertIn("digest", stats["operations"])
+            self.assertIn("configured_publish_targets", stats)
 
 
 if __name__ == "__main__":

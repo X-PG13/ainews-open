@@ -2,6 +2,8 @@
 
 This guide focuses on the fastest path from clone to a working pipeline, then shows how to run AI News Open in Docker, Docker Compose, `systemd`, and GitHub Actions.
 
+For a variable-by-variable breakdown, see [configuration.md](./configuration.md).
+
 ## 15-Minute Local Run
 
 ```bash
@@ -140,9 +142,16 @@ Use it when:
 The repository also includes:
 
 - [ci.yml](../.github/workflows/ci.yml) for matrix test, coverage, and build checks
-- [release.yml](../.github/workflows/release.yml) for tag-based release builds
+- [release.yml](../.github/workflows/release.yml) for tag-based release builds, checksums, SBOM, and provenance
+- [pypi-publish.yml](../.github/workflows/pypi-publish.yml) for trusted PyPI publishing
+- [demo-pages.yml](../.github/workflows/demo-pages.yml) for publishing the sample demo to GitHub Pages
 - [codeql.yml](../.github/workflows/codeql.yml) for security analysis
 - [.github/dependabot.yml](../.github/dependabot.yml) for dependency update PRs
+
+Release maintainers should also configure:
+
+- a `pypi` environment with PyPI trusted publishing enabled
+- GitHub Pages if the demo site should be public
 
 Recommended secrets:
 
