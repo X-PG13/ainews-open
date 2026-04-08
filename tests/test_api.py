@@ -310,6 +310,32 @@ class ApiTestCase(unittest.TestCase):
         self.assertTrue(source["last_success_at"])
         self.assertTrue(source["last_error_at"])
 
+    def test_admin_source_alerts_returns_recent_history(self) -> None:
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.record_source_alert(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            alert_key="source_cooldown:openai-news",
+            alert_status="sent",
+            severity="warning",
+            title="source cooldown active: OpenAI News",
+            message="OpenAI News entered blocked cooldown",
+            fingerprint="blocked|2999-01-01T00:00:00+00:00|2|403",
+            targets=[{"target": "telegram", "status": "ok"}],
+        )
+
+        response = self.client.get(
+            "/admin/source-alerts?limit=10",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["source_alerts"]), 1)
+        self.assertEqual(payload["source_alerts"][0]["source_id"], "openai-news")
+        self.assertEqual(payload["source_alerts"][0]["alert_status"], "sent")
+        self.assertEqual(payload["source_alerts"][0]["targets"], [{"target": "telegram", "status": "ok"}])
+
     def test_admin_reset_source_cooldowns_passes_filters(self) -> None:
         with patch(
             "ainews.api.NewsService.reset_source_cooldowns",

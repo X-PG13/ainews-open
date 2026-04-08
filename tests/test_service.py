@@ -181,12 +181,31 @@ class StubPublisher:
 
 
 class RecordingAlertNotifier:
-    def __init__(self):
+    def __init__(self, repository=None):
         self.calls = []
+        self.repository = repository
 
     def notify_rule(self, alert_key, **kwargs):
         self.calls.append((alert_key, kwargs))
-        return {"status": "sent", "alert_key": alert_key, "sent": True}
+        active = bool(kwargs.get("active"))
+        if self.repository is not None:
+            self.repository.save_alert_state(
+                alert_key=alert_key,
+                is_active=active,
+                fingerprint=str(kwargs.get("fingerprint") or ""),
+                last_status="active" if active else "recovered",
+                last_title=str(kwargs.get("title") or ""),
+                last_message=str(kwargs.get("message") or ""),
+                sent_at=utc_now().isoformat() if active else "",
+                recovered_at=utc_now().isoformat() if not active else "",
+                increment_delivery=True,
+            )
+        return {
+            "status": "sent" if active else "recovered",
+            "alert_key": alert_key,
+            "sent": True,
+            "targets": [{"target": "telegram", "status": "ok"}],
+        }
 
 
 class ServiceFilterTestCase(unittest.TestCase):
@@ -977,7 +996,7 @@ class ServiceFilterTestCase(unittest.TestCase):
                 source_cooldown_failure_threshold=2,
             )
             repository = ArticleRepository(settings.database_path)
-            alert_notifier = RecordingAlertNotifier()
+            alert_notifier = RecordingAlertNotifier(repository)
             now = utc_now()
             for index in range(2):
                 repository.insert_if_new(
@@ -1090,6 +1109,62 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["cleared"], 1)
             self.assertEqual(state["cooldown_status"], "")
             self.assertEqual(state["cooldown_until"], "")
+
+    def test_source_cooldown_alert_history_closes_on_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_cooldown_failure_threshold=2,
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier(repository)
+            now = utc_now()
+            for index in range(2):
+                repository.insert_if_new(
+                    ArticleRecord(
+                        source_id="venturebeat",
+                        source_name="VentureBeat",
+                        title=f"Cooldown alert story {index}",
+                        url=f"https://venturebeat.com/ai/alert-history-{index}",
+                        canonical_url=f"https://venturebeat.com/ai/alert-history-{index}",
+                        summary="A release update",
+                        published_at=now,
+                        discovered_at=now,
+                        language="en",
+                        region="international",
+                        country="US",
+                        topic="news",
+                        content_hash=make_content_hash(
+                            f"Cooldown alert story {index}", "A release update"
+                        ),
+                        dedup_key=make_dedup_key(f"Cooldown alert story {index}"),
+                        raw_payload={},
+                    )
+                )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ForbiddenExtractor(),
+                alert_notifier=alert_notifier,
+            )
+
+            service.extract_articles(limit=10)
+            active_alerts = service.list_source_alerts(limit=10)
+
+            self.assertEqual(len(active_alerts), 1)
+            self.assertEqual(active_alerts[0]["source_id"], "venturebeat")
+            self.assertEqual(active_alerts[0]["alert_status"], "sent")
+
+            service.reset_source_cooldowns(source_ids=["venturebeat"], active_only=False)
+            alert_history = service.list_source_alerts(limit=10)
+
+            self.assertEqual(len(alert_history), 2)
+            self.assertEqual(alert_history[0]["alert_status"], "recovered")
+            self.assertEqual(alert_history[0]["targets"][0]["target"], "telegram")
+            self.assertEqual(alert_history[1]["alert_status"], "sent")
 
     def test_pipeline_partial_error_dispatches_pipeline_alert(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

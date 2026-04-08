@@ -226,6 +226,7 @@ AI News Open 会把这个来源打入冷却窗口。冷却期间：
 - 默认抽取队列会跳过这个来源的文章
 - `/health` 会出现 `source_cooldowns_active`
 - `/admin/sources` 和控制台会展示受影响来源以及冷却截止时间
+- `/admin/source-alerts` 和控制台会展示最近的来源级告警与恢复历史
 
 手动解除冷却示例：
 
@@ -287,6 +288,7 @@ AINEWS_ALERT_FEISHU_SECRET=...
 运维建议：
 
 - 来源级冷却、最近成功率、失败分类分布、最近操作摘要，优先看 `/admin/sources`
+- 来源级告警激活和恢复通知历史，优先看 `/admin/source-alerts`
 - 告警是通知入口，不是排障终点；收到告警后优先结合 `/health` 和 `/admin/operations` 看上下文
 
 ## 升级前检查

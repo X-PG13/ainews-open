@@ -220,6 +220,22 @@
       <section class="panel">
         <div class="section-head">
           <div>
+            <p class="eyebrow">Source Alerts</p>
+            <h2>来源级告警历史</h2>
+          </div>
+          <div class="toolbar-row">
+            <button id="refreshSourceAlertsButton" class="button ghost">刷新告警历史</button>
+          </div>
+        </div>
+        <p class="muted">
+          展示最近来源冷却激活和恢复通知，方便快速确认哪个来源刚进入冷却、哪个来源已经恢复。
+        </p>
+        <div id="sourceAlertsList" class="publication-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
             <p class="eyebrow">Articles</p>
             <h2>新闻池</h2>
           </div>

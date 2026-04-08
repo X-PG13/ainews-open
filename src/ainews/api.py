@@ -527,6 +527,27 @@ def create_app() -> FastAPI:
         except Exception:
             return _handle_route_unexpected_error(request)
 
+    @app.get("/admin/source-alerts")
+    def admin_source_alerts(
+        request: Request,
+        source_id: Optional[str] = Query(default=None),
+        limit: int = Query(default=20, ge=1, le=100),
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_source_alerts")
+        try:
+            return _sanitize_service_payload(
+                {"source_alerts": service.list_source_alerts(source_id=source_id, limit=limit)}
+            )
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
     @app.get("/admin/articles")
     def admin_articles(
         request: Request,

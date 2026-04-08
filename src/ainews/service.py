@@ -30,6 +30,7 @@ PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response 
 PUBLIC_SKIPPED_MESSAGE = "extraction skipped by extractor policy"
 logger = logging.getLogger("ainews.service")
 SOURCE_COOLDOWN_CATEGORIES = {"throttled", "blocked"}
+SOURCE_COOLDOWN_ALERT_KEY_PREFIX = "source_cooldown:"
 
 
 class NewsService:
@@ -113,6 +114,14 @@ class NewsService:
 
     def get_operations(self) -> Dict[str, object]:
         return self.telemetry.snapshot()
+
+    def list_source_alerts(
+        self,
+        *,
+        source_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> List[dict]:
+        return self.repository.list_source_alerts(source_id=source_id, limit=limit)
 
     def get_health(self) -> Dict[str, object]:
         stats = self.repository.get_stats()
@@ -1857,6 +1866,7 @@ class NewsService:
             recovery_title="source cooldowns cleared",
             recovery_message="all source cooldowns have been cleared",
         )
+        self._dispatch_source_cooldown_alerts(cooldowns)
 
     def _dispatch_operation_alert(self, rule_key: str, *, active: bool, title: str, message: str, fingerprint: str) -> None:
         self.alert_notifier.notify_rule(
@@ -1870,6 +1880,80 @@ class NewsService:
             recovery_message=f"{title} returned to ok",
         )
 
+    def _dispatch_source_cooldown_alerts(self, cooldowns: List[dict]) -> None:
+        active_by_source: Dict[str, dict] = {}
+        for item in cooldowns:
+            source_id = clean_text(str(item.get("source_id", "")))
+            if not source_id:
+                continue
+            active_by_source[source_id] = item
+            source_name = clean_text(str(item.get("source_name", ""))) or source_id
+            alert_key = f"{SOURCE_COOLDOWN_ALERT_KEY_PREFIX}{source_id}"
+            message = self._source_cooldown_recovery_message(item, recovering=False)
+            fingerprint = "|".join(
+                [
+                    clean_text(str(item.get("cooldown_status", ""))),
+                    clean_text(str(item.get("cooldown_until", ""))),
+                    str(int(item.get("consecutive_failures") or 0)),
+                    str(int(item.get("last_http_status") or 0)),
+                ]
+            )
+            result = self.alert_notifier.notify_rule(
+                alert_key,
+                active=True,
+                title=f"source cooldown active: {source_name}",
+                message=message,
+                fingerprint=fingerprint,
+                severity="warning",
+                recovery_title=f"source cooldown cleared: {source_name}",
+                recovery_message=self._source_cooldown_recovery_message(item, recovering=True),
+            )
+            self._record_source_alert_history(
+                source_id=source_id,
+                source_name=source_name,
+                alert_key=alert_key,
+                alert_status=str(result.get("status", "")),
+                severity="warning",
+                title=f"source cooldown active: {source_name}",
+                message=message,
+                fingerprint=fingerprint,
+                targets=result.get("targets"),
+            )
+
+        for alert_state in self.repository.list_alert_states(
+            prefix=SOURCE_COOLDOWN_ALERT_KEY_PREFIX,
+            active_only=True,
+            limit=200,
+        ):
+            alert_key = clean_text(str(alert_state.get("alert_key", "")))
+            if not alert_key.startswith(SOURCE_COOLDOWN_ALERT_KEY_PREFIX):
+                continue
+            source_id = alert_key[len(SOURCE_COOLDOWN_ALERT_KEY_PREFIX) :]
+            if not source_id or source_id in active_by_source:
+                continue
+            source_state = self.repository.get_source_state(source_id) or {}
+            source_name = clean_text(str(source_state.get("source_name", ""))) or source_id
+            message = self._source_cooldown_recovery_message(source_state, recovering=True)
+            result = self.alert_notifier.notify_rule(
+                alert_key,
+                active=False,
+                title=f"source cooldown cleared: {source_name}",
+                message=message,
+                severity="info",
+                recovery_title=f"source cooldown cleared: {source_name}",
+                recovery_message=message,
+            )
+            self._record_source_alert_history(
+                source_id=source_id,
+                source_name=source_name,
+                alert_key=alert_key,
+                alert_status=str(result.get("status", "")),
+                severity="info",
+                title=f"source cooldown cleared: {source_name}",
+                message=message,
+                targets=result.get("targets"),
+            )
+
     @staticmethod
     def _source_cooldown_alert_message(cooldowns: List[dict]) -> str:
         if not cooldowns:
@@ -1882,6 +1966,67 @@ class NewsService:
         if remaining > 0:
             lines.append(f"+{remaining} more source cooldown(s)")
         return "\n".join(lines)
+
+    @staticmethod
+    def _source_cooldown_recovery_message(
+        source_state: Optional[dict],
+        *,
+        recovering: bool,
+    ) -> str:
+        if not isinstance(source_state, dict):
+            return "source cooldown state updated"
+        source_name = clean_text(str(source_state.get("source_name", "")))
+        source_id = clean_text(str(source_state.get("source_id", "")))
+        source_label = source_name or source_id or "unknown source"
+        if recovering:
+            last_success_at = clean_text(str(source_state.get("last_success_at", "")))
+            if last_success_at:
+                return f"{source_label} recovered from cooldown at {last_success_at}"
+            return f"{source_label} recovered from cooldown"
+        status = clean_text(str(source_state.get("cooldown_status", ""))) or "cooldown"
+        until = clean_text(str(source_state.get("cooldown_until", "")))
+        attempts = int(source_state.get("consecutive_failures") or 0)
+        http_status = int(source_state.get("last_http_status") or 0)
+        parts = [f"{source_label} entered {status} cooldown"]
+        if until:
+            parts.append(f"until {until}")
+        if attempts:
+            parts.append(f"after {attempts} consecutive failures")
+        if http_status:
+            parts.append(f"http={http_status}")
+        return "; ".join(parts)
+
+    def _record_source_alert_history(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+        alert_key: str,
+        alert_status: str,
+        severity: str,
+        title: str,
+        message: str,
+        fingerprint: str = "",
+        targets: Optional[object] = None,
+    ) -> None:
+        if alert_status not in {
+            "sent",
+            "delivery_error",
+            "recovered",
+            "recovery_delivery_error",
+        }:
+            return
+        self.repository.record_source_alert(
+            source_id=source_id,
+            source_name=source_name,
+            alert_key=alert_key,
+            alert_status=alert_status,
+            severity=severity,
+            title=title,
+            message=message,
+            fingerprint=fingerprint,
+            targets=targets if isinstance(targets, list) else None,
+        )
 
     @classmethod
     def _classify_error(cls, exc: Exception) -> str:

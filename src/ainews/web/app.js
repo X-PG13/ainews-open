@@ -40,6 +40,8 @@ const refs = {
   extractionDueOnlyCheckbox: document.getElementById("extractionDueOnlyCheckbox"),
   refreshExtractionOpsButton: document.getElementById("refreshExtractionOpsButton"),
   retryExtractionSelectionButton: document.getElementById("retryExtractionSelectionButton"),
+  sourceAlertsList: document.getElementById("sourceAlertsList"),
+  refreshSourceAlertsButton: document.getElementById("refreshSourceAlertsButton"),
   publishTargetInputs: Array.from(document.querySelectorAll(".publish-target")),
   wechatSubmitCheckbox: document.getElementById("wechatSubmitCheckbox"),
 };
@@ -457,6 +459,23 @@ function extractionStatusClass(status) {
   return "";
 }
 
+function sourceAlertStatusClass(status) {
+  if (status === "recovered") return "good";
+  if (status === "sent") return "warn";
+  if (status === "delivery_error" || status === "recovery_delivery_error") return "pending";
+  return "";
+}
+
+function sourceAlertStatusLabel(status) {
+  const labels = {
+    sent: "active",
+    delivery_error: "delivery_error",
+    recovered: "recovered",
+    recovery_delivery_error: "recovery_delivery_error",
+  };
+  return labels[status] || status || "unknown";
+}
+
 function retryDueLabel(article) {
   if (article.extraction_status === "pending") {
     return "pending";
@@ -506,6 +525,40 @@ function renderExtractionOps(articles) {
         )
         .join("")
     : '<p class="muted">当前筛选下没有需要关注的抽取记录。</p>';
+}
+
+function renderSourceAlerts(sourceAlerts) {
+  refs.sourceAlertsList.innerHTML = sourceAlerts.length
+    ? sourceAlerts
+        .map(
+          (item) => `
+            <article class="publication-card">
+              <header class="publication-head">
+                <div>
+                  <strong>${escapeHtml(item.source_name || item.source_id || "unknown source")}</strong>
+                  <div class="publication-meta">
+                    <span>${escapeHtml(item.created_at || "")}</span>
+                    <span>${escapeHtml(item.alert_key || "")}</span>
+                  </div>
+                </div>
+                <div class="chip-row compact">
+                  <span class="chip ${sourceAlertStatusClass(item.alert_status)}">${escapeHtml(sourceAlertStatusLabel(item.alert_status))}</span>
+                  ${item.severity ? `<span class="chip">${escapeHtml(item.severity)}</span>` : ""}
+                  ${(item.targets || [])
+                    .map(
+                      (target) =>
+                        `<span class="chip">${escapeHtml(target.target || "target")}:${escapeHtml(target.status || "unknown")}</span>`
+                    )
+                    .join("")}
+                </div>
+              </header>
+              <p class="publication-message">${escapeHtml(item.title || "source alert")}</p>
+              <p class="article-brief">${escapeHtml(item.message || "")}</p>
+            </article>
+          `
+        )
+        .join("")
+    : '<p class="muted">最近还没有来源级告警历史。</p>';
 }
 
 async function loadStats() {
@@ -561,6 +614,13 @@ async function loadExtractionOps() {
   renderExtractionOps(payload.articles || []);
 }
 
+async function loadSourceAlerts() {
+  const payload = await fetchJson("/admin/source-alerts?limit=20", {
+    headers: adminHeaders(),
+  });
+  renderSourceAlerts(payload.source_alerts || []);
+}
+
 async function refreshPublications() {
   const payload = await fetchJson("/admin/publications/refresh", {
     method: "POST",
@@ -586,6 +646,7 @@ async function refreshAll() {
       loadDigests(),
       loadPublications(),
       loadExtractionOps(),
+      loadSourceAlerts(),
     ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
@@ -770,6 +831,9 @@ refs.refreshExtractionOpsButton.addEventListener("click", () =>
 );
 refs.retryExtractionSelectionButton.addEventListener("click", () =>
   retryExtractions().catch((error) => logJob("retry extractions failed", { error: error.message }))
+);
+refs.refreshSourceAlertsButton.addEventListener("click", () =>
+  loadSourceAlerts().catch((error) => logJob("load source alerts failed", { error: error.message }))
 );
 refs.clearPublicationDigestFilterButton.addEventListener("click", () => {
   setSelectedDigestId(null);

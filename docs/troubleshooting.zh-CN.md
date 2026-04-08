@@ -82,7 +82,9 @@ API 示例：
 
 - `python -m ainews list-sources --runtime`
 - `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/sources`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/source-alerts`
 - 重点看 `cooldown_status`、`cooldown_until`、`consecutive_failures`、`last_http_status`
+- 再看最近的来源级告警和恢复记录，确认这次冷却是否已经发出通知
 
 如果确认这个来源可以恢复，可以手动解除冷却：
 
@@ -130,6 +132,7 @@ API 示例：
 - 调大 `AINEWS_ALERT_COOLDOWN_MINUTES`
 - 用 `AINEWS_ALERT_*` 单独配置告警目标，不要和业务发布目标混用
 - 到 `/admin/sources` 看看到底是哪个来源在重复触发冷却或 blocked 失败
+- 到 `/admin/source-alerts` 看同一个来源是不是在反复进入和退出冷却
 
 ## LLM 日报没有生成
 

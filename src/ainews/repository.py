@@ -35,7 +35,7 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 7
+CURRENT_SCHEMA_VERSION = 8
 
 
 class ArticleRepository:
@@ -161,6 +161,20 @@ class ArticleRepository:
                     delivery_count INTEGER NOT NULL DEFAULT 0,
                     updated_at TEXT NOT NULL DEFAULT ''
                 );
+
+                CREATE TABLE IF NOT EXISTS source_alerts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_id TEXT NOT NULL,
+                    source_name TEXT NOT NULL DEFAULT '',
+                    alert_key TEXT NOT NULL,
+                    alert_status TEXT NOT NULL,
+                    severity TEXT NOT NULL DEFAULT '',
+                    title TEXT NOT NULL DEFAULT '',
+                    message TEXT NOT NULL DEFAULT '',
+                    fingerprint TEXT NOT NULL DEFAULT '',
+                    targets TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL
+                );
                 """
             )
             self._ensure_article_migrations(connection)
@@ -214,6 +228,15 @@ class ArticleRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_source_events_status_created_at
                     ON source_events(status, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_alerts_source_created_at
+                    ON source_alerts(source_id, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_alerts_status_created_at
+                    ON source_alerts(alert_status, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_alerts_alert_key_created_at
+                    ON source_alerts(alert_key, created_at);
                 """
             )
             self._set_meta(connection, "schema_version", str(CURRENT_SCHEMA_VERSION))
@@ -290,6 +313,20 @@ class ArticleRepository:
         payload = dict(row)
         payload["is_active"] = bool(payload.get("is_active"))
         payload["delivery_count"] = int(payload.get("delivery_count") or 0)
+        return payload
+
+    @staticmethod
+    def _row_to_source_alert_dict(row: sqlite3.Row) -> Dict[str, object]:
+        payload = dict(row)
+        targets_raw = payload.get("targets")
+        if isinstance(targets_raw, str) and targets_raw:
+            try:
+                parsed = json.loads(targets_raw)
+            except json.JSONDecodeError:
+                parsed = []
+        else:
+            parsed = []
+        payload["targets"] = parsed if isinstance(parsed, list) else []
         return payload
 
     def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
@@ -1080,6 +1117,49 @@ class ArticleRepository:
             ).fetchone()
         return self._row_to_alert_state_dict(row) if row else None
 
+    def list_alert_states(
+        self,
+        *,
+        prefix: Optional[str] = None,
+        active_only: bool = False,
+        limit: int = 200,
+    ) -> List[dict]:
+        clauses = []
+        params: List[object] = []
+        if prefix:
+            clauses.append("alert_key LIKE ?")
+            params.append(f"{prefix}%")
+        if active_only:
+            clauses.append("is_active = 1")
+
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    alert_key,
+                    is_active,
+                    fingerprint,
+                    last_status,
+                    last_title,
+                    last_message,
+                    last_sent_at,
+                    last_recovered_at,
+                    delivery_count,
+                    updated_at
+                FROM alert_states
+                {where_sql}
+                ORDER BY updated_at DESC, alert_key ASC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_alert_state_dict(row) for row in rows]
+
     def save_alert_state(
         self,
         *,
@@ -1143,6 +1223,123 @@ class ArticleRepository:
                 ),
             )
         return self.get_alert_state(alert_key)
+
+    def record_source_alert(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+        alert_key: str,
+        alert_status: str,
+        severity: str = "",
+        title: str = "",
+        message: str = "",
+        fingerprint: str = "",
+        targets: Optional[Iterable[dict]] = None,
+    ) -> dict:
+        created_at = utc_now().isoformat()
+        target_payload = []
+        for item in list(targets or []):
+            if not isinstance(item, dict):
+                continue
+            target_payload.append(
+                {
+                    "target": clean_text(str(item.get("target", ""))),
+                    "status": clean_text(str(item.get("status", ""))),
+                }
+            )
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO source_alerts (
+                    source_id,
+                    source_name,
+                    alert_key,
+                    alert_status,
+                    severity,
+                    title,
+                    message,
+                    fingerprint,
+                    targets,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source_id,
+                    source_name,
+                    alert_key,
+                    alert_status,
+                    severity,
+                    title,
+                    message,
+                    fingerprint,
+                    json.dumps(target_payload, ensure_ascii=True),
+                    created_at,
+                ),
+            )
+            alert_id = int(cursor.lastrowid)
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    alert_key,
+                    alert_status,
+                    severity,
+                    title,
+                    message,
+                    fingerprint,
+                    targets,
+                    created_at
+                FROM source_alerts
+                WHERE id = ?
+                LIMIT 1
+                """,
+                (alert_id,),
+            ).fetchone()
+        return self._row_to_source_alert_dict(row) if row else {}
+
+    def list_source_alerts(
+        self,
+        *,
+        source_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[dict]:
+        clauses = []
+        params: List[object] = []
+        if source_id:
+            clauses.append("source_id = ?")
+            params.append(source_id)
+
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    alert_key,
+                    alert_status,
+                    severity,
+                    title,
+                    message,
+                    fingerprint,
+                    targets,
+                    created_at
+                FROM source_alerts
+                {where_sql}
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_source_alert_dict(row) for row in rows]
 
     def list_google_news_articles(
         self,

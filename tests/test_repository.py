@@ -372,6 +372,44 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(state["delivery_count"], 1)
             self.assertEqual(state["fingerprint"], "partial_error")
 
+    def test_repository_records_source_alert_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            repository.save_alert_state(
+                alert_key="source_cooldown:venturebeat",
+                is_active=True,
+                fingerprint="blocked|2999-01-01T00:00:00+00:00|2|403",
+                last_status="active",
+                last_title="source cooldown active: VentureBeat",
+                last_message="VentureBeat entered blocked cooldown",
+                sent_at=utc_now().isoformat(),
+                increment_delivery=True,
+            )
+            repository.record_source_alert(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                alert_key="source_cooldown:venturebeat",
+                alert_status="sent",
+                severity="warning",
+                title="source cooldown active: VentureBeat",
+                message="VentureBeat entered blocked cooldown",
+                fingerprint="blocked|2999-01-01T00:00:00+00:00|2|403",
+                targets=[{"target": "telegram", "status": "ok", "message": "ignored"}],
+            )
+
+            states = repository.list_alert_states(
+                prefix="source_cooldown:",
+                active_only=True,
+                limit=10,
+            )
+            history = repository.list_source_alerts(source_id="venturebeat", limit=10)
+
+            self.assertEqual(len(states), 1)
+            self.assertEqual(states[0]["alert_key"], "source_cooldown:venturebeat")
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0]["alert_status"], "sent")
+            self.assertEqual(history[0]["targets"], [{"target": "telegram", "status": "ok"}])
+
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")
