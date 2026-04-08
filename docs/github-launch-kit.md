@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.0`
+`v1.2.1`
 
 ### Suggested Title
 
-`AI News Open v1.2.0 · Operations And Content Quality`
+`AI News Open v1.2.1 · Fixture Coverage Expansion`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.0
+## AI News Open v1.2.1
 
-AI News Open `v1.2.0` upgrades both the operator surface and the extraction layer with a unified Operations dashboard and broader fixture-driven cleanup coverage across more media layouts.
+AI News Open `v1.2.1` hardens the fixture-driven regression layer with broader pipeline coverage across domestic, international, newsletter, and syndication source shapes.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.0` upgrades both the operator surface and the extraction laye
 
 ### Highlights in this release
 
-- One-screen `Operations` panel for health, pipeline, incidents, and publication failures
-- Richer `/admin/operations` payload for dashboard and automation consumers
-- New extraction fixtures and cleanup rules for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo`
+- Multi-source feed fixtures for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo`
+- A deterministic partial-error pipeline scenario that keeps timeout handling under regression coverage
+- Issue `#8` is now closed with CI-safe, network-free fixture expansion
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.1] - 2026-04-09
+
+### Added
+
+- Multi-source feed fixtures for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo` syndication pages in the pipeline end-to-end suite
+- A deterministic partial-error pipeline regression that keeps extraction timeout handling covered without depending on live network behavior
+
+### Changed
+
+- Package version is now `1.2.1`
+- Fixture-driven pipeline coverage now spans domestic media, international media, newsletter/blog layouts, and syndication targets in one CI-safe bundle
+
+### Fixed
+
+- Closed issue `#8` by expanding pipeline fixture coverage across more sources while keeping the regression suite deterministic
+
 ## [1.2.0] - 2026-04-09
 
 ### Added
