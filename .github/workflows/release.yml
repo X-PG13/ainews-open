@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: write
   attestations: write
   id-token: write
@@ -87,3 +88,8 @@ jobs:
           else
             gh release create "${TAG}" dist/* --title "${TAG}" --notes-file /tmp/release-notes.md
           fi
+
+      - name: Trigger release artifact smoke
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh workflow run release-artifact-smoke.yml --ref main -f tag="${TAG}"

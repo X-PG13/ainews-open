@@ -2,6 +2,18 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.1.2] - 2026-04-08
+
+### Changed
+
+- The tag release workflow now explicitly dispatches `Release Artifact Smoke` after publishing the GitHub Release
+- Release documentation now reflects that published tags trigger artifact smoke automatically, while manual reruns remain available
+- Package version is now `1.1.2`
+
+### Fixed
+
+- Closed the last manual step in the release flow by wiring release publication to post-release artifact validation
+
 ## [1.1.1] - 2026-04-08
 
 ### Added

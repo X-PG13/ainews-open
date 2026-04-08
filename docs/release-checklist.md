@@ -39,6 +39,7 @@ Confirm:
 - required repository secrets are configured
 
 Release is not considered complete until `Release Artifact Smoke` passes for the published tag.
+The standard release flow now dispatches that smoke workflow automatically after publishing the GitHub Release.
 
 ## GitHub Release
 
