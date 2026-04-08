@@ -1,7 +1,7 @@
 <div align="center">
   <h1>AI News Open</h1>
-  <p><strong>开源的国内外 AI 新闻聚合、中文翻译日报与多渠道发布工具</strong></p>
-  <p>Aggregate AI news, translate global coverage into Chinese, generate daily digests, and publish with one open-source stack.</p>
+  <p><strong>Open-source workflow for aggregating AI news, translating global coverage into Chinese, and publishing daily digests across channels.</strong></p>
+  <p><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a></p>
   <p>
     <a href="https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml"><img src="https://github.com/X-PG13/ainews-open/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
     <a href="https://github.com/X-PG13/ainews-open/releases"><img src="https://img.shields.io/github/v/release/X-PG13/ainews-open" alt="Release" /></a>
@@ -20,16 +20,16 @@
 
 ## Product Snapshot
 
-AI News Open 是一个面向开源发布的 AI 新闻聚合工具。它把分散的国内外 AI 信息源整理成一条完整工作流：采集、清洗、去重、正文提取、国际新闻中文翻译、日报生成、存档和多渠道发布。
+AI News Open is an open-source AI news stack built for maintainers, content teams, and operators who need more than a toy feed reader. It turns scattered domestic and international AI sources into one workflow: ingest, clean up, deduplicate, extract article bodies, translate global stories into Chinese, generate daily digests, archive them, and publish them across channels.
 
-### Why It Exists
+## Why It Exists
 
-- 国内外 AI 新闻统一采集，不依赖付费新闻 API
-- 国际新闻自动转中文标题、摘要和“为什么重要”
-- 同时提供 CLI、FastAPI API、零构建后台和多渠道发布
-- 已补齐 CI、lint、测试、Docker、Issue/PR 模板、安全策略等开源工程基线
+- Aggregate domestic and international AI news without paying for a commercial news API.
+- Translate global AI coverage into Chinese titles, summaries, and "why it matters" notes.
+- Ship one stack that includes CLI, FastAPI, a zero-build admin console, and publishing targets.
+- Meet open-source engineering expectations with tests, CI, lint, Docker, issue templates, and security policy.
 
-### What You Ship
+## What You Ship
 
 | Layer | Included |
 | --- | --- |
@@ -39,14 +39,14 @@ AI News Open 是一个面向开源发布的 AI 新闻聚合工具。它把分散
 | Publishing | Telegram, Feishu, static site, WeChat draft/publish |
 | Engineering | Tests, lint, pre-commit, CI, Docker, changelog, security policy |
 
-### Use Cases
+## Use Cases
 
-- 个人维护 AI 新闻日报
-- 内容团队做国际 AI 新闻中文编译
-- 轻量化 AI 媒体或内部情报流转
-- 把日报自动分发到 Telegram、飞书、静态站点或公众号
+- Run your own AI news digest as an individual maintainer.
+- Build a Chinese editorial workflow for international AI news.
+- Support a lightweight AI media product or internal intelligence feed.
+- Push daily digests to Telegram, Feishu, a static site, or a WeChat official account.
 
-### 60-Second Start
+## 60-Second Start
 
 ```bash
 python3 -m venv .venv
@@ -57,19 +57,19 @@ python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-l
 python -m ainews serve --port 8000
 ```
 
-启动后你可以：
+After startup you can:
 
-- 在 `http://127.0.0.1:8000/` 打开控制台
-- 查看新闻池、日报存档、发布历史和微信发布状态
-- 直接从控制台触发抓取、翻译、生成日报和发布
+- Open the admin console at `http://127.0.0.1:8000/`
+- Browse the article pool, digest archive, publication history, and WeChat publish status
+- Trigger ingest, extraction, translation, digest generation, and publishing from the dashboard
 
-### Public Demo
+## Public Demo
 
 - Sample demo page: [docs/demo/index.html](docs/demo/index.html)
 - Sample digest markdown: [docs/demo/sample-digest.md](docs/demo/sample-digest.md)
 - Sample digest JSON: [docs/demo/sample-digest.json](docs/demo/sample-digest.json)
 
-### Maintainer Flow
+## Maintainer Flow
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -78,7 +78,7 @@ make check
 make coverage
 ```
 
-### v1.0 Readiness Docs
+## v1.0 Readiness Docs
 
 - [Compatibility Contract](docs/compatibility.md)
 - [Configuration Matrix](docs/configuration.md)
@@ -91,57 +91,57 @@ make coverage
 
 ## What You Get
 
-当前版本提供：
+The current version includes:
 
-- 国内/国际 AI 新闻源 registry，默认混合中文站点、国际媒体和官方博客
-- RSS/Atom 采集、基础清洗、去重入库
-- 文章正文抓取、source-specific 清洗与本地持久化
-- 国际新闻 LLM 翻译与摘要补全
-- 中文日报生成与历史存档
-- 日报发布层，可推送到 Telegram、飞书、自建静态站点和微信公众号草稿箱
-- 飞书卡片消息和微信公众号封面自动上传
-- 发布历史管理与微信公众号发布状态刷新
-- `FastAPI` HTTP API
-- 零构建前端控制台和简单管理后台
-- 命令行采集、抓正文、翻译、日报生成、发布、整链路 pipeline
-- SQLite 存储
-- 单元测试、API 烟雾测试、Dockerfile、CI 工作流
-- `ruff`、coverage、`pre-commit`、issue/PR 模板、Security/Code of Conduct 等开源协作基建
+- A domestic and international AI source registry with Chinese sites, global media, and official blogs
+- RSS/Atom ingestion, basic cleanup, deduplicated persistence
+- Article body extraction, source-specific cleanup, and local storage
+- LLM-powered translation and summary enrichment for international stories
+- Chinese daily digest generation and digest history
+- A publication layer for Telegram, Feishu, a static site, and WeChat draft publishing
+- Feishu card messages and automatic WeChat cover upload
+- Publication history management and WeChat publish-status refresh
+- A `FastAPI` HTTP API
+- A zero-build admin console
+- CLI commands for ingest, extraction, enrichment, digest generation, publication, and full pipeline execution
+- SQLite storage
+- Unit tests, API smoke tests, Dockerfile, CI workflows
+- `ruff`, coverage, `pre-commit`, issue/PR templates, Security, and Code of Conduct
 
-默认源地址已在 `2026-04-07` 验证可访问，包括：
+The default sources were verified as reachable on `2026-04-07`, including:
 
-- 中文：`36Kr`、`TMTPost`、`IT之家`、`Google News CN AI`
-- 国际：`OpenAI News`、`Google AI Blog`、`Google DeepMind Blog`、`Hugging Face Blog`、`TechCrunch AI`、`The Verge AI`、`VentureBeat AI`、`Google News Global AI`
+- Chinese: `36Kr`, `TMTPost`, `IT之家`, `Google News CN AI`
+- Global: `OpenAI News`, `Google AI Blog`, `Google DeepMind Blog`, `Hugging Face Blog`, `TechCrunch AI`, `The Verge AI`, `VentureBeat AI`, `Google News Global AI`
 
-## 为什么这样设计
+## Why It Is Designed This Way
 
-这个版本优先解决四个问题：
+This version optimizes for four practical constraints:
 
-1. 不依赖付费新闻 API，默认只用公开 RSS/Atom 源。
-2. 能直接扩展，所有默认源都在 `src/ainews/sources.default.json` 里维护。
-3. 国际新闻可以先抓正文，再通过可配置的 LLM 自动转成中文标题、摘要和“为什么重要”。
-4. 能跑成服务，也能跑成命令行任务，还自带前端控制台、发布层和定时工作流，适合本地、服务器、Docker 和 GitHub Actions。
+1. No paid news API dependency. Everything starts from public RSS or Atom feeds.
+2. Easy extensibility. All default sources live in `src/ainews/sources.default.json`.
+3. International stories can be extracted first and then translated into Chinese titles, summaries, and "why it matters" notes through a configurable LLM.
+4. The same project can run as a service, a CLI task, a dashboard-backed tool, or a scheduled workflow on a server, in Docker, or in GitHub Actions.
 
-## 项目结构
+## Project Layout
 
 ```text
 src/ainews/
-  api.py              FastAPI 入口
-  cli.py              命令行入口
-  config.py           环境变量和配置
-  content_extractor.py 正文抓取
-  feed_parser.py      RSS / Atom 解析
-  http.py             HTTP 拉取
-  llm.py              OpenAI-compatible LLM 客户端
-  models.py           数据模型
-  publisher.py        日报发布层
-  repository.py       SQLite 存储
-  service.py          采集和聚合服务
-  web/                前端控制台
-  sources.default.json 默认新闻源
+  api.py               FastAPI entrypoint
+  cli.py               CLI entrypoint
+  config.py            Environment variables and settings
+  content_extractor.py Article body extraction
+  feed_parser.py       RSS / Atom parsing
+  http.py              HTTP fetching helpers
+  llm.py               OpenAI-compatible LLM client
+  models.py            Data models
+  publisher.py         Digest publishing layer
+  repository.py        SQLite storage
+  service.py           Ingest and aggregation service
+  web/                 Admin console
+  sources.default.json Default source registry
 ```
 
-## 快速开始
+## Quick Start
 
 ```bash
 python3 -m venv .venv
@@ -157,7 +157,7 @@ python -m ainews publish --use-llm --persist --export --target static_site
 python -m ainews serve --port 8000
 ```
 
-如果你是维护者或准备对外发布仓库，建议额外执行：
+If you are maintaining or publicly shipping the repository, also run:
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -165,70 +165,70 @@ pre-commit install
 make check
 ```
 
-启动后直接打开：
+Open the console at:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-如果你更喜欢直接启动 API：
+If you prefer to start the API directly:
 
 ```bash
 uvicorn ainews.api:create_app --factory --host 0.0.0.0 --port 8000
 ```
 
-如果你更希望直接用容器运行：
+If you prefer to run it in containers:
 
 ```bash
 docker compose up --build
 ```
 
-如果你准备二次开发，且本地 `pip` 足够新，可以改用 editable 安装：
+If your local `pip` is recent enough and you want editable installs:
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-## 开源工程基线
+## Open-Source Engineering Baseline
 
-当前仓库已经补齐以下开源工程基线：
+This repository already includes the expected open-source project baseline:
 
-- 社区文档：`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`
-- 协作模板：GitHub issue templates 和 pull request template
-- 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
-- 自动化：CI、tag release workflow、CodeQL、Dependabot
-- 打包与运行：非 root Docker 运行、`HEALTHCHECK`、`compose.yaml`、`.dockerignore`、`.editorconfig`
-- 供应链：release checksums、CycloneDX SBOM、build provenance、PyPI trusted publishing workflow
-- Demo：示例站内容、GitHub Pages 工作流、样例 digest/JSON 输出
+- Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`
+- Collaboration templates: GitHub issue templates and pull request template
+- Quality gates: `ruff`, unit tests, coverage, package build validation, `pre-commit`
+- Automation: CI, tag-based release workflow, CodeQL, Dependabot
+- Packaging and runtime: non-root Docker runtime, `HEALTHCHECK`, `compose.yaml`, `.dockerignore`, `.editorconfig`
+- Supply chain: release checksums, CycloneDX SBOM, build provenance, PyPI trusted publishing workflow
+- Demo assets: sample site content, GitHub Pages workflow, sample digest markdown and JSON output
 
-发布仓库前你还应该确认两件事：
+Before publishing the repository, still confirm two things:
 
-1. 私密漏洞上报入口已经配置到 GitHub Security Advisories。
-2. README 和 `pyproject.toml` 中的组织名、仓库地址、维护者信息已经改成真实值。
+1. Your private security reporting channel is configured in GitHub Security Advisories.
+2. The organization name, repository URLs, and maintainer metadata in `README.md` and `pyproject.toml` match your real public values.
 
-如果你准备发布到 GitHub，首版 Release 文案和项目简介可直接复用：
+If you are preparing a GitHub launch, you can reuse:
 
 - `docs/github-launch-kit.md`
 - `docs/project-intro.md`
 
-社区协作建议配套：
+Recommended community scaffolding:
 
 - `ROADMAP.md`
 - `SUPPORT.md`
 - `.github/labels.yml`
 
-## LLM 翻译与日报
+## LLM Translation and Digest Generation
 
-如果你希望国际新闻自动转成中文，并由 LLM 生成日报，需要在 `.env` 中配置一组 OpenAI-compatible 参数：
+If you want international stories translated into Chinese and daily digests generated by an LLM, configure an OpenAI-compatible endpoint in `.env`:
 
 ```env
 AINEWS_LLM_PROVIDER=openai_compatible
-AINEWS_LLM_BASE_URL=你的兼容接口地址
-AINEWS_LLM_API_KEY=你的密钥
-AINEWS_LLM_MODEL=你的模型名
+AINEWS_LLM_BASE_URL=your-compatible-endpoint
+AINEWS_LLM_API_KEY=your-key
+AINEWS_LLM_MODEL=your-model
 ```
 
-然后执行：
+Then run:
 
 ```bash
 python -m ainews extract --since-hours 48 --limit 20
@@ -236,28 +236,28 @@ python -m ainews enrich --since-hours 48 --limit 20
 python -m ainews print-digest --region all --limit 20 --use-llm --persist
 ```
 
-说明：
+Notes:
 
-- `extract` 会补抓文章正文，供后续翻译和摘要使用。
-- `enrich` 只处理国际新闻，给它们补中文标题、中文摘要和中文重要性说明。
-- `print-digest --use-llm` 会优先使用已翻译内容生成中文日报。
-- 如果 LLM 未配置，系统会回退到规则模板生成 fallback 日报，保证接口仍然可用。
+- `extract` fetches article bodies for downstream translation and summarization.
+- `enrich` only targets international stories and fills Chinese title, summary, and importance fields.
+- `print-digest --use-llm` prefers translated content to generate a Chinese daily digest.
+- If no LLM is configured, the system falls back to a rule-based digest template so the workflow remains available.
 
-如果你希望一步跑完整链路：
+If you want the full pipeline in one command:
 
 ```bash
 python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --persist --export
 ```
 
-它会依次执行：
+That pipeline executes:
 
-1. 抓取最新新闻
-2. 抓取正文
-3. 翻译国际新闻
-4. 生成日报
-5. 导出 `output/*.md` 和 `output/*.json`
+1. Ingest the latest stories
+2. Extract article bodies
+3. Translate international stories
+4. Generate a digest
+5. Export `output/*.md` and `output/*.json`
 
-如果你要在同一条流水线里直接发布：
+To publish as part of the same pipeline:
 
 ```bash
 python -m ainews run-pipeline \
@@ -271,31 +271,31 @@ python -m ainews run-pipeline \
   --target static_site
 ```
 
-说明：
+Notes:
 
-- `publish` 和 `run-pipeline --publish` 会自动持久化 digest，以便后续刷新发布状态并启用幂等防重复。
-- 同一个已存档 `digest` 发布到同一个 `target` 时，系统默认返回 `skipped`，不会新增脏记录。
-- 如果你明确要再次对外推送，可加 `--force-republish`。
+- `publish` and `run-pipeline --publish` automatically persist the digest so publication status can be refreshed later and idempotency can work.
+- Publishing the same stored `digest` to the same `target` returns `skipped` by default and does not create duplicate publication records.
+- If you intentionally want to publish again, add `--force-republish`.
 
-## 正文抽取与 source-specific 清洗
+## Content Extraction and Source-Specific Cleanup
 
-正文抽取器默认包含两层策略：
+The content extractor ships with two layers:
 
-- 通用正文识别：优先 `article`、`main`、`entry-content`、`post-content` 等常见容器
-- 站点专用清洗：当前对 `36Kr`、`IT之家` 优先命中正文容器，并主动丢弃推荐阅读、分享栏、面包屑、评论入口等站点噪音
+- Generic article detection that prefers containers such as `article`, `main`, `entry-content`, and `post-content`
+- Source-specific cleanup rules that currently prioritize the real article body for `36Kr` and `IT之家`, while dropping recommendation panels, share widgets, breadcrumbs, comments, and other site noise
 
-即使运行环境没有安装 `beautifulsoup4`，工具也会回退到标准库解析路径，并继续对 `36Kr`、`IT之家` 做专用正文抽取。
+Even if `beautifulsoup4` is not installed, the project falls back to a standard-library parser and still applies source-specific extraction rules for `36Kr` and `IT之家`.
 
-## 日报发布层
+## Publishing Layer
 
-当前支持四类发布目标：
+The current release supports four publication targets:
 
-- `telegram`：通过 Bot API 推送文本日报
-- `feishu`：通过自定义群机器人 webhook 推送，支持 `text` 和 `interactive` 卡片
-- `wechat`：写入微信公众号草稿箱，并可选直接提交发布；支持自动上传封面图生成 `thumb_media_id`
-- `static_site`：输出零依赖静态页面和 `latest.json`
+- `telegram`: send text digests through the Bot API
+- `feishu`: send digests through a custom webhook, with `text` and `interactive` card modes
+- `wechat`: create drafts in a WeChat official account and optionally submit them for publication; supports automatic cover upload to produce `thumb_media_id`
+- `static_site`: generate a zero-dependency static page and `latest.json`
 
-发布示例：
+Examples:
 
 ```bash
 python -m ainews publish --use-llm --target telegram
@@ -304,74 +304,74 @@ python -m ainews publish --use-llm --target wechat --wechat-submit
 python -m ainews publish --digest-id 1 --target static_site --force-republish
 ```
 
-如果不传 `--target`，系统会读取 `AINEWS_PUBLISH_TARGETS`。
+If `--target` is omitted, the system reads `AINEWS_PUBLISH_TARGETS`.
 
-### 飞书卡片
+### Feishu Cards
 
-如果你希望默认发卡片而不是纯文本：
+If you want cards instead of plain text by default:
 
 ```env
 AINEWS_FEISHU_MESSAGE_TYPE=card
 ```
 
-当前实现会优先尝试发送 `interactive` 卡片；如果卡片发送失败，会自动回退到 `text` 消息。
+The implementation tries `interactive` cards first and falls back to `text` automatically if the card send fails.
 
-### 微信公众号封面自动上传
+### Automatic WeChat Cover Upload
 
-如果你不想手工准备 `thumb_media_id`，可以改为提供封面图来源：
+If you do not want to prepare a `thumb_media_id` manually, provide a cover image source instead:
 
 ```env
-AINEWS_WECHAT_APP_ID=你的AppID
-AINEWS_WECHAT_APP_SECRET=你的AppSecret
+AINEWS_WECHAT_APP_ID=your-app-id
+AINEWS_WECHAT_APP_SECRET=your-app-secret
 AINEWS_WECHAT_THUMB_IMAGE_PATH=assets/wechat-cover.jpg
-# 或
+# or
 AINEWS_WECHAT_THUMB_IMAGE_URL=https://example.com/wechat-cover.jpg
 AINEWS_WECHAT_THUMB_UPLOAD_TYPE=thumb
 ```
 
-说明：
+Notes:
 
-- `thumb` 模式会走永久素材上传接口的 `type=thumb`，更适合作为封面；按官方要求需要 `JPG` 且不超过 `64KB`
-- 如果你已经有现成素材，仍然可以继续直接填 `AINEWS_WECHAT_THUMB_MEDIA_ID`
-- 当前实现只自动上传封面素材，不自动改写正文内的外部图片链接
+- `thumb` mode uses the permanent material upload API with `type=thumb`, which is better suited for cover images. Per the official constraint, the image must be `JPG` and under `64KB`.
+- If you already have a media asset, you can still set `AINEWS_WECHAT_THUMB_MEDIA_ID` directly.
+- The current implementation only uploads the cover asset automatically. It does not yet rewrite external image links inside the article body.
 
-### 微信公众号发布状态刷新
+### WeChat Publication Status Refresh
 
-如果你启用了 `--wechat-submit` 或 `AINEWS_WECHAT_PUBLISH_AFTER_DRAFT=true`，系统会把提交发布后的记录存下来，并支持后续轮询正式发布状态。
+If you use `--wechat-submit` or `AINEWS_WECHAT_PUBLISH_AFTER_DRAFT=true`, the system stores submitted publication records and lets you refresh the final publication state later.
 
-可以直接用：
+Use:
 
 ```bash
 python -m ainews list-publications --target wechat --limit 20
 python -m ainews refresh-publications --target wechat --limit 20
 ```
 
-当前基于微信官方 `freepublish/get` 接口把记录刷新为：
+The current implementation maps the official `freepublish/get` status into:
 
-- `pending`：仍在发布中
-- `ok`：发布成功
-- `error`：原创校验失败、常规失败、审核不通过、发布后删除或封禁
+- `pending`: still being published
+- `ok`: publication succeeded
+- `error`: originality validation failure, generic failure, review rejection, deletion after publication, or account restriction
 
-## 前端控制台
+## Admin Console
 
-根路径 `/` 提供一个开箱即用的后台页面，支持：
+The root path `/` provides an out-of-the-box admin page that supports:
 
-- 抓取新闻
-- 批量翻译国际新闻
-- 批量抓取正文
-- 生成和查看日报
-- 选择发布目标并直接推送日报
-- 查看发布历史并手动刷新微信发布状态
-- 查看历史日报
-- 对文章做置顶、隐藏和编辑备注
+- News ingest
+- Batch translation for international stories
+- Batch article body extraction
+- Digest generation and review
+- Target selection and one-click publishing
+- Publication history with manual WeChat refresh
+- Digest history
+- Manual curation such as pinning, hiding, and editorial notes
 
-如果你希望给管理接口加一个简单鉴权，可以设置：
+If you want simple protection for admin routes, set:
 
 ```env
 AINEWS_ADMIN_TOKEN=your-secret-token
 ```
 
-前端会自动通过 `X-Admin-Token` 调用管理接口。
+The frontend will automatically send `X-Admin-Token` to the admin API.
 
 ## CLI
 
@@ -394,17 +394,17 @@ python -m ainews serve --port 8000
 
 ### `GET /health`
 
-健康检查。返回 `status`、当前服务 `version`、数据库检查结果和 `schema_version`。
+Health check. Returns `status`, current service `version`, database checks, and `schema_version`.
 
 ### `GET /sources`
 
-列出当前启用的新闻源。
+List enabled sources.
 
 ### `POST /ingest`
 
-触发一次采集。
+Trigger one ingest run.
 
-示例：
+Example:
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/ingest?source_id=36kr-ai&source_id=openai-news"
@@ -412,9 +412,9 @@ curl -X POST "http://127.0.0.1:8000/ingest?source_id=36kr-ai&source_id=openai-ne
 
 ### `GET /articles`
 
-获取已经入库的文章。
+List stored articles.
 
-示例：
+Example:
 
 ```bash
 curl "http://127.0.0.1:8000/articles?region=domestic&since_hours=24&limit=20"
@@ -422,9 +422,9 @@ curl "http://127.0.0.1:8000/articles?region=domestic&since_hours=24&limit=20"
 
 ### `GET /digest/daily`
 
-获取聚合后的日报视图。默认是无副作用读取；如果加上 `use_llm=true`，会尝试用当前配置的 LLM 生成日报。
+Return the aggregated digest view. This route is read-only by default. If `use_llm=true` is added, it will try to generate a digest through the currently configured LLM.
 
-示例：
+Example:
 
 ```bash
 curl "http://127.0.0.1:8000/digest/daily?region=all&since_hours=24&limit=30"
@@ -432,11 +432,11 @@ curl "http://127.0.0.1:8000/digest/daily?region=all&since_hours=24&limit=30"
 
 ### `GET /admin/stats`
 
-获取文章、翻译、日报存档和 LLM 配置状态。
+Return article, enrichment, digest archive, and LLM configuration statistics.
 
 ### `POST /admin/enrich`
 
-批量翻译国际新闻。
+Batch-translate international stories.
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/admin/enrich" \
@@ -447,7 +447,7 @@ curl -X POST "http://127.0.0.1:8000/admin/enrich" \
 
 ### `POST /admin/extract`
 
-批量抓取正文。
+Batch-extract article bodies.
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/admin/extract" \
@@ -458,7 +458,7 @@ curl -X POST "http://127.0.0.1:8000/admin/extract" \
 
 ### `POST /admin/digests/generate`
 
-生成并可选持久化一份中文日报。
+Generate and optionally persist a Chinese daily digest.
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/admin/digests/generate" \
@@ -469,15 +469,15 @@ curl -X POST "http://127.0.0.1:8000/admin/digests/generate" \
 
 ### `PATCH /admin/articles/{id}`
 
-对单条新闻做人工干预，例如隐藏、置顶、补备注。
+Apply manual curation such as hide, pin, or editorial note.
 
 ### `POST /admin/pipeline`
 
-一键执行抓取、正文提取、翻译、日报生成、导出，并可选直接发布。
+Run ingest, extraction, enrichment, digest generation, export, and optionally publication in one call.
 
 ### `POST /admin/publish`
 
-生成或读取一份日报，并发布到配置好的目标平台。
+Build or load a digest and publish it to configured targets.
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/admin/publish" \
@@ -488,9 +488,9 @@ curl -X POST "http://127.0.0.1:8000/admin/publish" \
 
 ### `GET /admin/publications`
 
-查看最近的发布记录，包括目标平台、状态、外部 ID 和响应摘要。
+View recent publication records, including target platform, status, external ID, and response summary.
 
-支持可选查询参数：
+Optional query parameters:
 
 - `digest_id`
 - `target`
@@ -498,7 +498,7 @@ curl -X POST "http://127.0.0.1:8000/admin/publish" \
 
 ### `POST /admin/publications/refresh`
 
-刷新支持轮询的平台发布状态。当前主要用于微信公众号 `freepublish/get`。
+Refresh publication state for platforms that support polling. This is currently used mainly for WeChat `freepublish/get`.
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/admin/publications/refresh" \
@@ -507,80 +507,80 @@ curl -X POST "http://127.0.0.1:8000/admin/publications/refresh" \
   -d '{"target":"wechat","limit":20,"only_pending":true}'
 ```
 
-## 配置
+## Configuration
 
-环境变量示例见 `.env.example`。
+See `.env.example` for a concrete sample.
 
-- `AINEWS_DATABASE_URL`: SQLite 数据库位置
-- `AINEWS_SOURCES_FILE`: 新闻源配置文件
-- `AINEWS_HOME`: 工作目录根路径，默认是当前命令执行目录
-- `AINEWS_OUTPUT_DIR`: 导出的日报文件目录
-- `AINEWS_STATIC_SITE_DIR`: 静态站点输出目录
-- `AINEWS_STATIC_SITE_BASE_URL`: 静态站点对外访问基地址，可选
-- `AINEWS_REQUEST_TIMEOUT`: 抓取超时秒数
-- `AINEWS_DEFAULT_LOOKBACK_HOURS`: 默认回看时间窗口
-- `AINEWS_MAX_ARTICLES_PER_SOURCE`: 每个源默认最大采集条数
-- `AINEWS_ALLOWED_ORIGINS`: API CORS 白名单
-- `AINEWS_ADMIN_TOKEN`: 管理接口 token，可选
-- `AINEWS_LOG_LEVEL`: 日志级别，建议 `INFO` 或 `DEBUG`
-- `AINEWS_LOG_FORMAT`: 日志格式，支持 `text` 或 `json`
-- `AINEWS_EXTRACTION_TEXT_LIMIT`: 单篇正文本地保留的最大字符数
-- `AINEWS_LLM_ARTICLE_CONTEXT_CHARS`: 送入 LLM 的正文上下文字符数
-- `AINEWS_LLM_PROVIDER`: 当前默认是 `openai_compatible`
-- `AINEWS_LLM_BASE_URL`: LLM 接口基地址
-- `AINEWS_LLM_API_KEY`: LLM 密钥
-- `AINEWS_LLM_MODEL`: LLM 模型名
-- `AINEWS_LLM_TIMEOUT`: LLM 调用超时
-- `AINEWS_LLM_TEMPERATURE`: 日报和翻译的温度参数
-- `AINEWS_LLM_DIGEST_MAX_ARTICLES`: 参与日报生成的最大文章数
-- `AINEWS_PUBLISH_TARGETS`: 默认发布目标，逗号分隔，例如 `telegram,static_site`
+- `AINEWS_DATABASE_URL`: SQLite database location
+- `AINEWS_SOURCES_FILE`: source registry file
+- `AINEWS_HOME`: working directory root, defaults to the current command directory
+- `AINEWS_OUTPUT_DIR`: exported digest directory
+- `AINEWS_STATIC_SITE_DIR`: static site output directory
+- `AINEWS_STATIC_SITE_BASE_URL`: optional external base URL for the static site
+- `AINEWS_REQUEST_TIMEOUT`: fetch timeout in seconds
+- `AINEWS_DEFAULT_LOOKBACK_HOURS`: default lookback window
+- `AINEWS_MAX_ARTICLES_PER_SOURCE`: default per-source ingest cap
+- `AINEWS_ALLOWED_ORIGINS`: API CORS allowlist
+- `AINEWS_ADMIN_TOKEN`: optional admin API token
+- `AINEWS_LOG_LEVEL`: log level, typically `INFO` or `DEBUG`
+- `AINEWS_LOG_FORMAT`: `text` or `json`
+- `AINEWS_EXTRACTION_TEXT_LIMIT`: maximum number of locally stored characters per extracted article
+- `AINEWS_LLM_ARTICLE_CONTEXT_CHARS`: maximum number of article-body characters sent to the LLM
+- `AINEWS_LLM_PROVIDER`: defaults to `openai_compatible`
+- `AINEWS_LLM_BASE_URL`: LLM base URL
+- `AINEWS_LLM_API_KEY`: LLM API key
+- `AINEWS_LLM_MODEL`: LLM model name
+- `AINEWS_LLM_TIMEOUT`: LLM timeout
+- `AINEWS_LLM_TEMPERATURE`: temperature for translation and digest generation
+- `AINEWS_LLM_DIGEST_MAX_ARTICLES`: maximum number of articles used for digest generation
+- `AINEWS_PUBLISH_TARGETS`: default publish targets, comma-separated, for example `telegram,static_site`
 - `AINEWS_TELEGRAM_BOT_TOKEN`: Telegram bot token
-- `AINEWS_TELEGRAM_CHAT_ID`: Telegram chat id 或频道名
-- `AINEWS_TELEGRAM_DISABLE_NOTIFICATION`: Telegram 静默推送开关
-- `AINEWS_FEISHU_WEBHOOK`: 飞书自定义机器人 webhook
-- `AINEWS_FEISHU_SECRET`: 飞书签名秘钥，可选
-- `AINEWS_FEISHU_MESSAGE_TYPE`: 飞书消息类型，支持 `text` 或 `card`
-- `AINEWS_WECHAT_ACCESS_TOKEN`: 直接指定微信公众号 access token，可选
-- `AINEWS_WECHAT_APP_ID`: 用于自动换取 access token 的 AppID
-- `AINEWS_WECHAT_APP_SECRET`: 用于自动换取 access token 的 AppSecret
-- `AINEWS_WECHAT_THUMB_MEDIA_ID`: 微信图文封面素材 ID，创建草稿时必填
-- `AINEWS_WECHAT_THUMB_IMAGE_PATH`: 本地封面图片路径，可替代 `AINEWS_WECHAT_THUMB_MEDIA_ID`
-- `AINEWS_WECHAT_THUMB_IMAGE_URL`: 远程封面图片 URL，可替代 `AINEWS_WECHAT_THUMB_MEDIA_ID`
-- `AINEWS_WECHAT_THUMB_UPLOAD_TYPE`: 封面上传类型，默认 `thumb`
-- `AINEWS_WECHAT_AUTHOR`: 微信图文作者名
-- `AINEWS_WECHAT_CONTENT_SOURCE_URL`: 微信图文“阅读原文”地址，可选
-- `AINEWS_WECHAT_NEED_OPEN_COMMENT`: 微信图文是否打开评论
-- `AINEWS_WECHAT_ONLY_FANS_CAN_COMMENT`: 微信图文是否仅粉丝可评论
-- `AINEWS_WECHAT_PUBLISH_AFTER_DRAFT`: 创建草稿后是否自动提交发布
+- `AINEWS_TELEGRAM_CHAT_ID`: Telegram chat ID or channel name
+- `AINEWS_TELEGRAM_DISABLE_NOTIFICATION`: Telegram silent delivery toggle
+- `AINEWS_FEISHU_WEBHOOK`: Feishu custom bot webhook
+- `AINEWS_FEISHU_SECRET`: optional Feishu signing secret
+- `AINEWS_FEISHU_MESSAGE_TYPE`: `text` or `card`
+- `AINEWS_WECHAT_ACCESS_TOKEN`: optional fixed WeChat access token
+- `AINEWS_WECHAT_APP_ID`: AppID used for access token retrieval
+- `AINEWS_WECHAT_APP_SECRET`: AppSecret used for access token retrieval
+- `AINEWS_WECHAT_THUMB_MEDIA_ID`: WeChat cover material ID, required for draft creation unless you upload one automatically
+- `AINEWS_WECHAT_THUMB_IMAGE_PATH`: local cover image path, can replace `AINEWS_WECHAT_THUMB_MEDIA_ID`
+- `AINEWS_WECHAT_THUMB_IMAGE_URL`: remote cover image URL, can replace `AINEWS_WECHAT_THUMB_MEDIA_ID`
+- `AINEWS_WECHAT_THUMB_UPLOAD_TYPE`: upload type for the cover, default `thumb`
+- `AINEWS_WECHAT_AUTHOR`: WeChat article author name
+- `AINEWS_WECHAT_CONTENT_SOURCE_URL`: optional "Read more" URL in the WeChat article
+- `AINEWS_WECHAT_NEED_OPEN_COMMENT`: whether comments are enabled
+- `AINEWS_WECHAT_ONLY_FANS_CAN_COMMENT`: whether only followers can comment
+- `AINEWS_WECHAT_PUBLISH_AFTER_DRAFT`: whether to submit the draft for publication automatically
 
 ## v1.0 Contract Notes
 
-- 导出 JSON 现在包含顶层 `schema_version`
-- `publish` 与 `run-pipeline --publish` 默认按“已存档 digest + target”做幂等控制
-- 数据库升级按 [Database Migrations](docs/database-migrations.md) 执行，当前 schema version 为 `3`
-- 对外兼容承诺见 [Compatibility Contract](docs/compatibility.md)
+- Exported JSON includes top-level `schema_version`
+- `publish` and `run-pipeline --publish` are idempotent by default on the tuple `(stored digest, target)`
+- Database upgrades follow [Database Migrations](docs/database-migrations.md); the current schema version is `3`
+- Public compatibility guarantees are documented in [Compatibility Contract](docs/compatibility.md)
 
-## 作为开源项目继续增强
+## How to Keep Improving the Project
 
-当前代码已经具备较完整的开源骨架，但如果你要继续往“生产化”推进，下一步建议做这四件事：
+The repository already has a solid open-source skeleton, but if you want to push further toward production use, these are the next four upgrades:
 
-1. 增加来源健康检查、失败重试和抓取监控。
-2. 为管理后台补权限体系和多用户编辑日志。
-3. 对更多媒体站做专用清洗规则，而不是只覆盖通用 DOM 模式。
-4. 接入更多发布目标或更深的平台能力，例如 Telegram 富文本、公众号正文图片自动上传、发布状态轮询。
+1. Add source health checks, retries, and ingest monitoring.
+2. Add permissions and multi-user editing logs to the admin console.
+3. Add more source-specific extraction rules beyond the current generic DOM strategy.
+4. Add more publishing targets or deeper platform support, such as richer Telegram formatting, automatic inline image upload for WeChat, and more publication polling.
 
-仓库里已经提供了一个示例工作流：
+The repository already includes one scheduled workflow example:
 
-- [daily-digest.yml](/Users/zhaoyifan/Desktop/news/.github/workflows/daily-digest.yml)
+- [daily-digest.yml](.github/workflows/daily-digest.yml)
 
-它会每天定时执行 `run-pipeline`，并把生成的日报文件作为 artifact 上传。
+It runs `run-pipeline` every day and uploads the generated digest files as workflow artifacts.
 
-## 测试
+## Testing
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## 许可证
+## License
 
-MIT，见 `LICENSE`。
+MIT. See `LICENSE`.
