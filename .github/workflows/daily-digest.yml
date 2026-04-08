@@ -31,7 +31,7 @@ jobs:
         run: python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --persist --export
 
       - name: Upload digest artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ai-news-digest
           path: output/
