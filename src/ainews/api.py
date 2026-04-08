@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import __version__
 from .config import load_settings
@@ -160,55 +162,40 @@ def _sanitize_http_exception(exc: HTTPException) -> JSONResponse:
     return _error_response(exc.status_code, detail, headers=exc.headers)
 
 
+def _request_action_name(request: Request) -> str:
+    return str(getattr(request.state, "action_name", "") or "")
+
+
+def _log_api_warning(request: Request, *, event: str, message: str, status_code: int) -> None:
+    logger.warning(
+        message,
+        extra={
+            "event": event,
+            "action": _request_action_name(request),
+            "request_id": _request_id_from_state(request),
+            "status_code": status_code,
+        },
+    )
+
+
+def _log_api_exception(request: Request, *, event: str, message: str) -> None:
+    logger.exception(
+        message,
+        extra={
+            "event": event,
+            "action": _request_action_name(request),
+            "request_id": _request_id_from_state(request),
+        },
+    )
+
+
 def _run_service_action(
     request: Request,
     action_name: str,
     runner,
 ) -> Any:
-    request_id = _request_id_from_state(request)
-    try:
-        return _sanitize_service_payload(runner())
-    except HTTPException as exc:
-        logger.warning(
-            "service action returned an http error",
-            extra={
-                "event": "api.action_http_error",
-                "action": action_name,
-                "request_id": request_id,
-                "status_code": exc.status_code,
-            },
-        )
-        return _sanitize_http_exception(exc)
-    except LookupError:
-        logger.warning(
-            "requested resource was not found",
-            extra={
-                "event": "api.action_not_found",
-                "action": action_name,
-                "request_id": request_id,
-            },
-        )
-        return _error_response(404, NOT_FOUND_MESSAGE)
-    except ValueError:
-        logger.warning(
-            "request could not be processed",
-            extra={
-                "event": "api.action_bad_request",
-                "action": action_name,
-                "request_id": request_id,
-            },
-        )
-        return _error_response(400, BAD_REQUEST_MESSAGE)
-    except Exception:
-        logger.exception(
-            "service action failed",
-            extra={
-                "event": "api.action_error",
-                "action": action_name,
-                "request_id": request_id,
-            },
-        )
-        return _error_response(500, SANITIZED_ERROR_MESSAGE)
+    request.state.action_name = action_name
+    return _sanitize_service_payload(runner())
 
 
 def create_app() -> FastAPI:
@@ -222,6 +209,59 @@ def create_app() -> FastAPI:
         version=__version__,
         description="Daily domestic and international AI news aggregation API.",
     )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        _log_api_warning(
+            request,
+            event="api.action_http_error",
+            message="service action returned an http error",
+            status_code=exc.status_code,
+        )
+        return _sanitize_http_exception(
+            HTTPException(status_code=exc.status_code, detail=exc.detail, headers=exc.headers)
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        _log_api_warning(
+            request,
+            event="api.action_validation_error",
+            message="request validation failed",
+            status_code=422,
+        )
+        return _error_response(422, BAD_REQUEST_MESSAGE)
+
+    @app.exception_handler(LookupError)
+    async def handle_lookup_error(request: Request, exc: LookupError) -> JSONResponse:
+        _log_api_warning(
+            request,
+            event="api.action_not_found",
+            message="requested resource was not found",
+            status_code=404,
+        )
+        return _error_response(404, NOT_FOUND_MESSAGE)
+
+    @app.exception_handler(ValueError)
+    async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
+        _log_api_warning(
+            request,
+            event="api.action_bad_request",
+            message="request could not be processed",
+            status_code=400,
+        )
+        return _error_response(400, BAD_REQUEST_MESSAGE)
+
+    @app.exception_handler(Exception)
+    async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        _log_api_exception(
+            request,
+            event="api.action_error",
+            message="service action failed",
+        )
+        return _error_response(500, SANITIZED_ERROR_MESSAGE)
 
     allow_origins = [
         origin.strip() for origin in settings.allowed_origins.split(",") if origin.strip()

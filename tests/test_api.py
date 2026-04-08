@@ -90,6 +90,31 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(authorized.status_code, 200)
         self.assertIn("total_articles", authorized.json())
 
+    def test_admin_route_masks_invalid_token_detail(self) -> None:
+        response = self.client.get(
+            "/admin/stats",
+            headers={"X-Admin-Token": "wrong-token"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json()["detail"],
+            "request could not be processed; inspect server logs with the response X-Request-ID",
+        )
+
+    def test_admin_route_masks_validation_error_detail(self) -> None:
+        response = self.client.post(
+            "/admin/extract/retry",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"limit": 1000},
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(
+            response.json()["detail"],
+            "request could not be processed; inspect server logs with the response X-Request-ID",
+        )
+
     def test_admin_publish_skips_duplicate_digest_target(self) -> None:
         self._seed_article()
 
