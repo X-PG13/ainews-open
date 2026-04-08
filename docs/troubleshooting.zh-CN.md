@@ -138,6 +138,15 @@ API 示例：
 - 如果只是短时限流，先临时静默这个来源
 - 如果要暂停该来源的默认抽取和来源级告警，直接切到维护模式
 
+CLI 示例：
+
+```bash
+python -m ainews ack-source-alerts --source venturebeat --note "由值班同学接手"
+python -m ainews snooze-source-alerts --source venturebeat --minutes 120
+python -m ainews set-source-maintenance --source venturebeat
+python -m ainews set-source-maintenance --source venturebeat --disable
+```
+
 ## LLM 日报没有生成
 
 先检查：

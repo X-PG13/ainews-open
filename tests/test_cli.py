@@ -169,6 +169,85 @@ class CliTestCase(unittest.TestCase):
         )
         self.assertIn('"cleared": 1', stdout.getvalue())
 
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_ack_source_alerts_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.acknowledge_source_alerts.return_value = {"status": "ok", "acknowledged": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(
+                ["ack-source-alerts", "--source", "venturebeat", "--note", "known issue"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        service.acknowledge_source_alerts.assert_called_once_with(
+            source_ids=["venturebeat"],
+            note="known issue",
+        )
+        self.assertIn('"acknowledged": 1', stdout.getvalue())
+
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_snooze_source_alerts_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.snooze_source_alerts.return_value = {"status": "ok", "updated": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(
+                ["snooze-source-alerts", "--source", "venturebeat", "--minutes", "90"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        service.snooze_source_alerts.assert_called_once_with(
+            source_ids=["venturebeat"],
+            minutes=90,
+            clear=False,
+        )
+        self.assertIn('"updated": 1', stdout.getvalue())
+
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_set_source_maintenance_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.set_source_maintenance.return_value = {"status": "ok", "updated": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(
+                ["set-source-maintenance", "--source", "venturebeat", "--disable"]
+            )
+
+        self.assertEqual(exit_code, 0)
+        service.set_source_maintenance.assert_called_once_with(
+            source_ids=["venturebeat"],
+            enabled=False,
+        )
+        self.assertIn('"updated": 1', stdout.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

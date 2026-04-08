@@ -249,6 +249,20 @@ python -m ainews reset-source-cooldowns --source venturebeat
 python -m ainews reset-source-cooldowns --all
 ```
 
+Source Ops examples:
+
+```bash
+python -m ainews ack-source-alerts --source venturebeat --note "known rate limit incident"
+```
+
+```bash
+python -m ainews snooze-source-alerts --source venturebeat --minutes 60
+```
+
+```bash
+python -m ainews set-source-maintenance --source venturebeat
+```
+
 Relevant environment variables:
 
 - `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD`

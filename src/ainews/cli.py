@@ -105,6 +105,43 @@ def _build_parser() -> argparse.ArgumentParser:
     reset_source_cooldowns_parser.add_argument("--source", action="append", dest="sources")
     reset_source_cooldowns_parser.add_argument("--all", action="store_true")
 
+    acknowledge_source_alerts_parser = subparsers.add_parser(
+        "ack-source-alerts",
+        help="Acknowledge active source alerts for one or more sources",
+    )
+    acknowledge_source_alerts_parser.add_argument(
+        "--source",
+        action="append",
+        dest="sources",
+        required=True,
+    )
+    acknowledge_source_alerts_parser.add_argument("--note", default="")
+
+    snooze_source_alerts_parser = subparsers.add_parser(
+        "snooze-source-alerts",
+        help="Temporarily mute source-level alerts for one or more sources",
+    )
+    snooze_source_alerts_parser.add_argument(
+        "--source",
+        action="append",
+        dest="sources",
+        required=True,
+    )
+    snooze_source_alerts_parser.add_argument("--minutes", type=int, default=60)
+    snooze_source_alerts_parser.add_argument("--clear", action="store_true")
+
+    set_source_maintenance_parser = subparsers.add_parser(
+        "set-source-maintenance",
+        help="Enable or disable maintenance mode for one or more sources",
+    )
+    set_source_maintenance_parser.add_argument(
+        "--source",
+        action="append",
+        dest="sources",
+        required=True,
+    )
+    set_source_maintenance_parser.add_argument("--disable", action="store_true")
+
     resolve_google_news_parser = subparsers.add_parser(
         "resolve-google-news",
         help="Resolve stored Google News wrapper URLs to direct article URLs",
@@ -260,6 +297,34 @@ def main(argv: list[str] | None = None) -> int:
             service.reset_source_cooldowns(
                 source_ids=args.sources,
                 active_only=not args.all,
+            )
+        )
+        return 0
+
+    if args.command == "ack-source-alerts":
+        _json_dump(
+            service.acknowledge_source_alerts(
+                source_ids=args.sources,
+                note=args.note,
+            )
+        )
+        return 0
+
+    if args.command == "snooze-source-alerts":
+        _json_dump(
+            service.snooze_source_alerts(
+                source_ids=args.sources,
+                minutes=args.minutes,
+                clear=args.clear,
+            )
+        )
+        return 0
+
+    if args.command == "set-source-maintenance":
+        _json_dump(
+            service.set_source_maintenance(
+                source_ids=args.sources,
+                enabled=not args.disable,
             )
         )
         return 0

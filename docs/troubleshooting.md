@@ -136,6 +136,15 @@ If alerts feel too noisy:
 - snooze the source temporarily when you expect short-lived rate limits
 - move the source into maintenance mode when you want the extraction queue and source alerts to pause together
 
+CLI examples:
+
+```bash
+python -m ainews ack-source-alerts --source venturebeat --note "owned by on-call"
+python -m ainews snooze-source-alerts --source venturebeat --minutes 120
+python -m ainews set-source-maintenance --source venturebeat
+python -m ainews set-source-maintenance --source venturebeat --disable
+```
+
 ## LLM digest generation does not happen
 
 Checks:
