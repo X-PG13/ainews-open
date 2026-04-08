@@ -33,6 +33,7 @@ make smoke
 
 - GitHub Actions `CI` 为绿色
 - GitHub Actions `CodeQL` 为绿色
+- 上一个已发布 tag 的 GitHub Actions `Release Artifact Smoke` 为绿色
 - `release.yml` 存在且是当前版本
 - 如果需要发 PyPI，`pypi-publish.yml` 已配置
 - 仓库 secrets 已补齐
@@ -65,6 +66,7 @@ python -m ainews --help
 ## 发版后
 
 1. 检查 Release 页面和 demo 页面仍可访问。
-2. 检查 GitHub / PyPI 上的包元信息是否正确。
-3. 检查 `Latest` 是否指向预期 tag。
-4. 如需对外公告，可直接复用 `docs/releases/` 里的文案。
+2. 检查已发布 tag 的 `Release Artifact Smoke` 是否通过。
+3. 检查 GitHub / PyPI 上的包元信息是否正确。
+4. 检查 `Latest` 是否指向预期 tag。
+5. 如需对外公告，可直接复用 `docs/releases/` 里的文案。

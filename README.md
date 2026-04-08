@@ -213,6 +213,7 @@ This repository already includes the expected open-source project baseline:
 - Collaboration templates: GitHub issue templates, pull request template, `CODEOWNERS`, and review policy
 - Quality gates: `ruff`, unit tests, coverage, package build validation, `pre-commit`
 - Automation: CI, tag-based release workflow, CodeQL, Dependabot
+- Release verification: published artifact checksum and install smoke workflow
 - Packaging and runtime: non-root Docker runtime, `HEALTHCHECK`, `compose.yaml`, `.dockerignore`, `.editorconfig`
 - Supply chain: release checksums, CycloneDX SBOM, build provenance, PyPI trusted publishing workflow
 - Observability: Prometheus-compatible `/metrics`, source runtime history, housekeeping workflow, and ready-to-run monitoring profile

@@ -213,6 +213,7 @@ python -m pip install -e ".[dev]"
 - 协作模板：GitHub issue templates、pull request template、`CODEOWNERS` 和审核约定
 - 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
 - 自动化：CI、tag release workflow、CodeQL、Dependabot
+- 发版校验：release artifact checksum 和安装 smoke workflow
 - 打包与运行：非 root Docker 运行、`HEALTHCHECK`、`compose.yaml`、`.dockerignore`、`.editorconfig`
 - 供应链：release checksums、CycloneDX SBOM、build provenance、PyPI trusted publishing workflow
 - 可观测性：Prometheus `/metrics`、来源运行态历史、housekeeping 工作流、可直接运行的 monitoring profile

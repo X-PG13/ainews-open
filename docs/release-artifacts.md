@@ -10,6 +10,12 @@ Every tagged GitHub release publishes a release bundle with:
 - CycloneDX SBOM JSON
 - provenance attestation
 
+The repository also includes a GitHub Actions validation workflow:
+
+- `.github/workflows/release-artifact-smoke.yml`
+
+It downloads the published release assets, verifies checksums, installs the wheel and source archive in clean jobs, and runs minimal CLI and `/health` smoke checks.
+
 ## Download And Verify
 
 From a release page, download the wheel, source archive, and `sha256sums.txt`.
@@ -44,6 +50,8 @@ python -m pip install ainews_open-X.Y.Z.tar.gz
 python -m ainews --help
 python -m ainews stats
 ```
+
+For the GitHub-hosted equivalent, re-run the `Release Artifact Smoke` workflow against any published tag.
 
 ## SBOM And Provenance
 
