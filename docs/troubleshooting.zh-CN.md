@@ -41,6 +41,16 @@
 - 如果 LLM 没配置或调用失败，系统会自动回退到规则模板 digest
 - 这是预期降级行为，不是 crash
 
+## Google News 文章在抽取时显示 `skipped`
+
+这是 `news.google.com` 聚合壳页的预期行为。
+
+- Google News 的 RSS 链接经常落到 Google 自己的壳页，而不是原始媒体正文页
+- AI News Open 现在会把这类页面标记成 `skipped`，而不是 `error`
+- 默认抽取队列不会反复重试这些条目，`/health` 也不会因此降级
+
+如果你确实需要正文，应优先使用原始媒体链接，而不是 Google News 包装链接。
+
 ## 发布返回 `skipped`
 
 这表示：

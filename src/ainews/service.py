@@ -6,7 +6,7 @@ from collections import Counter
 from typing import Dict, Iterable, List, Optional
 
 from .config import Settings, load_settings
-from .content_extractor import ArticleContentExtractor
+from .content_extractor import ArticleContentExtractor, ExtractionSkippedError
 from .feed_parser import parse_feed_document
 from .http import fetch_text
 from .llm import LLMClient, OpenAICompatibleLLMClient
@@ -109,6 +109,7 @@ class NewsService:
             "stats": {
                 "total_articles": stats["total_articles"],
                 "extraction_errors": stats["extraction_errors"],
+                "skipped_extractions": stats["skipped_extractions"],
                 "llm_errors": stats["llm_errors"],
                 "pending_publications": stats["pending_publications"],
                 "publication_errors": stats["publication_errors"],
@@ -397,6 +398,7 @@ class NewsService:
         )
         results = []
         updated = 0
+        skipped = 0
         errors = 0
         failure_categories: Counter[str] = Counter()
 
@@ -416,6 +418,21 @@ class NewsService:
                     }
                 )
                 updated += 1
+            except ExtractionSkippedError as exc:
+                message = str(exc)
+                self.repository.mark_article_extraction_skipped(
+                    int(article["id"]),
+                    error=message,
+                )
+                results.append(
+                    {
+                        "article_id": article["id"],
+                        "status": "skipped",
+                        "title": article["title"],
+                        "message": message,
+                    }
+                )
+                skipped += 1
             except Exception as exc:
                 category = self._classify_error(exc)
                 public_error = self._public_error_message(exc)
@@ -447,6 +464,7 @@ class NewsService:
             "status": "partial_error" if errors else "ok",
             "requested": len(candidates),
             "updated": updated,
+            "skipped": skipped,
             "errors": errors,
             "articles": results,
             "failure_categories": dict(failure_categories),
@@ -454,7 +472,7 @@ class NewsService:
         operation_record = self.telemetry.finish(
             operation,
             status=str(payload["status"]),
-            metrics={"requested": len(candidates), "updated": updated, "errors": errors},
+            metrics={"requested": len(candidates), "updated": updated, "skipped": skipped, "errors": errors},
             error_category=self._top_failure_category(failure_categories),
         )
         payload["operation"] = operation_record
@@ -465,6 +483,7 @@ class NewsService:
                 "operation_id": operation.operation_id,
                 "requested": len(candidates),
                 "updated": updated,
+                "skipped": skipped,
                 "errors": errors,
                 "duration_ms": operation_record["duration_ms"],
             },

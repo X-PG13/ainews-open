@@ -239,12 +239,17 @@ TEXT_BLOCK_TAGS = {
     "ul",
 }
 MIN_EXTRACTED_TEXT_LENGTH = 140
+GOOGLE_NEWS_SKIP_MESSAGE = "skipped aggregated Google News shell page; direct article URL required"
 
 
 @dataclass
 class ExtractedContent:
     text: str
     title: str = ""
+
+
+class ExtractionSkippedError(ValueError):
+    pass
 
 
 class _FallbackContainerParser(HTMLParser):
@@ -367,6 +372,8 @@ class ArticleContentExtractor:
 
     def extract_from_html(self, html: str, *, url: str = "") -> ExtractedContent:
         host = self._normalize_host(url)
+        if self._should_skip_aggregate_shell(html, host):
+            raise ExtractionSkippedError(GOOGLE_NEWS_SKIP_MESSAGE)
         if BeautifulSoup is None:
             return self._fallback_extract_from_html(html, url=url)
 
@@ -551,6 +558,8 @@ class ArticleContentExtractor:
 
     def _fallback_extract_from_html(self, raw_html: str, *, url: str = "") -> ExtractedContent:
         host = self._normalize_host(url)
+        if self._should_skip_aggregate_shell(raw_html, host):
+            raise ExtractionSkippedError(GOOGLE_NEWS_SKIP_MESSAGE)
         title_match = TITLE_RE.search(raw_html)
         title = clean_text(html.unescape(title_match.group(1))) if title_match else ""
 
@@ -576,3 +585,10 @@ class ArticleContentExtractor:
         if len(text) < MIN_EXTRACTED_TEXT_LENGTH:
             raise ValueError("extracted article text is too short")
         return ExtractedContent(text=text, title=title)
+
+    @staticmethod
+    def _should_skip_aggregate_shell(raw_html: str, host: str) -> bool:
+        if host != "news.google.com":
+            return False
+        lowered = raw_html.lower()
+        return "<title>google news</title>" in lowered or "dotssplashui" in lowered

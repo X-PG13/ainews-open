@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from ainews.content_extractor import ArticleContentExtractor
+from ainews.content_extractor import ArticleContentExtractor, ExtractionSkippedError
 
 HTML_SAMPLE = """
 <html>
@@ -129,10 +129,10 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Posts from this author", content.text)
         self.assertNotIn("Follow", content.text)
 
-    def test_rejects_google_news_aggregate_fixture(self) -> None:
+    def test_skips_google_news_aggregate_fixture(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
 
-        with self.assertRaisesRegex(ValueError, "too short"):
+        with self.assertRaisesRegex(ExtractionSkippedError, "aggregated Google News shell"):
             extractor.extract_from_html(
                 _fixture("google-news-aggregate.html"),
                 url="https://news.google.com/rss/articles/demo?oc=5",

@@ -476,7 +476,7 @@ class ArticleRepository:
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         if not force:
-            clauses.append("(extraction_status != 'ready' OR extracted_text = '')")
+            clauses.append("extraction_status NOT IN ('ready', 'skipped')")
 
         params.append(limit)
         where_sql = "WHERE " + " AND ".join(clauses)
@@ -559,6 +559,30 @@ class ArticleRepository:
                 UPDATE articles
                 SET
                     extraction_status = 'error',
+                    extraction_error = ?,
+                    extraction_updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    error,
+                    utc_now().isoformat(),
+                    article_id,
+                ),
+        )
+        return self.get_article(article_id)
+
+    def mark_article_extraction_skipped(
+        self,
+        article_id: int,
+        *,
+        error: str,
+    ) -> Optional[dict]:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE articles
+                SET
+                    extraction_status = 'skipped',
                     extraction_error = ?,
                     extraction_updated_at = ?
                 WHERE id = ?
@@ -1009,6 +1033,7 @@ class ArticleRepository:
                     SUM(CASE WHEN is_hidden = 1 THEN 1 ELSE 0 END) AS hidden_articles,
                     SUM(CASE WHEN is_pinned = 1 THEN 1 ELSE 0 END) AS pinned_articles,
                     SUM(CASE WHEN extraction_status = 'ready' THEN 1 ELSE 0 END) AS extracted_articles,
+                    SUM(CASE WHEN extraction_status = 'skipped' THEN 1 ELSE 0 END) AS skipped_extractions,
                     SUM(CASE WHEN extraction_status = 'error' THEN 1 ELSE 0 END) AS extraction_errors,
                     SUM(CASE WHEN llm_status = 'ready' THEN 1 ELSE 0 END) AS enriched_articles,
                     SUM(CASE WHEN llm_status = 'error' THEN 1 ELSE 0 END) AS llm_errors
@@ -1048,6 +1073,7 @@ class ArticleRepository:
             "hidden_articles": int(totals_row["hidden_articles"] or 0),
             "pinned_articles": int(totals_row["pinned_articles"] or 0),
             "extracted_articles": int(totals_row["extracted_articles"] or 0),
+            "skipped_extractions": int(totals_row["skipped_extractions"] or 0),
             "extraction_errors": int(totals_row["extraction_errors"] or 0),
             "enriched_articles": int(totals_row["enriched_articles"] or 0),
             "llm_errors": int(totals_row["llm_errors"] or 0),

@@ -141,6 +141,42 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(stats["publication_status_counts"]["ok"], 2)
             self.assertEqual(stats["pending_publications"], 0)
 
+    def test_repository_skipped_extraction_is_not_requeued_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+            article = ArticleRecord(
+                source_id="google-news-global-ai",
+                source_name="Google News Global AI",
+                title="Anthropic security story",
+                url="https://news.google.com/rss/articles/demo?oc=5",
+                canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                summary="A short summary",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Anthropic security story", "A short summary"),
+                dedup_key=make_dedup_key("Anthropic security story"),
+                raw_payload={},
+            )
+            repository.insert_if_new(article)
+            stored = repository.list_articles(limit=1, include_hidden=True)[0]
+
+            updated = repository.mark_article_extraction_skipped(
+                int(stored["id"]),
+                error="skipped aggregated Google News shell page; direct article URL required",
+            )
+
+            self.assertEqual(updated["extraction_status"], "skipped")
+            queued = repository.list_articles_for_extraction(limit=10, force=False)
+            self.assertEqual(queued, [])
+            forced = repository.list_articles_for_extraction(limit=10, force=True)
+            self.assertEqual(len(forced), 1)
+            self.assertEqual(repository.get_stats()["skipped_extractions"], 1)
+
     def test_repository_migrates_legacy_schema_and_sets_version(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir) / "ainews.db"

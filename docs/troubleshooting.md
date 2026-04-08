@@ -39,6 +39,16 @@ Behavior:
 - if the LLM is not configured or errors out, the service falls back to a rule-based digest
 - this is expected behavior, not a crash
 
+## Google News articles show `skipped` during extraction
+
+This is expected for `news.google.com` aggregator shell pages.
+
+- Google News RSS links often resolve to a Google wrapper page, not the publisher article body
+- AI News Open now marks these as `skipped` instead of `error`
+- they are excluded from default extraction retries and do not degrade `/health`
+
+If you need the full body, use the original publisher URL instead of the Google News wrapper URL.
+
 ## Publish returns `skipped`
 
 Meaning:

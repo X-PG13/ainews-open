@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from ainews.config import Settings
-from ainews.content_extractor import ExtractedContent
+from ainews.content_extractor import ExtractedContent, ExtractionSkippedError
 from ainews.models import ArticleEnrichment, ArticleRecord, DailyDigest, SourceDefinition
 from ainews.publisher import PublicationResult
 from ainews.repository import ArticleRepository
@@ -79,6 +79,13 @@ class FailingExtractor:
 class LeakyExtractor:
     def fetch_and_extract(self, url):
         raise RuntimeError("internal extractor path leaked: /srv/private")
+
+
+class AggregateSkipExtractor:
+    def fetch_and_extract(self, url):
+        raise ExtractionSkippedError(
+            "skipped aggregated Google News shell page; direct article URL required"
+        )
 
 
 class StubPublisher:
@@ -782,6 +789,69 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["articles"][0]["error"], PUBLIC_ERROR_MESSAGE)
             self.assertEqual(article["extraction_error"], PUBLIC_ERROR_MESSAGE)
             self.assertNotIn("/srv/private", json.dumps(result))
+
+    def test_extract_articles_skips_aggregate_shell_without_degrading_health(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="google-news-global-ai",
+                    source_name="Google News Global AI",
+                    title="Anthropic security story",
+                    url="https://news.google.com/rss/articles/demo?oc=5",
+                    canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash(
+                        "Anthropic security story", "A release update"
+                    ),
+                    dedup_key=make_dedup_key("Anthropic security story"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="google-news-global-ai",
+                            name="Google News Global AI",
+                            url="https://news.google.com/rss/search?q=ai",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="news",
+                        )
+                    ]
+                ),
+                llm_client=StubLLMClient(),
+                content_extractor=AggregateSkipExtractor(),
+            )
+
+            result = service.extract_articles(limit=5)
+            article = service.list_articles(limit=5)[0]
+            health = service.get_health()
+            stats = service.get_stats()
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["skipped"], 1)
+            self.assertEqual(result["errors"], 0)
+            self.assertEqual(result["articles"][0]["status"], "skipped")
+            self.assertEqual(article["extraction_status"], "skipped")
+            self.assertEqual(health["status"], "ok")
+            self.assertNotIn("article_extraction_errors", health["degraded_reasons"])
+            self.assertEqual(stats["skipped_extractions"], 1)
 
     def test_enrich_articles_masks_internal_error_details(self) -> None:
         class FailingLLMClient(StubLLMClient):
