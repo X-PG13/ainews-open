@@ -412,6 +412,9 @@ class NewsService:
         language: Optional[str] = None,
         source_id: Optional[str] = None,
         since_hours: Optional[int] = None,
+        extraction_status: Optional[str] = None,
+        extraction_error_category: Optional[str] = None,
+        due_only: bool = False,
         limit: int = 50,
         include_hidden: bool = False,
     ) -> List[dict]:
@@ -420,6 +423,9 @@ class NewsService:
             language=language,
             source_id=source_id,
             since_hours=since_hours,
+            extraction_status=extraction_status,
+            extraction_error_category=extraction_error_category,
+            due_only=due_only,
             limit=limit,
             include_hidden=include_hidden,
         )
@@ -557,6 +563,9 @@ class NewsService:
         source_ids: Optional[Iterable[str]] = None,
         article_ids: Optional[Iterable[int]] = None,
         since_hours: Optional[int] = None,
+        extraction_status: Optional[str] = None,
+        extraction_error_category: Optional[str] = None,
+        due_only: bool = False,
         limit: int = 20,
         force: bool = False,
     ) -> Dict[str, object]:
@@ -566,6 +575,9 @@ class NewsService:
                 "source_ids": list(source_ids or []),
                 "article_ids": list(article_ids or []),
                 "since_hours": since_hours,
+                "extraction_status": extraction_status,
+                "extraction_error_category": extraction_error_category,
+                "due_only": due_only,
                 "limit": limit,
                 "force": force,
             },
@@ -574,6 +586,9 @@ class NewsService:
             source_ids=source_ids,
             article_ids=article_ids,
             since_hours=since_hours,
+            extraction_status=extraction_status,
+            extraction_error_category=extraction_error_category,
+            due_only=due_only,
             limit=limit,
             force=force,
         )
@@ -673,6 +688,39 @@ class NewsService:
                 "duration_ms": operation_record["duration_ms"],
             },
         )
+        return payload
+
+    def retry_extractions(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        article_ids: Optional[Iterable[int]] = None,
+        since_hours: Optional[int] = None,
+        extraction_status: Optional[str] = None,
+        extraction_error_category: Optional[str] = None,
+        due_only: bool = False,
+        limit: int = 20,
+    ) -> Dict[str, object]:
+        payload = self.extract_articles(
+            source_ids=source_ids,
+            article_ids=article_ids,
+            since_hours=since_hours,
+            extraction_status=extraction_status,
+            extraction_error_category=extraction_error_category,
+            due_only=due_only,
+            limit=limit,
+            force=True,
+        )
+        payload["retry_mode"] = "manual"
+        payload["requested_filters"] = {
+            "source_ids": list(source_ids or []),
+            "article_ids": list(article_ids or []),
+            "since_hours": since_hours,
+            "extraction_status": extraction_status,
+            "extraction_error_category": extraction_error_category,
+            "due_only": due_only,
+            "limit": limit,
+        }
         return payload
 
     def curate_article(

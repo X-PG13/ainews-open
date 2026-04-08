@@ -31,6 +31,13 @@ const refs = {
   publicationOnlyPendingCheckbox: document.getElementById("publicationOnlyPendingCheckbox"),
   refreshPublicationsButton: document.getElementById("refreshPublicationsButton"),
   clearPublicationDigestFilterButton: document.getElementById("clearPublicationDigestFilterButton"),
+  extractionOpsSummary: document.getElementById("extractionOpsSummary"),
+  extractionOpsList: document.getElementById("extractionOpsList"),
+  extractionStatusFilter: document.getElementById("extractionStatusFilter"),
+  extractionErrorCategoryFilter: document.getElementById("extractionErrorCategoryFilter"),
+  extractionDueOnlyCheckbox: document.getElementById("extractionDueOnlyCheckbox"),
+  refreshExtractionOpsButton: document.getElementById("refreshExtractionOpsButton"),
+  retryExtractionSelectionButton: document.getElementById("retryExtractionSelectionButton"),
   publishTargetInputs: Array.from(document.querySelectorAll(".publish-target")),
   wechatSubmitCheckbox: document.getElementById("wechatSubmitCheckbox"),
 };
@@ -88,6 +95,7 @@ function renderStats(stats) {
     `
     )
     .join("");
+  renderExtractionOpsSummary(stats);
 }
 
 function renderSources(sources) {
@@ -232,6 +240,7 @@ function articleChips(article) {
     article.region,
     article.language,
     article.source_name,
+    article.extraction_status || "pending",
     article.llm_status || "pending",
   ];
   if (article.is_pinned) chips.push("pinned");
@@ -311,6 +320,26 @@ function setSelectedDigestId(digestId) {
   refs.clearPublicationDigestFilterButton.style.display = state.selectedDigestId ? "inline-flex" : "none";
 }
 
+function buildExtractionQuery() {
+  const filters = getFilters();
+  const query = new URLSearchParams({
+    region: filters.region,
+    since_hours: String(filters.since_hours),
+    limit: String(Math.min(40, filters.limit)),
+    include_hidden: "true",
+  });
+  if (refs.extractionStatusFilter.value) {
+    query.set("extraction_status", refs.extractionStatusFilter.value);
+  }
+  if (refs.extractionErrorCategoryFilter.value) {
+    query.set("extraction_error_category", refs.extractionErrorCategoryFilter.value);
+  }
+  if (refs.extractionDueOnlyCheckbox.checked) {
+    query.set("due_only", "true");
+  }
+  return query;
+}
+
 function buildPublicationQuery() {
   const query = new URLSearchParams({
     limit: "20",
@@ -325,6 +354,80 @@ function buildPublicationQuery() {
     query.set("status", refs.publicationStatusFilter.value);
   }
   return query;
+}
+
+function renderExtractionOpsSummary(stats) {
+  const chips = [
+    ["throttled", stats.throttled_extractions || 0, "pending"],
+    ["blocked", stats.blocked_extractions || 0, "warn"],
+    ["temporary_error", stats.temporary_extraction_errors || 0, ""],
+    ["permanent_error", stats.permanent_extraction_errors || 0, "warn"],
+    ["scheduled_retries", stats.scheduled_extraction_retries || 0, "pending"],
+  ];
+  refs.extractionOpsSummary.innerHTML = chips
+    .map(
+      ([label, value, klass]) =>
+        `<span class="chip ${klass}">${escapeHtml(String(label))}: ${escapeHtml(String(value))}</span>`
+    )
+    .join("");
+}
+
+function extractionStatusClass(status) {
+  if (status === "ready") return "good";
+  if (status === "throttled") return "pending";
+  if (status === "blocked" || status === "permanent_error") return "warn";
+  return "";
+}
+
+function retryDueLabel(article) {
+  if (article.extraction_status === "pending") {
+    return "pending";
+  }
+  return article.extraction_next_retry_at || "none";
+}
+
+function renderExtractionOps(articles) {
+  refs.extractionOpsList.innerHTML = articles.length
+    ? articles
+        .map(
+          (article) => `
+            <article class="publication-card" data-extraction-article-id="${article.id}">
+              <header class="publication-head">
+                <div>
+                  <strong>${escapeHtml(article.display_title_zh || article.title)}</strong>
+                  <div class="publication-meta">
+                    <span>${escapeHtml(article.source_name || "")}</span>
+                    <span>${escapeHtml(article.published_at || "")}</span>
+                  </div>
+                </div>
+                <div class="chip-row compact">
+                  <span class="chip ${extractionStatusClass(article.extraction_status)}">${escapeHtml(article.extraction_status || "pending")}</span>
+                  ${
+                    article.extraction_error_category
+                      ? `<span class="chip">${escapeHtml(article.extraction_error_category)}</span>`
+                      : ""
+                  }
+                </div>
+              </header>
+              <div class="publication-meta">
+                <span>attempts: ${escapeHtml(String(article.extraction_attempts || 0))}</span>
+                <span>next_retry_at: ${escapeHtml(retryDueLabel(article))}</span>
+                ${
+                  article.extraction_last_http_status
+                    ? `<span>http: ${escapeHtml(String(article.extraction_last_http_status))}</span>`
+                    : ""
+                }
+              </div>
+              <p class="article-summary">${escapeHtml(article.compact_summary_zh || article.display_summary_zh || article.summary || "")}</p>
+              <div class="article-actions">
+                <button class="button ghost" data-action="retry-extraction">立即重试</button>
+                <a class="article-link" href="${escapeAttribute(article.url)}" target="_blank" rel="noreferrer">查看原文</a>
+              </div>
+            </article>
+          `
+        )
+        .join("")
+    : '<p class="muted">当前筛选下没有需要关注的抽取记录。</p>';
 }
 
 async function loadStats() {
@@ -373,6 +476,13 @@ async function loadPublications() {
   renderPublications(payload.publications || []);
 }
 
+async function loadExtractionOps() {
+  const payload = await fetchJson(`/admin/articles?${buildExtractionQuery().toString()}`, {
+    headers: adminHeaders(),
+  });
+  renderExtractionOps(payload.articles || []);
+}
+
 async function refreshPublications() {
   const payload = await fetchJson("/admin/publications/refresh", {
     method: "POST",
@@ -391,7 +501,14 @@ async function refreshPublications() {
 
 async function refreshAll() {
   try {
-    await Promise.all([loadStats(), loadSources(), loadArticles(), loadDigests(), loadPublications()]);
+    await Promise.all([
+      loadStats(),
+      loadSources(),
+      loadArticles(),
+      loadDigests(),
+      loadPublications(),
+      loadExtractionOps(),
+    ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
   }
@@ -437,6 +554,24 @@ async function runExtract() {
     }),
   });
   logJob("extract", payload);
+  await refreshAll();
+}
+
+async function retryExtractions(options = {}) {
+  const filters = getFilters();
+  const payload = await fetchJson("/admin/extract/retry", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      since_hours: filters.since_hours,
+      limit: Math.min(40, filters.limit),
+      extraction_status: refs.extractionStatusFilter.value || null,
+      extraction_error_category: refs.extractionErrorCategoryFilter.value || null,
+      due_only: refs.extractionDueOnlyCheckbox.checked,
+      ...options,
+    }),
+  });
+  logJob("retry extractions", payload);
   await refreshAll();
 }
 
@@ -533,6 +668,12 @@ refs.publishButton.addEventListener("click", () => runPublish().catch((error) =>
 refs.refreshPublicationsButton.addEventListener("click", () =>
   refreshPublications().catch((error) => logJob("refresh publications failed", { error: error.message }))
 );
+refs.refreshExtractionOpsButton.addEventListener("click", () =>
+  loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
+);
+refs.retryExtractionSelectionButton.addEventListener("click", () =>
+  retryExtractions().catch((error) => logJob("retry extractions failed", { error: error.message }))
+);
 refs.clearPublicationDigestFilterButton.addEventListener("click", () => {
   setSelectedDigestId(null);
   loadPublications().catch((error) => logJob("load publications failed", { error: error.message }));
@@ -542,6 +683,15 @@ refs.publicationTargetFilter.addEventListener("change", () =>
 );
 refs.publicationStatusFilter.addEventListener("change", () =>
   loadPublications().catch((error) => logJob("load publications failed", { error: error.message }))
+);
+refs.extractionStatusFilter.addEventListener("change", () =>
+  loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
+);
+refs.extractionErrorCategoryFilter.addEventListener("change", () =>
+  loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
+);
+refs.extractionDueOnlyCheckbox.addEventListener("change", () =>
+  loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
 );
 
 refs.articlesList.addEventListener("click", async (event) => {
@@ -585,6 +735,27 @@ refs.digestArchive.addEventListener("click", async (event) => {
     setSelectedDigestId(digestId);
     renderDigest(digest);
     await loadPublications();
+  }
+});
+
+refs.extractionOpsList.addEventListener("click", async (event) => {
+  const button = event.target.closest('button[data-action="retry-extraction"]');
+  if (!button) return;
+
+  const card = event.target.closest("[data-extraction-article-id]");
+  if (!card) return;
+
+  const articleId = Number(card.dataset.extractionArticleId);
+  try {
+    await retryExtractions({
+      article_ids: [articleId],
+      due_only: false,
+      extraction_status: null,
+      extraction_error_category: null,
+      limit: 1,
+    });
+  } catch (error) {
+    logJob("retry extraction failed", { error: error.message, articleId });
   }
 });
 

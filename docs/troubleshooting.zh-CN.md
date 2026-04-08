@@ -27,6 +27,52 @@
 - 在 [content_extractor.py](../src/ainews/content_extractor.py) 里新增或调整站点专用 selector
 - 调整前先补 fixture 和回归测试
 
+## 正文抽取为什么没有立刻重试
+
+这通常是预期行为。
+
+AI News Open 现在会把正文抽取失败分成：
+
+- `throttled`
+- `blocked`
+- `temporary_error`
+- `permanent_error`
+
+默认重试策略：
+
+- `throttled`：按退避时间自动重试
+- `temporary_error`：按较短退避时间自动重试
+- `blocked`：重试频率会明显更低，面向反爬或访问控制场景
+- `permanent_error`：不会自动重试
+
+建议先看：
+
+- `python -m ainews stats`
+- `curl http://127.0.0.1:8000/health`
+- `curl -H "X-Admin-Token: your-secret-token" "http://127.0.0.1:8000/admin/articles?extraction_status=throttled&due_only=true"`
+
+手动重试示例：
+
+```bash
+python -m ainews retry-extractions --status throttled --due-only --limit 20
+```
+
+```bash
+python -m ainews retry-extractions --status blocked --limit 5
+```
+
+API 示例：
+
+```json
+{
+  "extraction_status": "throttled",
+  "due_only": true,
+  "limit": 20
+}
+```
+
+把这段 JSON 以 `POST` 方式发到 `/admin/extract/retry`，并带上 `X-Admin-Token`。
+
 ## LLM 日报没有生成
 
 先检查：
@@ -100,6 +146,7 @@ python -m ainews publish --digest-id 1 --target static_site --force-republish
 - 用 API 响应头里的 `X-Request-ID` 对日志
 - 查 `/health` 里的 `ready`、`degraded_reasons`、最近操作时长和失败分类
 - 查 `/admin/operations` 里的 `ingest`、`extract`、`enrich`、`digest`、`publish`、`pipeline`
+- 用 `/admin/articles` 的 `extraction_status`、`extraction_error_category`、`due_only` 过滤重试队列
 
 ## health 显示 `degraded`
 

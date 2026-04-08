@@ -169,6 +169,53 @@
       <section class="panel">
         <div class="section-head">
           <div>
+            <p class="eyebrow">Extraction Ops</p>
+            <h2>抽取重试面板</h2>
+          </div>
+          <div class="toolbar-row">
+            <button id="refreshExtractionOpsButton" class="button ghost">刷新失败队列</button>
+            <button id="retryExtractionSelectionButton" class="button secondary">重试当前筛选</button>
+          </div>
+        </div>
+        <p class="muted">
+          面向 `throttled`、`blocked`、`permanent_error` 等抽取状态。可按状态或错误类别筛选，并只看已到重试时间的文章。
+        </p>
+        <div class="publication-filters">
+          <label>
+            抽取状态
+            <select id="extractionStatusFilter">
+              <option value="">全部</option>
+              <option value="pending">pending</option>
+              <option value="throttled">throttled</option>
+              <option value="blocked">blocked</option>
+              <option value="temporary_error">temporary_error</option>
+              <option value="permanent_error">permanent_error</option>
+              <option value="skipped">skipped</option>
+              <option value="ready">ready</option>
+            </select>
+          </label>
+          <label>
+            错误类别
+            <select id="extractionErrorCategoryFilter">
+              <option value="">全部</option>
+              <option value="throttled">throttled</option>
+              <option value="blocked">blocked</option>
+              <option value="temporary_error">temporary_error</option>
+              <option value="permanent_error">permanent_error</option>
+            </select>
+          </label>
+          <label class="check-label">
+            <input id="extractionDueOnlyCheckbox" type="checkbox" checked />
+            仅看已到重试窗口
+          </label>
+        </div>
+        <div id="extractionOpsSummary" class="chip-row"></div>
+        <div id="extractionOpsList" class="publication-list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
             <p class="eyebrow">Articles</p>
             <h2>新闻池</h2>
           </div>

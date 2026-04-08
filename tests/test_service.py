@@ -992,6 +992,62 @@ class ServiceFilterTestCase(unittest.TestCase):
             queued = repository.list_articles_for_extraction(limit=10, force=False)
             self.assertEqual(len(queued), 1)
 
+    def test_retry_extractions_can_target_blocked_articles_manually(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="venturebeat",
+                    source_name="VentureBeat",
+                    title="Retry blocked article",
+                    url="https://venturebeat.com/ai/retry-blocked",
+                    canonical_url="https://venturebeat.com/ai/retry-blocked",
+                    summary="Blocked before",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("Retry blocked article", "Blocked before"),
+                    dedup_key=make_dedup_key("Retry blocked article"),
+                    raw_payload={},
+                )
+            )
+            stored = repository.list_articles(limit=5, include_hidden=True)[0]
+            repository.mark_article_extraction_failure(
+                int(stored["id"]),
+                error=PUBLIC_ERROR_MESSAGE,
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                next_retry_at="2999-01-01T00:00:00+00:00",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+            )
+
+            result = service.retry_extractions(
+                extraction_status="blocked",
+                due_only=False,
+                limit=5,
+            )
+            article = service.list_articles(limit=5)[0]
+
+            self.assertEqual(result["retry_mode"], "manual")
+            self.assertEqual(result["updated"], 1)
+            self.assertEqual(result["requested_filters"]["extraction_status"], "blocked")
+            self.assertEqual(article["extraction_status"], "ready")
+
     def test_extract_articles_masks_internal_error_details(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(

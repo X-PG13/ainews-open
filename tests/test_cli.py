@@ -105,6 +105,46 @@ class CliTestCase(unittest.TestCase):
         )
         self.assertIn('"updated": 1', stdout.getvalue())
 
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_retry_extractions_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.retry_extractions.return_value = {"status": "ok", "requested": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(
+                [
+                    "retry-extractions",
+                    "--status",
+                    "throttled",
+                    "--error-category",
+                    "throttled",
+                    "--due-only",
+                    "--limit",
+                    "5",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        service.retry_extractions.assert_called_once_with(
+            source_ids=None,
+            article_ids=None,
+            since_hours=None,
+            extraction_status="throttled",
+            extraction_error_category="throttled",
+            due_only=True,
+            limit=5,
+        )
+        self.assertIn('"requested": 1', stdout.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

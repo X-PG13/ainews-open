@@ -25,6 +25,52 @@ What to do:
 - add or tune a site-specific selector in [content_extractor.py](../src/ainews/content_extractor.py)
 - add a regression fixture and test before shipping the selector change
 
+## Extraction retries do not happen immediately
+
+This is usually expected behavior.
+
+AI News Open now classifies extraction failures into:
+
+- `throttled`
+- `blocked`
+- `temporary_error`
+- `permanent_error`
+
+Default retry behavior:
+
+- `throttled`: retried automatically after a backoff window
+- `temporary_error`: retried automatically after a shorter backoff window
+- `blocked`: not retried frequently; intended for anti-bot or access-control cases
+- `permanent_error`: not retried automatically
+
+Use these checks:
+
+- `python -m ainews stats`
+- `curl http://127.0.0.1:8000/health`
+- `curl -H "X-Admin-Token: your-secret-token" "http://127.0.0.1:8000/admin/articles?extraction_status=throttled&due_only=true"`
+
+Manual retry examples:
+
+```bash
+python -m ainews retry-extractions --status throttled --due-only --limit 20
+```
+
+```bash
+python -m ainews retry-extractions --status blocked --limit 5
+```
+
+API example:
+
+```json
+{
+  "extraction_status": "throttled",
+  "due_only": true,
+  "limit": 20
+}
+```
+
+POST it to `/admin/extract/retry` with `X-Admin-Token`.
+
 ## LLM digest generation does not happen
 
 Checks:
@@ -98,6 +144,7 @@ Checks:
 - look for `X-Request-ID` in API responses and match it to request logs
 - inspect `/health` for `ready`, `degraded_reasons`, recent operation timings, and failure categories
 - inspect `/admin/operations` for the last tracked `ingest`, `extract`, `enrich`, `digest`, `publish`, and `pipeline` runs
+- inspect `/admin/articles` with `extraction_status`, `extraction_error_category`, and `due_only` filters for the retry queue
 
 ## Health is `degraded`
 

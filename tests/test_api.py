@@ -38,16 +38,21 @@ class ApiTestCase(unittest.TestCase):
             else:
                 os.environ[key] = value
 
-    def _seed_article(self) -> None:
+    def _seed_article(
+        self,
+        *,
+        title: str = "OpenAI launches a new model",
+        url: str = "https://example.com/openai-model",
+    ) -> None:
         repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
         published = utc_now()
         repository.insert_if_new(
             ArticleRecord(
                 source_id="openai-news",
                 source_name="OpenAI News",
-                title="OpenAI launches a new model",
-                url="https://example.com/openai-model",
-                canonical_url="https://example.com/openai-model",
+                title=title,
+                url=url,
+                canonical_url=url,
                 summary="A release update",
                 published_at=published,
                 discovered_at=published,
@@ -55,8 +60,8 @@ class ApiTestCase(unittest.TestCase):
                 region="international",
                 country="US",
                 topic="company",
-                content_hash=make_content_hash("OpenAI launches a new model", "A release update"),
-                dedup_key=make_dedup_key("OpenAI launches a new model"),
+                content_hash=make_content_hash(title, "A release update"),
+                dedup_key=make_dedup_key(title),
                 raw_payload={},
             )
         )
@@ -156,6 +161,67 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(
             payload["articles"][0]["error"],
             "operation failed; inspect server logs with the response X-Request-ID",
+        )
+
+    def test_admin_articles_supports_extraction_filters(self) -> None:
+        self._seed_article(title="Throttled article", url="https://example.com/throttled")
+        self._seed_article(title="Blocked article", url="https://example.com/blocked")
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        rows = repository.list_articles(limit=10, include_hidden=True)
+        throttled = next(row for row in rows if row["title"] == "Throttled article")
+        blocked = next(row for row in rows if row["title"] == "Blocked article")
+        repository.mark_article_extraction_failure(
+            int(throttled["id"]),
+            error="retry later",
+            status="throttled",
+            error_category="throttled",
+            http_status=429,
+            next_retry_at="2000-01-01T00:00:00+00:00",
+        )
+        repository.mark_article_extraction_failure(
+            int(blocked["id"]),
+            error="blocked",
+            status="blocked",
+            error_category="blocked",
+            http_status=403,
+            next_retry_at="2999-01-01T00:00:00+00:00",
+        )
+
+        response = self.client.get(
+            "/admin/articles?extraction_status=throttled&due_only=true",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(len(payload["articles"]), 1)
+        self.assertEqual(payload["articles"][0]["title"], "Throttled article")
+
+    def test_admin_extract_retry_passes_filters(self) -> None:
+        with patch(
+            "ainews.api.NewsService.retry_extractions",
+            return_value={"status": "ok", "requested": 1, "articles": []},
+        ) as mock_retry:
+            response = self.client.post(
+                "/admin/extract/retry",
+                headers={"X-Admin-Token": "secret-token"},
+                json={
+                    "extraction_status": "throttled",
+                    "extraction_error_category": "throttled",
+                    "due_only": True,
+                    "limit": 5,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        mock_retry.assert_called_once_with(
+            source_ids=None,
+            article_ids=None,
+            since_hours=None,
+            extraction_status="throttled",
+            extraction_error_category="throttled",
+            due_only=True,
+            limit=5,
         )
 
     def test_admin_refresh_publications_sanitizes_nested_error_message(self) -> None:

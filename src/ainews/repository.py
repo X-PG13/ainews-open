@@ -287,6 +287,9 @@ class ArticleRepository:
         language: Optional[str] = None,
         source_id: Optional[str] = None,
         since_hours: Optional[int] = None,
+        extraction_status: Optional[str] = None,
+        extraction_error_category: Optional[str] = None,
+        due_only: bool = False,
         limit: int = 50,
         include_hidden: bool = False,
     ) -> List[dict]:
@@ -295,6 +298,9 @@ class ArticleRepository:
             language=language,
             source_id=source_id,
             since_hours=since_hours,
+            extraction_status=extraction_status,
+            extraction_error_category=extraction_error_category,
+            due_only=due_only,
             include_hidden=include_hidden,
         )
         params.append(limit)
@@ -475,6 +481,9 @@ class ArticleRepository:
         source_ids: Optional[Iterable[str]] = None,
         article_ids: Optional[Iterable[int]] = None,
         since_hours: Optional[int] = None,
+        extraction_status: Optional[str] = None,
+        extraction_error_category: Optional[str] = None,
+        due_only: bool = False,
         limit: int = 20,
         force: bool = False,
     ) -> List[dict]:
@@ -497,7 +506,19 @@ class ArticleRepository:
             clauses.append("published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
-        if not force:
+        if extraction_status:
+            clauses.append("extraction_status = ?")
+            params.append(extraction_status)
+
+        if extraction_error_category:
+            clauses.append("extraction_error_category = ?")
+            params.append(extraction_error_category)
+
+        if due_only:
+            retry_clause, retry_params = self._build_retry_due_filter()
+            clauses.append(retry_clause)
+            params.extend(retry_params)
+        elif not force:
             retry_threshold = utc_now().isoformat()
             clauses.append(
                 """
@@ -1665,6 +1686,9 @@ class ArticleRepository:
         language: Optional[str],
         source_id: Optional[str],
         since_hours: Optional[int],
+        extraction_status: Optional[str],
+        extraction_error_category: Optional[str],
+        due_only: bool,
         include_hidden: bool,
     ) -> Tuple[str, List[object]]:
         clauses = []
@@ -1689,7 +1713,32 @@ class ArticleRepository:
             clauses.append("published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
+        if extraction_status:
+            clauses.append("extraction_status = ?")
+            params.append(extraction_status)
+
+        if extraction_error_category:
+            clauses.append("extraction_error_category = ?")
+            params.append(extraction_error_category)
+
+        if due_only:
+            retry_clause, retry_params = ArticleRepository._build_retry_due_filter()
+            clauses.append(retry_clause)
+            params.extend(retry_params)
+
         where_sql = ""
         if clauses:
             where_sql = "WHERE " + " AND ".join(clauses)
         return where_sql, params
+
+    @staticmethod
+    def _build_retry_due_filter() -> Tuple[str, List[object]]:
+        return (
+            """
+            (
+                extraction_status IN ('error', 'throttled', 'blocked', 'temporary_error')
+                AND (extraction_next_retry_at = '' OR extraction_next_retry_at <= ?)
+            )
+            """,
+            [utc_now().isoformat()],
+        )

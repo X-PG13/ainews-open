@@ -74,6 +74,22 @@ def _build_parser() -> argparse.ArgumentParser:
     extract_parser.add_argument("--limit", type=int, default=20)
     extract_parser.add_argument("--force", action="store_true")
 
+    retry_extract_parser = subparsers.add_parser(
+        "retry-extractions",
+        help="Manually retry extraction for filtered failed or due articles",
+    )
+    retry_extract_parser.add_argument("--source", action="append", dest="sources")
+    retry_extract_parser.add_argument("--article-id", action="append", dest="article_ids", type=int)
+    retry_extract_parser.add_argument("--since-hours", type=int, default=None)
+    retry_extract_parser.add_argument("--status", dest="extraction_status", default=None)
+    retry_extract_parser.add_argument(
+        "--error-category",
+        dest="extraction_error_category",
+        default=None,
+    )
+    retry_extract_parser.add_argument("--due-only", action="store_true")
+    retry_extract_parser.add_argument("--limit", type=int, default=20)
+
     resolve_google_news_parser = subparsers.add_parser(
         "resolve-google-news",
         help="Resolve stored Google News wrapper URLs to direct article URLs",
@@ -206,6 +222,20 @@ def main(argv: list[str] | None = None) -> int:
                 since_hours=args.since_hours,
                 limit=args.limit,
                 force=args.force,
+            )
+        )
+        return 0
+
+    if args.command == "retry-extractions":
+        _json_dump(
+            service.retry_extractions(
+                source_ids=args.sources,
+                article_ids=args.article_ids,
+                since_hours=args.since_hours,
+                extraction_status=args.extraction_status,
+                extraction_error_category=args.extraction_error_category,
+                due_only=args.due_only,
+                limit=args.limit,
             )
         )
         return 0

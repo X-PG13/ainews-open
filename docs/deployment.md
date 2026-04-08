@@ -179,6 +179,48 @@ Default paths:
 
 Mount or back up these paths in any real deployment.
 
+## Extraction Retry Policy
+
+Production operators should treat extraction retry state as part of normal operations.
+
+Automatic behavior:
+
+- `pending` articles are eligible for the normal extraction queue
+- `throttled` articles re-enter the queue after backoff
+- `temporary_error` articles re-enter the queue after backoff
+- `blocked` articles are delayed much more aggressively
+- `permanent_error` articles do not re-enter the queue automatically
+
+The admin API exposes queue filters on `/admin/articles`:
+
+- `extraction_status`
+- `extraction_error_category`
+- `due_only`
+
+Manual retry options:
+
+```bash
+python -m ainews retry-extractions --status throttled --due-only --limit 20
+```
+
+```bash
+python -m ainews retry-extractions --status blocked --limit 5
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/admin/extract/retry \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Token: your-secret-token" \
+  -d '{"extraction_status":"throttled","due_only":true,"limit":20}'
+```
+
+Recommended operator loop:
+
+1. Inspect `/health` and `/admin/operations`.
+2. Filter `/admin/articles` for retry-due extraction failures.
+3. Retry only the due subset first.
+4. Retry `blocked` or `permanent_error` items manually after reviewing the source behavior.
+
 ## Upgrade Checklist
 
 Before upgrading:

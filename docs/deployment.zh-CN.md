@@ -169,6 +169,48 @@ sudo systemctl status ainews-open
 
 真实部署里请确保这些目录可持久化、可备份。
 
+## 正文抽取重试策略
+
+生产环境里，正文抽取重试状态本身就应该视为运维面的一部分。
+
+自动行为：
+
+- `pending`：会进入正常抽取队列
+- `throttled`：到达退避时间后自动重试
+- `temporary_error`：到达退避时间后自动重试
+- `blocked`：重试间隔会更长
+- `permanent_error`：不会自动回到重试队列
+
+管理接口 `/admin/articles` 现在支持这些重试过滤参数：
+
+- `extraction_status`
+- `extraction_error_category`
+- `due_only`
+
+手动重试方式：
+
+```bash
+python -m ainews retry-extractions --status throttled --due-only --limit 20
+```
+
+```bash
+python -m ainews retry-extractions --status blocked --limit 5
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/admin/extract/retry \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Token: your-secret-token" \
+  -d '{"extraction_status":"throttled","due_only":true,"limit":20}'
+```
+
+推荐运维闭环：
+
+1. 先看 `/health` 和 `/admin/operations`
+2. 再用 `/admin/articles` 过滤出已到重试时间的失败条目
+3. 优先重试已到窗口的条目
+4. `blocked` 或 `permanent_error` 先人工判断站点行为，再决定是否手动重试
+
 ## 升级前检查
 
 升级前建议先做：

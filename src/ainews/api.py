@@ -39,6 +39,16 @@ class ExtractRequest(BaseModel):
     force: bool = False
 
 
+class RetryExtractionRequest(BaseModel):
+    source_ids: Optional[List[str]] = None
+    article_ids: Optional[List[int]] = None
+    since_hours: Optional[int] = Field(default=None, ge=1, le=720)
+    extraction_status: Optional[str] = None
+    extraction_error_category: Optional[str] = None
+    due_only: bool = False
+    limit: int = Field(default=20, ge=1, le=200)
+
+
 class DigestRequest(BaseModel):
     region: str = Field(default="all")
     since_hours: Optional[int] = Field(default=None, ge=1, le=720)
@@ -322,6 +332,9 @@ def create_app() -> FastAPI:
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
+        extraction_status: Optional[str] = Query(default=None),
+        extraction_error_category: Optional[str] = Query(default=None),
+        due_only: bool = Query(default=False),
         since_hours: int = Query(default=settings.default_lookback_hours, ge=1, le=720),
         limit: int = Query(default=50, ge=1, le=200),
     ) -> dict:
@@ -334,6 +347,9 @@ def create_app() -> FastAPI:
                     language=language,
                     source_id=source_id,
                     since_hours=since_hours,
+                    extraction_status=extraction_status,
+                    extraction_error_category=extraction_error_category,
+                    due_only=due_only,
                     limit=limit,
                     include_hidden=False,
                 )
@@ -382,6 +398,9 @@ def create_app() -> FastAPI:
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
+        extraction_status: Optional[str] = Query(default=None),
+        extraction_error_category: Optional[str] = Query(default=None),
+        due_only: bool = Query(default=False),
         since_hours: int = Query(default=settings.default_lookback_hours, ge=1, le=720),
         limit: int = Query(default=100, ge=1, le=200),
         include_hidden: bool = Query(default=True),
@@ -396,6 +415,9 @@ def create_app() -> FastAPI:
                     language=language,
                     source_id=source_id,
                     since_hours=since_hours,
+                    extraction_status=extraction_status,
+                    extraction_error_category=extraction_error_category,
+                    due_only=due_only,
                     limit=limit,
                     include_hidden=include_hidden,
                 )
@@ -450,6 +472,26 @@ def create_app() -> FastAPI:
                 since_hours=payload.since_hours,
                 limit=payload.limit,
                 force=payload.force,
+            ),
+        )
+
+    @app.post("/admin/extract/retry")
+    def admin_retry_extractions(
+        payload: RetryExtractionRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        return _run_service_action(
+            request,
+            "admin_retry_extractions",
+            lambda: service.retry_extractions(
+                source_ids=payload.source_ids,
+                article_ids=payload.article_ids,
+                since_hours=payload.since_hours,
+                extraction_status=payload.extraction_status,
+                extraction_error_category=payload.extraction_error_category,
+                due_only=payload.due_only,
+                limit=payload.limit,
             ),
         )
 

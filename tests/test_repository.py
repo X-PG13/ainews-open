@@ -177,6 +177,85 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(len(forced), 1)
             self.assertEqual(repository.get_stats()["skipped_extractions"], 1)
 
+    def test_repository_filters_articles_by_extraction_status_category_and_due_window(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+
+            throttled = ArticleRecord(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                title="Throttled article",
+                url="https://venturebeat.com/ai/throttled",
+                canonical_url="https://venturebeat.com/ai/throttled",
+                summary="Retry later",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Throttled article", "Retry later"),
+                dedup_key=make_dedup_key("Throttled article"),
+                raw_payload={},
+            )
+            blocked = ArticleRecord(
+                source_id="theverge",
+                source_name="The Verge",
+                title="Blocked article",
+                url="https://www.theverge.com/ai/blocked",
+                canonical_url="https://www.theverge.com/ai/blocked",
+                summary="Blocked by challenge",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Blocked article", "Blocked by challenge"),
+                dedup_key=make_dedup_key("Blocked article"),
+                raw_payload={},
+            )
+            repository.insert_if_new(throttled)
+            repository.insert_if_new(blocked)
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            throttled_row = next(row for row in rows if row["title"] == "Throttled article")
+            blocked_row = next(row for row in rows if row["title"] == "Blocked article")
+
+            repository.mark_article_extraction_failure(
+                int(throttled_row["id"]),
+                error="retry later",
+                status="throttled",
+                error_category="throttled",
+                http_status=429,
+                next_retry_at="2000-01-01T00:00:00+00:00",
+            )
+            repository.mark_article_extraction_failure(
+                int(blocked_row["id"]),
+                error="blocked",
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                next_retry_at="2999-01-01T00:00:00+00:00",
+            )
+
+            filtered = repository.list_articles(
+                extraction_status="throttled",
+                extraction_error_category="throttled",
+                due_only=True,
+                limit=10,
+                include_hidden=True,
+            )
+            self.assertEqual([item["title"] for item in filtered], ["Throttled article"])
+
+            queued = repository.list_articles_for_extraction(
+                extraction_status="blocked",
+                due_only=True,
+                force=True,
+                limit=10,
+            )
+            self.assertEqual(queued, [])
+
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")
