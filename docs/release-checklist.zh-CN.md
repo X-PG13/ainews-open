@@ -39,6 +39,7 @@ make smoke
 - 仓库 secrets 已补齐
 
 如果已发布 tag 对应的 `Release Artifact Smoke` 还没通过，这次 release 就不算完成。
+标准 release 流程现在会在 GitHub Release 发布后自动触发这条 smoke workflow。
 
 ## GitHub Release
 

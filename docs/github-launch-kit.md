@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.1.1`
+`v1.1.2`
 
 ### Suggested Title
 
-`AI News Open v1.1.1 · Release Hardening Patch`
+`AI News Open v1.1.2 · Automated Release Validation`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.1.1
+## AI News Open v1.1.2
 
-AI News Open `v1.1.1` hardens the release process itself with published-artifact smoke checks and stricter release-completion rules.
+AI News Open `v1.1.2` closes the last manual step in the release process by automatically dispatching published-artifact smoke validation after each GitHub Release.
 
 ### What it does
 
@@ -40,10 +40,10 @@ AI News Open `v1.1.1` hardens the release process itself with published-artifact
 
 ### Highlights in this release
 
-- Dedicated published-artifact smoke validation for wheels and source archives
-- Checksum verification against the actual GitHub Release bundle
-- `Release Artifact Smoke` is now part of the release-completion gate
-- PyPI publication is opt-in by default until trusted publishing is configured
+- Automatic dispatch from `release.yml` to `release-artifact-smoke.yml`
+- Published-artifact smoke validation remains the release-completion gate
+- Manual reruns remain available for any already-published tag
+- PyPI publication remains opt-in by default until trusted publishing is configured
 
 ### Quick start
 

@@ -17,6 +17,7 @@ The repository also includes a GitHub Actions validation workflow:
 It downloads the published release assets, verifies checksums, installs the wheel and source archive in clean jobs, and runs minimal CLI and `/health` smoke checks.
 
 Treat this workflow as a release-completion gate. Do not announce a new public tag until it passes.
+For tags created through `.github/workflows/release.yml`, the smoke workflow is dispatched automatically after the GitHub Release is published. You can still re-run it manually for any published tag.
 
 ## Download And Verify
 
