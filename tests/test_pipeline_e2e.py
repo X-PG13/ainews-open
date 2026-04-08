@@ -62,19 +62,23 @@ class StubGoogleNewsResolver:
 
 
 class PipelineE2ETestCase(unittest.TestCase):
+    def _make_settings(self, temp_dir: str) -> Settings:
+        settings = Settings(
+            database_path=Path(temp_dir) / "ainews.db",
+            sources_file=Path(temp_dir) / "sources.json",
+            output_dir=Path(temp_dir) / "output",
+            static_site_dir=Path(temp_dir) / "site",
+            llm_base_url="https://example.com/v1",
+            llm_api_key="token",
+            llm_model="stub-model",
+        )
+        settings.output_dir.mkdir(parents=True, exist_ok=True)
+        settings.static_site_dir.mkdir(parents=True, exist_ok=True)
+        return settings
+
     def test_pipeline_runs_from_feed_fixture_to_static_publish(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            settings = Settings(
-                database_path=Path(temp_dir) / "ainews.db",
-                sources_file=Path(temp_dir) / "sources.json",
-                output_dir=Path(temp_dir) / "output",
-                static_site_dir=Path(temp_dir) / "site",
-                llm_base_url="https://example.com/v1",
-                llm_api_key="token",
-                llm_model="stub-model",
-            )
-            settings.output_dir.mkdir(parents=True, exist_ok=True)
-            settings.static_site_dir.mkdir(parents=True, exist_ok=True)
+            settings = self._make_settings(temp_dir)
 
             source = SourceDefinition(
                 id="openai-news",
@@ -138,17 +142,7 @@ class PipelineE2ETestCase(unittest.TestCase):
 
     def test_pipeline_resolves_google_news_wrapper_before_extract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            settings = Settings(
-                database_path=Path(temp_dir) / "ainews.db",
-                sources_file=Path(temp_dir) / "sources.json",
-                output_dir=Path(temp_dir) / "output",
-                static_site_dir=Path(temp_dir) / "site",
-                llm_base_url="https://example.com/v1",
-                llm_api_key="token",
-                llm_model="stub-model",
-            )
-            settings.output_dir.mkdir(parents=True, exist_ok=True)
-            settings.static_site_dir.mkdir(parents=True, exist_ok=True)
+            settings = self._make_settings(temp_dir)
 
             source = SourceDefinition(
                 id="google-news-global-ai",
@@ -215,6 +209,200 @@ class PipelineE2ETestCase(unittest.TestCase):
             self.assertEqual(article["canonical_url"], "https://example.com/news/openai-enterprise")
             self.assertEqual(result["extract"]["updated"], 1)
             self.assertEqual(result["enrich"]["updated"], 1)
+
+    def test_pipeline_runs_from_multi_source_feed_fixtures(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = self._make_settings(temp_dir)
+
+            sources = [
+                SourceDefinition(
+                    id="jiqizhixin-ai",
+                    name="机器之心",
+                    url="https://example.com/feed/jiqizhixin.xml",
+                    region="domestic",
+                    language="zh",
+                    country="CN",
+                    topic="news",
+                ),
+                SourceDefinition(
+                    id="ars-ai",
+                    name="Ars Technica AI",
+                    url="https://example.com/feed/arstechnica.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="news",
+                ),
+                SourceDefinition(
+                    id="latent-ops",
+                    name="Latent Ops",
+                    url="https://example.com/feed/substack.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="blog",
+                ),
+                SourceDefinition(
+                    id="yahoo-finance-ai",
+                    name="Yahoo Finance AI",
+                    url="https://example.com/feed/yahoo.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="news",
+                ),
+            ]
+            repository = ArticleRepository(settings.database_path)
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=FixtureRegistry(sources),
+                llm_client=StubLLMClient(),
+                content_extractor=ArticleContentExtractor(
+                    timeout=10,
+                    user_agent="test-agent",
+                    text_limit=5000,
+                ),
+            )
+
+            feed_map = {
+                sources[0].url: (FIXTURE_ROOT / "feed" / "jiqizhixin.xml").read_text(encoding="utf-8"),
+                sources[1].url: (FIXTURE_ROOT / "feed" / "arstechnica.xml").read_text(encoding="utf-8"),
+                sources[2].url: (FIXTURE_ROOT / "feed" / "substack.xml").read_text(encoding="utf-8"),
+                sources[3].url: (FIXTURE_ROOT / "feed" / "yahoo.xml").read_text(encoding="utf-8"),
+            }
+            article_map = {
+                "https://www.jiqizhixin.com/articles/2026-04-09-ops-stack?utm_source=rss": (
+                    FIXTURE_ROOT / "extraction" / "jiqizhixin.html"
+                ).read_text(encoding="utf-8"),
+                "https://arstechnica.com/ai/2026/04/why-ai-teams-are-rebuilding-their-observability-stacks/?utm_source=rss": (
+                    FIXTURE_ROOT / "extraction" / "arstechnica-article.html"
+                ).read_text(encoding="utf-8"),
+                "https://latentops.substack.com/p/managed-ai-operations?utm_medium=rss": (
+                    FIXTURE_ROOT / "extraction" / "substack-article.html"
+                ).read_text(encoding="utf-8"),
+                "https://finance.yahoo.com/news/ai-deployment-discipline-board-level-topic-090000123.html?guccounter=1": (
+                    FIXTURE_ROOT / "extraction" / "yahoo-syndication.html"
+                ).read_text(encoding="utf-8"),
+            }
+
+            def fake_service_fetch(url, **kwargs):
+                if url in feed_map:
+                    return feed_map[url]
+                raise AssertionError(f"unexpected service fetch url: {url}")
+
+            def fake_extractor_fetch(url, **kwargs):
+                if url in article_map:
+                    return article_map[url]
+                raise AssertionError(f"unexpected extractor fetch url: {url}")
+
+            with patch("ainews.service.fetch_text", side_effect=fake_service_fetch), patch(
+                "ainews.content_extractor.fetch_text", side_effect=fake_extractor_fetch
+            ):
+                result = service.run_pipeline(
+                    region="all",
+                    since_hours=72,
+                    limit=10,
+                    use_llm=True,
+                    persist=True,
+                    export=False,
+                    publish=True,
+                    publish_targets=["static_site"],
+                )
+
+            articles = repository.list_articles(limit=10, include_hidden=True)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["ingest"]["inserted_total"], 4)
+            self.assertEqual(result["extract"]["updated"], 4)
+            self.assertEqual(result["enrich"]["updated"], 3)
+            self.assertEqual(result["digest"]["total_articles"], 4)
+            self.assertEqual(result["publish"]["published"], 1)
+            self.assertEqual({article["source_id"] for article in articles}, {source.id for source in sources})
+
+    def test_pipeline_reports_partial_error_for_multi_source_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = self._make_settings(temp_dir)
+
+            sources = [
+                SourceDefinition(
+                    id="jiqizhixin-ai",
+                    name="机器之心",
+                    url="https://example.com/feed/jiqizhixin.xml",
+                    region="domestic",
+                    language="zh",
+                    country="CN",
+                    topic="news",
+                ),
+                SourceDefinition(
+                    id="ars-ai",
+                    name="Ars Technica AI",
+                    url="https://example.com/feed/arstechnica.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="news",
+                ),
+            ]
+            repository = ArticleRepository(settings.database_path)
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=FixtureRegistry(sources),
+                llm_client=StubLLMClient(),
+                content_extractor=ArticleContentExtractor(
+                    timeout=10,
+                    user_agent="test-agent",
+                    text_limit=5000,
+                ),
+            )
+
+            feed_map = {
+                sources[0].url: (FIXTURE_ROOT / "feed" / "jiqizhixin.xml").read_text(encoding="utf-8"),
+                sources[1].url: (FIXTURE_ROOT / "feed" / "arstechnica.xml").read_text(encoding="utf-8"),
+            }
+            article_map = {
+                "https://www.jiqizhixin.com/articles/2026-04-09-ops-stack?utm_source=rss": (
+                    FIXTURE_ROOT / "extraction" / "jiqizhixin.html"
+                ).read_text(encoding="utf-8"),
+            }
+
+            def fake_service_fetch(url, **kwargs):
+                if url in feed_map:
+                    return feed_map[url]
+                raise AssertionError(f"unexpected service fetch url: {url}")
+
+            def fake_extractor_fetch(url, **kwargs):
+                if url in article_map:
+                    return article_map[url]
+                if url == "https://arstechnica.com/ai/2026/04/why-ai-teams-are-rebuilding-their-observability-stacks/?utm_source=rss":
+                    raise TimeoutError("fixture timeout")
+                raise AssertionError(f"unexpected extractor fetch url: {url}")
+
+            with patch("ainews.service.fetch_text", side_effect=fake_service_fetch), patch(
+                "ainews.content_extractor.fetch_text", side_effect=fake_extractor_fetch
+            ):
+                result = service.run_pipeline(
+                    region="all",
+                    since_hours=72,
+                    limit=10,
+                    use_llm=True,
+                    persist=True,
+                    export=False,
+                    publish=False,
+                )
+
+            articles = repository.list_articles(limit=10, include_hidden=True)
+            failed_article = next(article for article in articles if article["source_id"] == "ars-ai")
+            successful_article = next(article for article in articles if article["source_id"] == "jiqizhixin-ai")
+
+            self.assertEqual(result["status"], "partial_error")
+            self.assertEqual(result["extract"]["status"], "partial_error")
+            self.assertEqual(result["extract"]["updated"], 1)
+            self.assertEqual(result["extract"]["errors"], 1)
+            self.assertEqual(result["failure_categories"], {"temporary_error": 1})
+            self.assertEqual(failed_article["extraction_status"], "temporary_error")
+            self.assertEqual(failed_article["extraction_error_category"], "temporary_error")
+            self.assertTrue(successful_article["extracted_text"])
 
 
 if __name__ == "__main__":
