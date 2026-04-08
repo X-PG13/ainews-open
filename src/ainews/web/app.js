@@ -86,6 +86,8 @@ function renderStats(stats) {
     ["已抓正文", stats.extracted_articles || 0],
     ["已翻译国际稿", stats.enriched_articles || 0],
     ["来源冷却", stats.active_source_cooldowns || 0],
+    ["静默来源", stats.silenced_source_alerts || 0],
+    ["维护来源", stats.sources_in_maintenance || 0],
     ["已发布", stats.total_publications || 0],
     ["日报存档", stats.total_digests || 0],
     ["LLM", stats.llm_configured ? (stats.llm_model || "已配置") : "未配置"],
@@ -116,6 +118,9 @@ function renderSources(sources) {
                 ? `<span class="chip ${source.cooldown_status === "blocked" ? "warn" : "pending"}">${escapeHtml(source.cooldown_status || "cooldown")}</span>`
                 : '<span class="chip good">normal</span>'
             }
+            ${source.maintenance_mode ? '<span class="chip pending">maintenance</span>' : ""}
+            ${source.silenced_active ? '<span class="chip">silenced</span>' : ""}
+            ${source.acknowledged_at ? '<span class="chip good">acknowledged</span>' : ""}
           </div>
         </header>
         <div class="chip-row">
@@ -159,6 +164,23 @@ function renderSources(sources) {
               : "<span>last_success_at: none</span>"
           }
         </div>
+        <div class="publication-meta">
+          ${
+            source.silenced_until
+              ? `<span>silenced_until: ${escapeHtml(source.silenced_until)}</span>`
+              : "<span>silenced_until: none</span>"
+          }
+          ${
+            source.acknowledged_at
+              ? `<span>acknowledged_at: ${escapeHtml(source.acknowledged_at)}</span>`
+              : "<span>acknowledged_at: none</span>"
+          }
+        </div>
+        ${
+          source.ack_note
+            ? `<p class="article-brief"><strong>ack_note:</strong> ${escapeHtml(source.ack_note)}</p>`
+            : ""
+        }
         ${
           Object.keys(source.recent_failure_categories || {}).length
             ? `<p class="article-brief"><strong>failure_mix:</strong> ${escapeHtml(
@@ -185,11 +207,20 @@ function renderSources(sources) {
                 .join("")}</div>`
             : ""
         }
-        ${
-          source.cooldown_active
-            ? `<div class="article-actions"><button class="button ghost" data-action="reset-source-cooldown" data-source-id="${escapeAttribute(source.id)}">解除冷却</button></div>`
-            : ""
-        }
+        <div class="article-actions">
+          ${
+            source.cooldown_active && !source.acknowledged_at
+              ? `<button class="button ghost" data-action="ack-source-alert" data-source-id="${escapeAttribute(source.id)}">确认告警</button>`
+              : ""
+          }
+          <button class="button ghost" data-action="${source.silenced_active ? "clear-source-snooze" : "snooze-source-alert"}" data-source-id="${escapeAttribute(source.id)}">${source.silenced_active ? "解除静默" : "静默1h"}</button>
+          <button class="button ghost" data-action="toggle-source-maintenance" data-source-id="${escapeAttribute(source.id)}" data-enabled="${source.maintenance_mode ? "true" : "false"}">${source.maintenance_mode ? "退出维护" : "进入维护"}</button>
+          ${
+            source.cooldown_active
+              ? `<button class="button ghost" data-action="reset-source-cooldown" data-source-id="${escapeAttribute(source.id)}">解除冷却</button>`
+              : ""
+          }
+        </div>
       </article>
     `
     )
@@ -621,6 +652,46 @@ async function loadSourceAlerts() {
   renderSourceAlerts(payload.source_alerts || []);
 }
 
+async function acknowledgeSourceAlert(sourceIds, note = "") {
+  const payload = await fetchJson("/admin/sources/acknowledge", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      source_ids: sourceIds,
+      note,
+    }),
+  });
+  logJob("acknowledge source alerts", payload);
+  await refreshAll();
+}
+
+async function snoozeSourceAlerts(sourceIds, minutes = 60, clear = false) {
+  const payload = await fetchJson("/admin/sources/snooze", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      source_ids: sourceIds,
+      minutes,
+      clear,
+    }),
+  });
+  logJob(clear ? "clear source alert snooze" : "snooze source alerts", payload);
+  await refreshAll();
+}
+
+async function setSourceMaintenance(sourceIds, enabled) {
+  const payload = await fetchJson("/admin/sources/maintenance", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      source_ids: sourceIds,
+      enabled,
+    }),
+  });
+  logJob(enabled ? "enable source maintenance" : "disable source maintenance", payload);
+  await refreshAll();
+}
+
 async function refreshPublications() {
   const payload = await fetchJson("/admin/publications/refresh", {
     method: "POST",
@@ -884,14 +955,25 @@ refs.articlesList.addEventListener("click", async (event) => {
 });
 
 refs.sourcesList.addEventListener("click", async (event) => {
-  const button = event.target.closest('button[data-action="reset-source-cooldown"]');
+  const button = event.target.closest("button[data-action]");
   if (!button) return;
 
   const sourceId = button.dataset.sourceId;
+  const action = button.dataset.action;
   try {
-    await resetSourceCooldowns(sourceId ? [sourceId] : null);
+    if (action === "reset-source-cooldown") {
+      await resetSourceCooldowns(sourceId ? [sourceId] : null);
+    } else if (action === "ack-source-alert") {
+      await acknowledgeSourceAlert(sourceId ? [sourceId] : []);
+    } else if (action === "snooze-source-alert") {
+      await snoozeSourceAlerts(sourceId ? [sourceId] : [], 60, false);
+    } else if (action === "clear-source-snooze") {
+      await snoozeSourceAlerts(sourceId ? [sourceId] : [], 60, true);
+    } else if (action === "toggle-source-maintenance") {
+      await setSourceMaintenance(sourceId ? [sourceId] : [], button.dataset.enabled !== "true");
+    }
   } catch (error) {
-    logJob("reset source cooldown failed", { error: error.message, sourceId });
+    logJob("source control failed", { error: error.message, sourceId, action });
   }
 });
 

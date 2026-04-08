@@ -410,6 +410,34 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(history[0]["alert_status"], "sent")
             self.assertEqual(history[0]["targets"], [{"target": "telegram", "status": "ok"}])
 
+    def test_repository_updates_source_runtime_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error="blocked",
+                last_error_at=utc_now().isoformat(),
+            )
+
+            updated = repository.update_source_runtime_controls(
+                source_id="venturebeat",
+                silenced_until="2999-01-02T00:00:00+00:00",
+                maintenance_mode=True,
+                acknowledged_at="2026-04-08T00:00:00+00:00",
+                ack_note="known issue",
+            )
+
+            self.assertTrue(updated["maintenance_mode"])
+            self.assertTrue(updated["silenced_active"])
+            self.assertEqual(updated["ack_note"], "known issue")
+            self.assertEqual(updated["acknowledged_at"], "2026-04-08T00:00:00+00:00")
+
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")

@@ -428,7 +428,19 @@ class ServiceFilterTestCase(unittest.TestCase):
             service = NewsService(
                 settings,
                 repository=repository,
-                source_registry=StubRegistry([]),
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="venturebeat",
+                            name="VentureBeat",
+                            url="https://venturebeat.com/feed",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="news",
+                        )
+                    ]
+                ),
                 llm_client=StubLLMClient(),
                 content_extractor=StubExtractor(),
             )
@@ -1079,6 +1091,102 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["articles"][2]["status"], "skipped")
             self.assertIn("cooldown", result["articles"][2]["message"])
 
+    def test_source_maintenance_blocks_extraction_queue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="venturebeat",
+                    source_name="VentureBeat",
+                    title="Maintenance article",
+                    url="https://venturebeat.com/ai/maintenance",
+                    canonical_url="https://venturebeat.com/ai/maintenance",
+                    summary="A release update",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("Maintenance article", "A release update"),
+                    dedup_key=make_dedup_key("Maintenance article"),
+                    raw_payload={},
+                )
+            )
+            repository.update_source_runtime_controls(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                maintenance_mode=True,
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="venturebeat",
+                            name="VentureBeat",
+                            url="https://venturebeat.com/feed",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="news",
+                        )
+                    ]
+                ),
+                llm_client=StubLLMClient(),
+                content_extractor=StubExtractor(),
+            )
+
+            result = service.extract_articles(limit=10)
+            source = service.list_sources(include_runtime=True)
+
+            self.assertEqual(result["requested"], 0)
+            self.assertTrue(source[0]["maintenance_mode"])
+
+    def test_snoozed_or_acknowledged_source_suppresses_active_source_alert(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            alert_notifier = RecordingAlertNotifier(repository)
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error=PUBLIC_ERROR_MESSAGE,
+                last_error_at=utc_now().isoformat(),
+                silenced_until="2999-01-01T00:00:00+00:00",
+                acknowledged_at=utc_now().isoformat(),
+                ack_note="known issue",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                alert_notifier=alert_notifier,
+            )
+
+            service._dispatch_runtime_alerts()
+
+            keys = [item[0] for item in alert_notifier.calls]
+            aggregate_call = next(
+                item for item in alert_notifier.calls if item[0] == "source_cooldowns_active"
+            )
+            self.assertFalse(bool(aggregate_call[1].get("active")))
+            self.assertFalse(any(key.startswith("source_cooldown:") for key in keys))
+
     def test_reset_source_cooldowns_clears_runtime_block(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(
@@ -1109,6 +1217,8 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["cleared"], 1)
             self.assertEqual(state["cooldown_status"], "")
             self.assertEqual(state["cooldown_until"], "")
+            self.assertEqual(state["acknowledged_at"], "")
+            self.assertEqual(state["ack_note"], "")
 
     def test_source_cooldown_alert_history_closes_on_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1165,6 +1275,46 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(alert_history[0]["alert_status"], "recovered")
             self.assertEqual(alert_history[0]["targets"][0]["target"], "telegram")
             self.assertEqual(alert_history[1]["alert_status"], "sent")
+
+    def test_source_control_methods_update_runtime_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="venturebeat",
+                            name="VentureBeat",
+                            url="https://venturebeat.com/feed",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="news",
+                        )
+                    ]
+                ),
+            )
+
+            acknowledge = service.acknowledge_source_alerts(
+                source_ids=["venturebeat"],
+                note="known cooldown",
+            )
+            snooze = service.snooze_source_alerts(source_ids=["venturebeat"], minutes=30)
+            maintenance = service.set_source_maintenance(source_ids=["venturebeat"], enabled=True)
+            source = service.list_sources(include_runtime=True)[0]
+
+            self.assertEqual(acknowledge["acknowledged"], 1)
+            self.assertEqual(snooze["updated"], 1)
+            self.assertEqual(maintenance["updated"], 1)
+            self.assertEqual(source["ack_note"], "known cooldown")
+            self.assertTrue(source["silenced_active"])
+            self.assertTrue(source["maintenance_mode"])
 
     def test_pipeline_partial_error_dispatches_pipeline_alert(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

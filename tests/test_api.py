@@ -353,6 +353,44 @@ class ApiTestCase(unittest.TestCase):
             active_only=False,
         )
 
+    def test_admin_source_control_routes_update_runtime_state(self) -> None:
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.upsert_source_state(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            cooldown_status="blocked",
+            cooldown_until="2999-01-01T00:00:00+00:00",
+            consecutive_failures=2,
+            last_error_category="blocked",
+            last_http_status=403,
+            last_error="blocked",
+            last_error_at=utc_now().isoformat(),
+        )
+
+        ack = self.client.post(
+            "/admin/sources/acknowledge",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"source_ids": ["openai-news"], "note": "known issue"},
+        )
+        snooze = self.client.post(
+            "/admin/sources/snooze",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"source_ids": ["openai-news"], "minutes": 60},
+        )
+        maintenance = self.client.post(
+            "/admin/sources/maintenance",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"source_ids": ["openai-news"], "enabled": True},
+        )
+        source = repository.get_source_state("openai-news")
+
+        self.assertEqual(ack.status_code, 200)
+        self.assertEqual(snooze.status_code, 200)
+        self.assertEqual(maintenance.status_code, 200)
+        self.assertEqual(source["ack_note"], "known issue")
+        self.assertTrue(source["silenced_active"])
+        self.assertTrue(source["maintenance_mode"])
+
     def test_admin_refresh_publications_sanitizes_nested_error_message(self) -> None:
         with patch(
             "ainews.api.NewsService.refresh_publications",

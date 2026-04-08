@@ -894,6 +894,120 @@ class NewsService:
             "sources": cleared_sources,
         }
 
+    def acknowledge_source_alerts(
+        self,
+        *,
+        source_ids: Iterable[str],
+        note: str = "",
+    ) -> Dict[str, object]:
+        acknowledged = []
+        acknowledged_at = utc_now().isoformat()
+        for source_id in [clean_text(str(item)) for item in source_ids if clean_text(str(item))]:
+            source_name = self._source_name_for_id(source_id)
+            state = self.repository.update_source_runtime_controls(
+                source_id=source_id,
+                source_name=source_name,
+                acknowledged_at=acknowledged_at,
+                ack_note=note,
+            )
+            if not state:
+                continue
+            self.repository.record_source_event(
+                source_id=source_id,
+                source_name=source_name,
+                event_type="ops",
+                status="acknowledged",
+                message=clean_text(note) or "source alert acknowledged by operator",
+            )
+            acknowledged.append(state)
+        return {
+            "status": "ok",
+            "acknowledged": len(acknowledged),
+            "acknowledged_at": acknowledged_at,
+            "note": clean_text(note),
+            "sources": acknowledged,
+        }
+
+    def snooze_source_alerts(
+        self,
+        *,
+        source_ids: Iterable[str],
+        minutes: Optional[int] = None,
+        clear: bool = False,
+    ) -> Dict[str, object]:
+        updated = []
+        silenced_until = ""
+        if not clear:
+            silenced_until = (utc_now() + timedelta(minutes=max(1, int(minutes or 60)))).isoformat()
+        for source_id in [clean_text(str(item)) for item in source_ids if clean_text(str(item))]:
+            source_name = self._source_name_for_id(source_id)
+            state = self.repository.update_source_runtime_controls(
+                source_id=source_id,
+                source_name=source_name,
+                silenced_until=silenced_until,
+            )
+            if not state:
+                continue
+            self._deactivate_source_cooldown_alert_state(source_id, last_status="silenced")
+            self.repository.record_source_event(
+                source_id=source_id,
+                source_name=source_name,
+                event_type="ops",
+                status="unsilenced" if clear else "silenced",
+                message=(
+                    "source alert silence cleared"
+                    if clear
+                    else f"source alerts silenced until {silenced_until}"
+                ),
+            )
+            updated.append(state)
+        self._dispatch_runtime_alerts()
+        return {
+            "status": "ok",
+            "updated": len(updated),
+            "clear": clear,
+            "silenced_until": silenced_until,
+            "sources": updated,
+        }
+
+    def set_source_maintenance(
+        self,
+        *,
+        source_ids: Iterable[str],
+        enabled: bool,
+    ) -> Dict[str, object]:
+        updated = []
+        for source_id in [clean_text(str(item)) for item in source_ids if clean_text(str(item))]:
+            source_name = self._source_name_for_id(source_id)
+            state = self.repository.update_source_runtime_controls(
+                source_id=source_id,
+                source_name=source_name,
+                maintenance_mode=enabled,
+            )
+            if not state:
+                continue
+            if enabled:
+                self._deactivate_source_cooldown_alert_state(source_id, last_status="maintenance")
+            self.repository.record_source_event(
+                source_id=source_id,
+                source_name=source_name,
+                event_type="ops",
+                status="maintenance_on" if enabled else "maintenance_off",
+                message=(
+                    "source moved into maintenance mode"
+                    if enabled
+                    else "source maintenance mode cleared"
+                ),
+            )
+            updated.append(state)
+        self._dispatch_runtime_alerts()
+        return {
+            "status": "ok",
+            "updated": len(updated),
+            "maintenance_mode": enabled,
+            "sources": updated,
+        }
+
     def curate_article(
         self,
         article_id: int,
@@ -1708,6 +1822,11 @@ class NewsService:
         payload["last_http_status"] = int(runtime.get("last_http_status") or 0)
         payload["last_error_at"] = clean_text(str(runtime.get("last_error_at", "")))
         payload["last_success_at"] = clean_text(str(runtime.get("last_success_at", "")))
+        payload["silenced_until"] = clean_text(str(runtime.get("silenced_until", "")))
+        payload["silenced_active"] = bool(runtime.get("silenced_active"))
+        payload["maintenance_mode"] = bool(runtime.get("maintenance_mode"))
+        payload["acknowledged_at"] = clean_text(str(runtime.get("acknowledged_at", "")))
+        payload["ack_note"] = clean_text(str(runtime.get("ack_note", "")))
         payload["recent_success_rate"] = summary.get("recent_success_rate")
         payload["recent_failure_categories"] = dict(summary.get("recent_failure_categories", {}))
         payload["recent_operations"] = list(summary.get("recent_operations", []))
@@ -1773,6 +1892,21 @@ class NewsService:
         return bool(cooldown_until and cooldown_until > utc_now().isoformat())
 
     @staticmethod
+    def _source_alerts_muted(source_state: Optional[dict]) -> bool:
+        if not isinstance(source_state, dict):
+            return False
+        if bool(source_state.get("maintenance_mode")):
+            return True
+        silenced_until = clean_text(str(source_state.get("silenced_until", "")))
+        return bool(silenced_until and silenced_until > utc_now().isoformat())
+
+    @staticmethod
+    def _source_alerts_acknowledged(source_state: Optional[dict]) -> bool:
+        if not isinstance(source_state, dict):
+            return False
+        return bool(clean_text(str(source_state.get("acknowledged_at", ""))))
+
+    @staticmethod
     def _source_cooldown_message(source_state: Optional[dict]) -> str:
         if not isinstance(source_state, dict):
             return "source cooldown is active"
@@ -1819,6 +1953,8 @@ class NewsService:
             last_http_status=http_status,
             last_error=error,
             last_error_at=utc_now().isoformat(),
+            acknowledged_at="" if (not previous_active and category in SOURCE_COOLDOWN_CATEGORIES) else None,
+            ack_note="" if (not previous_active and category in SOURCE_COOLDOWN_CATEGORIES) else None,
         )
         if state and self._source_cooldown_active(state) and not previous_active:
             self.repository.record_source_event(
@@ -1836,31 +1972,43 @@ class NewsService:
         health = self.get_health()
         health_status = clean_text(str(health.get("status", "ok")))
         degraded_reasons = list(health.get("degraded_reasons", []))
+        cooldowns = list(health.get("source_cooldowns", []))
+        alertable_cooldowns = [
+            item
+            for item in cooldowns
+            if not self._source_alerts_muted(item) and not self._source_alerts_acknowledged(item)
+        ]
+        alertable_degraded_reasons = [
+            item
+            for item in degraded_reasons
+            if item != "source_cooldowns_active" or alertable_cooldowns
+        ]
         self.alert_notifier.notify_rule(
             "health_status",
-            active=health_status in {"degraded", "error"},
+            active=health_status == "error" or (
+                health_status == "degraded" and bool(alertable_degraded_reasons)
+            ),
             title=f"service health is {health_status or 'unknown'}",
             message=(
-                f"status={health_status}; degraded_reasons={', '.join(degraded_reasons) or 'none'}; "
+                f"status={health_status}; degraded_reasons={', '.join(alertable_degraded_reasons) or 'none'}; "
                 f"request ready={health.get('ready')}"
             ),
-            fingerprint=f"{health_status}|{'|'.join(sorted(str(item) for item in degraded_reasons))}",
+            fingerprint=f"{health_status}|{'|'.join(sorted(str(item) for item in alertable_degraded_reasons))}",
             severity="warning",
             recovery_title="service health recovered",
             recovery_message="service health returned to ok",
         )
-        cooldowns = list(health.get("source_cooldowns", []))
         cooldown_fingerprint = "|".join(
             sorted(
                 f"{item.get('source_id')}:{item.get('cooldown_status')}:{item.get('cooldown_until')}"
-                for item in cooldowns
+                for item in alertable_cooldowns
             )
         )
         self.alert_notifier.notify_rule(
             "source_cooldowns_active",
-            active=bool(cooldowns),
+            active=bool(alertable_cooldowns),
             title="source cooldowns are active",
-            message=self._source_cooldown_alert_message(cooldowns),
+            message=self._source_cooldown_alert_message(alertable_cooldowns),
             fingerprint=cooldown_fingerprint,
             severity="warning",
             recovery_title="source cooldowns cleared",
@@ -1887,6 +2035,11 @@ class NewsService:
             if not source_id:
                 continue
             active_by_source[source_id] = item
+            if self._source_alerts_muted(item):
+                self._deactivate_source_cooldown_alert_state(source_id, last_status="suppressed")
+                continue
+            if self._source_alerts_acknowledged(item):
+                continue
             source_name = clean_text(str(item.get("source_name", ""))) or source_id
             alert_key = f"{SOURCE_COOLDOWN_ALERT_KEY_PREFIX}{source_id}"
             message = self._source_cooldown_recovery_message(item, recovering=False)
@@ -1932,6 +2085,9 @@ class NewsService:
             if not source_id or source_id in active_by_source:
                 continue
             source_state = self.repository.get_source_state(source_id) or {}
+            if self._source_alerts_muted(source_state):
+                self._deactivate_source_cooldown_alert_state(source_id, last_status="suppressed")
+                continue
             source_name = clean_text(str(source_state.get("source_name", ""))) or source_id
             message = self._source_cooldown_recovery_message(source_state, recovering=True)
             result = self.alert_notifier.notify_rule(
@@ -1995,6 +2151,27 @@ class NewsService:
         if http_status:
             parts.append(f"http={http_status}")
         return "; ".join(parts)
+
+    def _source_name_for_id(self, source_id: str) -> str:
+        source_list = self.source_registry.list_sources(source_ids=[source_id])
+        if source_list:
+            return clean_text(str(source_list[0].name)) or source_id
+        source_state = self.repository.get_source_state(source_id) or {}
+        return clean_text(str(source_state.get("source_name", ""))) or source_id
+
+    def _deactivate_source_cooldown_alert_state(self, source_id: str, *, last_status: str) -> None:
+        alert_key = f"{SOURCE_COOLDOWN_ALERT_KEY_PREFIX}{source_id}"
+        state = self.repository.get_alert_state(alert_key)
+        if not state or not bool(state.get("is_active")):
+            return
+        self.repository.save_alert_state(
+            alert_key=alert_key,
+            is_active=False,
+            fingerprint="",
+            last_status=last_status,
+            last_title=str(state.get("last_title", "")),
+            last_message=str(state.get("last_message", "")),
+        )
 
     def _record_source_alert_history(
         self,

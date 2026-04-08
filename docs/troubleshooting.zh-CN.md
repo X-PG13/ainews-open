@@ -85,6 +85,7 @@ API 示例：
 - `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/source-alerts`
 - 重点看 `cooldown_status`、`cooldown_until`、`consecutive_failures`、`last_http_status`
 - 再看最近的来源级告警和恢复记录，确认这次冷却是否已经发出通知
+- 再确认 `silenced_until`、`maintenance_mode`、`acknowledged_at`、`ack_note`，避免把静默或维护误判成告警失效
 
 如果确认这个来源可以恢复，可以手动解除冷却：
 
@@ -133,6 +134,9 @@ API 示例：
 - 用 `AINEWS_ALERT_*` 单独配置告警目标，不要和业务发布目标混用
 - 到 `/admin/sources` 看看到底是哪个来源在重复触发冷却或 blocked 失败
 - 到 `/admin/source-alerts` 看同一个来源是不是在反复进入和退出冷却
+- 如果这次问题已经有人处理，先确认告警，避免同一轮冷却重复刷活动告警
+- 如果只是短时限流，先临时静默这个来源
+- 如果要暂停该来源的默认抽取和来源级告警，直接切到维护模式
 
 ## LLM 日报没有生成
 

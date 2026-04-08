@@ -83,6 +83,7 @@ Checks:
 - `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/source-alerts`
 - inspect `cooldown_status`, `cooldown_until`, `consecutive_failures`, and `last_http_status`
 - inspect the latest source-level alert and recovery entries to confirm whether the cooldown alert already fired
+- inspect `silenced_until`, `maintenance_mode`, `acknowledged_at`, and `ack_note` before assuming alert delivery is broken
 
 If the source is safe to resume, clear the cooldown:
 
@@ -131,6 +132,9 @@ If alerts feel too noisy:
 - separate publish targets from alert targets by using the `AINEWS_ALERT_*` overrides
 - use `/admin/sources` to inspect which source is repeatedly driving cooldowns or blocked failures
 - use `/admin/source-alerts` to verify whether the same source is repeatedly entering and leaving cooldown
+- acknowledge the active source alert if the team already owns the incident
+- snooze the source temporarily when you expect short-lived rate limits
+- move the source into maintenance mode when you want the extraction queue and source alerts to pause together
 
 ## LLM digest generation does not happen
 

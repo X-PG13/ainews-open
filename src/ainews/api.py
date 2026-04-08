@@ -105,6 +105,22 @@ class ResetSourceCooldownRequest(BaseModel):
     active_only: bool = True
 
 
+class AcknowledgeSourceAlertRequest(BaseModel):
+    source_ids: List[str] = Field(min_length=1)
+    note: Optional[str] = Field(default=None, max_length=280)
+
+
+class SnoozeSourceAlertRequest(BaseModel):
+    source_ids: List[str] = Field(min_length=1)
+    minutes: Optional[int] = Field(default=60, ge=1, le=10080)
+    clear: bool = False
+
+
+class SourceMaintenanceRequest(BaseModel):
+    source_ids: List[str] = Field(min_length=1)
+    enabled: bool = True
+
+
 logger = logging.getLogger("ainews.api")
 SANITIZED_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
 BAD_REQUEST_MESSAGE = "request could not be processed; inspect server logs with the response X-Request-ID"
@@ -667,6 +683,76 @@ def create_app() -> FastAPI:
                 source_ids=payload.source_ids,
                 active_only=payload.active_only,
             ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/sources/acknowledge")
+    def admin_acknowledge_source_alerts(
+        payload: AcknowledgeSourceAlertRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_acknowledge_source_alerts")
+        try:
+            return _sanitize_service_payload(
+                service.acknowledge_source_alerts(
+                    source_ids=payload.source_ids,
+                    note=str(payload.note or ""),
+                )
+            )
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/sources/snooze")
+    def admin_snooze_source_alerts(
+        payload: SnoozeSourceAlertRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_snooze_source_alerts")
+        try:
+            return _sanitize_service_payload(
+                service.snooze_source_alerts(
+                    source_ids=payload.source_ids,
+                    minutes=payload.minutes,
+                    clear=payload.clear,
+                )
+            )
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/sources/maintenance")
+    def admin_set_source_maintenance(
+        payload: SourceMaintenanceRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_set_source_maintenance")
+        try:
+            return _sanitize_service_payload(
+                service.set_source_maintenance(
+                    source_ids=payload.source_ids,
+                    enabled=payload.enabled,
+                )
+            )
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)
         except LookupError:

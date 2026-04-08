@@ -35,7 +35,14 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 8
+CURRENT_SCHEMA_VERSION = 9
+
+SOURCE_STATE_EXTRA_COLUMNS = {
+    "silenced_until": "TEXT NOT NULL DEFAULT ''",
+    "maintenance_mode": "INTEGER NOT NULL DEFAULT 0",
+    "acknowledged_at": "TEXT NOT NULL DEFAULT ''",
+    "ack_note": "TEXT NOT NULL DEFAULT ''",
+}
 
 
 class ArticleRepository:
@@ -132,6 +139,10 @@ class ArticleRepository:
                     last_error TEXT NOT NULL DEFAULT '',
                     last_error_at TEXT NOT NULL DEFAULT '',
                     last_success_at TEXT NOT NULL DEFAULT '',
+                    silenced_until TEXT NOT NULL DEFAULT '',
+                    maintenance_mode INTEGER NOT NULL DEFAULT 0,
+                    acknowledged_at TEXT NOT NULL DEFAULT '',
+                    ack_note TEXT NOT NULL DEFAULT '',
                     updated_at TEXT NOT NULL DEFAULT ''
                 );
 
@@ -179,6 +190,7 @@ class ArticleRepository:
             )
             self._ensure_article_migrations(connection)
             self._ensure_publication_migrations(connection)
+            self._ensure_source_state_migrations(connection)
             connection.executescript(
                 """
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_articles_canonical_url
@@ -222,6 +234,12 @@ class ArticleRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_source_states_cooldown_status
                     ON source_states(cooldown_status);
+
+                CREATE INDEX IF NOT EXISTS idx_source_states_silenced_until
+                    ON source_states(silenced_until);
+
+                CREATE INDEX IF NOT EXISTS idx_source_states_maintenance_mode
+                    ON source_states(maintenance_mode);
 
                 CREATE INDEX IF NOT EXISTS idx_source_events_source_created_at
                     ON source_events(source_id, created_at);
@@ -267,6 +285,19 @@ class ArticleRepository:
                 if "duplicate column name" not in str(exc).lower():
                     raise
 
+    def _ensure_source_state_migrations(self, connection: sqlite3.Connection) -> None:
+        existing_columns = self._table_columns(connection, "source_states")
+        for column_name, column_type in SOURCE_STATE_EXTRA_COLUMNS.items():
+            if column_name in existing_columns:
+                continue
+            try:
+                connection.execute(
+                    f"ALTER TABLE source_states ADD COLUMN {column_name} {column_type}"
+                )
+            except sqlite3.OperationalError as exc:
+                if "duplicate column name" not in str(exc).lower():
+                    raise
+
     @staticmethod
     def _table_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
         rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
@@ -297,8 +328,11 @@ class ArticleRepository:
         payload = dict(row)
         payload["consecutive_failures"] = int(payload.get("consecutive_failures") or 0)
         payload["last_http_status"] = int(payload.get("last_http_status") or 0)
+        payload["maintenance_mode"] = bool(payload.get("maintenance_mode"))
         cooldown_until = clean_text(str(payload.get("cooldown_until") or ""))
+        silenced_until = clean_text(str(payload.get("silenced_until") or ""))
         payload["cooldown_active"] = bool(cooldown_until and cooldown_until > utc_now().isoformat())
+        payload["silenced_active"] = bool(silenced_until and silenced_until > utc_now().isoformat())
         return payload
 
     @staticmethod
@@ -625,8 +659,13 @@ class ArticleRepository:
                 SELECT 1
                 FROM source_states
                 WHERE source_states.source_id = articles.source_id
-                  AND source_states.cooldown_until != ''
-                  AND source_states.cooldown_until > ?
+                  AND (
+                      source_states.maintenance_mode = 1
+                      OR (
+                          source_states.cooldown_until != ''
+                          AND source_states.cooldown_until > ?
+                      )
+                  )
             )
             """
         )
@@ -722,6 +761,10 @@ class ArticleRepository:
                     last_error,
                     last_error_at,
                     last_success_at,
+                    silenced_until,
+                    maintenance_mode,
+                    acknowledged_at,
+                    ack_note,
                     updated_at
                 FROM source_states
                 WHERE source_id = ?
@@ -762,6 +805,10 @@ class ArticleRepository:
                     last_error,
                     last_error_at,
                     last_success_at,
+                    silenced_until,
+                    maintenance_mode,
+                    acknowledged_at,
+                    ack_note,
                     updated_at
                 FROM source_states
                 {where_sql}
@@ -785,7 +832,35 @@ class ArticleRepository:
         last_error: str = "",
         last_error_at: str = "",
         last_success_at: str = "",
+        silenced_until: Optional[str] = None,
+        maintenance_mode: Optional[bool] = None,
+        acknowledged_at: Optional[str] = None,
+        ack_note: Optional[str] = None,
     ) -> Optional[dict]:
+        existing = self.get_source_state(source_id) or {}
+        effective_source_name = clean_text(source_name) or clean_text(
+            str(existing.get("source_name", ""))
+        ) or source_id
+        effective_silenced_until = (
+            clean_text(str(existing.get("silenced_until", "")))
+            if silenced_until is None
+            else clean_text(str(silenced_until))
+        )
+        effective_maintenance_mode = (
+            bool(existing.get("maintenance_mode"))
+            if maintenance_mode is None
+            else bool(maintenance_mode)
+        )
+        effective_acknowledged_at = (
+            clean_text(str(existing.get("acknowledged_at", "")))
+            if acknowledged_at is None
+            else clean_text(str(acknowledged_at))
+        )
+        effective_ack_note = (
+            clean_text(str(existing.get("ack_note", "")))
+            if ack_note is None
+            else clean_text(str(ack_note))
+        )
         updated_at = utc_now().isoformat()
         with self._connect() as connection:
             connection.execute(
@@ -801,8 +876,12 @@ class ArticleRepository:
                     last_error,
                     last_error_at,
                     last_success_at,
+                    silenced_until,
+                    maintenance_mode,
+                    acknowledged_at,
+                    ack_note,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(source_id) DO UPDATE SET
                     source_name = excluded.source_name,
                     cooldown_status = excluded.cooldown_status,
@@ -819,11 +898,15 @@ class ArticleRepository:
                         WHEN excluded.last_success_at != '' THEN excluded.last_success_at
                         ELSE source_states.last_success_at
                     END,
+                    silenced_until = excluded.silenced_until,
+                    maintenance_mode = excluded.maintenance_mode,
+                    acknowledged_at = excluded.acknowledged_at,
+                    ack_note = excluded.ack_note,
                     updated_at = excluded.updated_at
                 """,
                 (
                     source_id,
-                    source_name,
+                    effective_source_name,
                     cooldown_status,
                     cooldown_until,
                     consecutive_failures,
@@ -832,6 +915,10 @@ class ArticleRepository:
                     last_error,
                     last_error_at,
                     last_success_at,
+                    effective_silenced_until,
+                    1 if effective_maintenance_mode else 0,
+                    effective_acknowledged_at,
+                    effective_ack_note,
                     updated_at,
                 ),
             )
@@ -850,6 +937,8 @@ class ArticleRepository:
             cooldown_until="",
             consecutive_failures=0,
             last_success_at=utc_now().isoformat(),
+            acknowledged_at="",
+            ack_note="",
         )
 
     def reset_source_cooldowns(
@@ -893,12 +982,46 @@ class ArticleRepository:
                         cooldown_status = '',
                         cooldown_until = '',
                         consecutive_failures = 0,
+                        acknowledged_at = '',
+                        ack_note = '',
                         updated_at = ?
                     WHERE source_id IN ({placeholders})
                     """,
                     [utc_now().isoformat(), *source_id_rows],
                 )
         return [state for source_id in source_id_rows if (state := self.get_source_state(source_id))]
+
+    def update_source_runtime_controls(
+        self,
+        *,
+        source_id: str,
+        source_name: str = "",
+        silenced_until: Optional[str] = None,
+        maintenance_mode: Optional[bool] = None,
+        acknowledged_at: Optional[str] = None,
+        ack_note: Optional[str] = None,
+        clear_ack: bool = False,
+    ) -> Optional[dict]:
+        current = self.get_source_state(source_id) or {}
+        if clear_ack:
+            acknowledged_at = ""
+            ack_note = ""
+        return self.upsert_source_state(
+            source_id=source_id,
+            source_name=source_name or str(current.get("source_name", "")) or source_id,
+            cooldown_status=str(current.get("cooldown_status", "")),
+            cooldown_until=str(current.get("cooldown_until", "")),
+            consecutive_failures=int(current.get("consecutive_failures") or 0),
+            last_error_category=str(current.get("last_error_category", "")),
+            last_http_status=int(current.get("last_http_status") or 0),
+            last_error=str(current.get("last_error", "")),
+            last_error_at=str(current.get("last_error_at", "")),
+            last_success_at=str(current.get("last_success_at", "")),
+            silenced_until=silenced_until,
+            maintenance_mode=maintenance_mode,
+            acknowledged_at=acknowledged_at,
+            ack_note=ack_note,
+        )
 
     def record_source_event(
         self,
@@ -2402,10 +2525,17 @@ class ArticleRepository:
                     COUNT(*) AS total_source_states,
                     SUM(CASE WHEN cooldown_until != '' AND cooldown_until > ? THEN 1 ELSE 0 END) AS active_source_cooldowns,
                     SUM(CASE WHEN cooldown_status = 'throttled' AND cooldown_until > ? THEN 1 ELSE 0 END) AS throttled_source_cooldowns,
-                    SUM(CASE WHEN cooldown_status = 'blocked' AND cooldown_until > ? THEN 1 ELSE 0 END) AS blocked_source_cooldowns
+                    SUM(CASE WHEN cooldown_status = 'blocked' AND cooldown_until > ? THEN 1 ELSE 0 END) AS blocked_source_cooldowns,
+                    SUM(CASE WHEN silenced_until != '' AND silenced_until > ? THEN 1 ELSE 0 END) AS silenced_source_alerts,
+                    SUM(CASE WHEN maintenance_mode = 1 THEN 1 ELSE 0 END) AS sources_in_maintenance
                 FROM source_states
                 """,
-                (utc_now().isoformat(), utc_now().isoformat(), utc_now().isoformat()),
+                (
+                    utc_now().isoformat(),
+                    utc_now().isoformat(),
+                    utc_now().isoformat(),
+                    utc_now().isoformat(),
+                ),
             ).fetchone()
             source_cooldown_rows = connection.execute(
                 """
@@ -2419,6 +2549,10 @@ class ArticleRepository:
                     last_http_status,
                     last_error_at,
                     last_success_at,
+                    silenced_until,
+                    maintenance_mode,
+                    acknowledged_at,
+                    ack_note,
                     updated_at
                 FROM source_states
                 WHERE cooldown_until != '' AND cooldown_until > ?
@@ -2465,6 +2599,8 @@ class ArticleRepository:
             "active_source_cooldowns": int(source_state_row["active_source_cooldowns"] or 0),
             "throttled_source_cooldowns": int(source_state_row["throttled_source_cooldowns"] or 0),
             "blocked_source_cooldowns": int(source_state_row["blocked_source_cooldowns"] or 0),
+            "silenced_source_alerts": int(source_state_row["silenced_source_alerts"] or 0),
+            "sources_in_maintenance": int(source_state_row["sources_in_maintenance"] or 0),
             "source_cooldowns": source_cooldowns,
             "counts_by_region": {
                 str(row["region"]): int(row["total"] or 0) for row in region_rows

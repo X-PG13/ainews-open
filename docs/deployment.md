@@ -237,6 +237,7 @@ AI News Open can put the source into a cooldown window. During that cooldown:
 - `/health` reports `source_cooldowns_active`
 - `/admin/sources` and the console show the affected source and cooldown deadline
 - `/admin/source-alerts` and the console show the latest source-level alert and recovery history
+- operators can acknowledge a source alert, snooze it temporarily, or put the source into maintenance mode
 
 Manual reset examples:
 
@@ -300,6 +301,8 @@ Operator notes:
 - recovery messages are emitted when health, cooldown state, publish, or pipeline status returns to normal
 - `/admin/sources` is the primary runtime panel for source cooldowns, recent success rate, failure mix, and recent operations
 - `/admin/source-alerts` is the history panel for source cooldown activation and recovery notifications
+- acknowledged alerts suppress repeated active source alerts for the current cooldown incident
+- snoozed or maintenance-mode sources suppress source-level alert delivery until the mute window ends or maintenance is removed
 
 ## Upgrade Checklist
 
