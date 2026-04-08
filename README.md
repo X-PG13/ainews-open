@@ -17,6 +17,7 @@
 </div>
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
+![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
 
 ## Product Snapshot
 
@@ -60,6 +61,7 @@ python -m ainews serve --port 8000
 After startup you can:
 
 - Open the admin console at `http://127.0.0.1:8000/`
+- Use the Operations panel to inspect `/health`, recent pipeline runs, source cooldowns, source alerts, and publication failures in one screen
 - Browse the article pool, digest archive, publication history, and WeChat publish status
 - Trigger ingest, extraction, translation, digest generation, and publishing from the dashboard
 
@@ -70,6 +72,7 @@ After startup you can:
 - Sample digest markdown (EN): [docs/demo/sample-digest.en.md](docs/demo/sample-digest.en.md)
 - Sample digest JSON: [docs/demo/sample-digest.json](docs/demo/sample-digest.json)
 - Sample health payload: [docs/demo/sample-health.json](docs/demo/sample-health.json)
+- Sample operations payload: [docs/demo/sample-operations.json](docs/demo/sample-operations.json)
 - Sample publication history: [docs/demo/sample-publications.json](docs/demo/sample-publications.json)
 
 ## Maintainer Flow

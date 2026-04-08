@@ -2118,6 +2118,87 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertIn("digest", stats["operations"])
             self.assertIn("configured_publish_targets", stats)
 
+    def test_get_operations_aggregates_runtime_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+                llm_client=StubLLMClient(),
+            )
+
+            pipeline_token = service.telemetry.start("pipeline", context={"region": "all"})
+            service.telemetry.finish(
+                pipeline_token,
+                status="partial_error",
+                metrics={"published": 0},
+                error_category="publication_error",
+            )
+            repository.upsert_source_state(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error="blocked by site",
+                last_error_at=utc_now().isoformat(),
+            )
+            repository.record_source_event(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                event_type="extract",
+                status="blocked",
+                error_category="blocked",
+                http_status=403,
+                message="blocked extraction",
+            )
+            repository.record_source_alert(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                alert_key="source_cooldown:openai-news",
+                alert_status="sent",
+                severity="warning",
+                title="source cooldown active: OpenAI News",
+                message="OpenAI News entered blocked cooldown",
+                fingerprint="blocked|2999-01-01T00:00:00+00:00|2|403",
+                targets=[{"target": "telegram", "status": "ok"}],
+            )
+            repository.save_publication(
+                digest_id=1,
+                target="wechat",
+                status="error",
+                external_id="PUBLISH123",
+                message="publish failed",
+                response_payload={"status_query_error": {"message": PUBLIC_ERROR_MESSAGE}},
+            )
+
+            payload = service.get_operations()
+
+            self.assertEqual(payload["health"]["status"], "degraded")
+            self.assertEqual(payload["pipeline_runs"][0]["name"], "pipeline")
+            self.assertEqual(payload["pipeline_runs"][0]["status"], "partial_error")
+            self.assertEqual(payload["source_runtime"][0]["id"], "openai-news")
+            self.assertEqual(payload["source_alerts"][0]["source_id"], "openai-news")
+            self.assertEqual(payload["publication_failures"][0]["status"], "error")
+            self.assertIn("publication_error", payload["failure_categories"])
+            self.assertIn("pipeline", payload["operation_totals"])
+
 
 if __name__ == "__main__":
     unittest.main()

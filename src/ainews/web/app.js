@@ -42,6 +42,13 @@ const refs = {
   retryExtractionSelectionButton: document.getElementById("retryExtractionSelectionButton"),
   sourceAlertsList: document.getElementById("sourceAlertsList"),
   refreshSourceAlertsButton: document.getElementById("refreshSourceAlertsButton"),
+  operationsSummary: document.getElementById("operationsSummary"),
+  operationsHealth: document.getElementById("operationsHealth"),
+  operationsMetrics: document.getElementById("operationsMetrics"),
+  operationsPipelineRuns: document.getElementById("operationsPipelineRuns"),
+  operationsSources: document.getElementById("operationsSources"),
+  operationsAlerts: document.getElementById("operationsAlerts"),
+  operationsPublicationFailures: document.getElementById("operationsPublicationFailures"),
   publishTargetInputs: Array.from(document.querySelectorAll(".publish-target")),
   wechatSubmitCheckbox: document.getElementById("wechatSubmitCheckbox"),
 };
@@ -103,6 +110,251 @@ function renderStats(stats) {
     )
     .join("");
   renderExtractionOpsSummary(stats);
+}
+
+function operationStatusClass(status) {
+  if (status === "ok" || status === "ready") return "good";
+  if (status === "degraded" || status === "pending" || status === "partial_error") return "pending";
+  if (status === "error" || status === "blocked") return "warn";
+  return "";
+}
+
+function summarizePairs(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  return Object.entries(payload)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "" && value !== 0)
+    .slice(0, 4)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" · ");
+}
+
+function renderOperationsSummary(payload) {
+  const health = payload.health || {};
+  const stats = payload.stats || {};
+  const metrics = payload.metrics || {};
+  const cards = [
+    ["health", health.status || "unknown", operationStatusClass(health.status)],
+    ["cooldowns", stats.active_source_cooldowns || 0, stats.active_source_cooldowns ? "warn" : "good"],
+    ["publish errors", stats.publication_errors || 0, stats.publication_errors ? "warn" : "good"],
+    ["pending publish", stats.pending_publications || 0, stats.pending_publications ? "pending" : "good"],
+    ["scheduled retries", stats.scheduled_extraction_retries || 0, stats.scheduled_extraction_retries ? "pending" : "good"],
+    ["alerts sent", metrics.alert_sends_total || 0, metrics.alert_sends_total ? "" : "good"],
+  ];
+  refs.operationsSummary.innerHTML = cards
+    .map(
+      ([label, value, klass]) => `
+        <article class="stat-card operations-stat-card">
+          <p class="stat-label">${escapeHtml(String(label))}</p>
+          <div class="stat-value ${klass ? `status-${klass}` : ""}">${escapeHtml(String(value))}</div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderOperationsHealth(payload) {
+  const health = payload.health || {};
+  const checks = Object.entries(health.checks || {})
+    .map(
+      ([key, value]) =>
+        `<span class="chip ${operationStatusClass(String(value))}">${escapeHtml(String(key))}: ${escapeHtml(String(value))}</span>`
+    )
+    .join("");
+  const reasons = (health.degraded_reasons || []).length
+    ? (health.degraded_reasons || [])
+        .map((reason) => `<span class="chip warn">${escapeHtml(reason)}</span>`)
+        .join("")
+    : '<span class="chip good">no degraded reasons</span>';
+  refs.operationsHealth.innerHTML = `
+    <article class="publication-card">
+      <header class="publication-head">
+        <div>
+          <strong>status</strong>
+          <div class="publication-meta">
+            <span>generated_at: ${escapeHtml(payload.generated_at || "")}</span>
+            <span>ready: ${escapeHtml(String(Boolean(health.ready)))}</span>
+            <span>schema: ${escapeHtml(String(health.schema_version || ""))}</span>
+          </div>
+        </div>
+        <span class="chip ${operationStatusClass(health.status)}">${escapeHtml(health.status || "unknown")}</span>
+      </header>
+      <div class="chip-row compact">${checks}</div>
+      <div class="chip-row">${reasons}</div>
+    </article>
+  `;
+  const metrics = payload.metrics || {};
+  const pipelineTotals = summarizePairs(metrics.pipeline_runs_total);
+  const extractFailures = summarizePairs(metrics.extract_failures_total);
+  refs.operationsMetrics.innerHTML = [
+    ["pipeline_runs", pipelineTotals || "none"],
+    ["extract_failures", extractFailures || "none"],
+    ["source_recoveries_total", metrics.source_recoveries_total || 0],
+    ["source_cooldowns_active", metrics.source_cooldowns_active || 0],
+    ["alert_sends_total", metrics.alert_sends_total || 0],
+  ]
+    .map(
+      ([label, value]) =>
+        `<span class="chip">${escapeHtml(String(label))}: ${escapeHtml(String(value))}</span>`
+    )
+    .join("");
+}
+
+function renderOperationsPipelineRuns(runs) {
+  refs.operationsPipelineRuns.innerHTML = runs.length
+    ? runs
+        .map(
+          (item) => `
+            <article class="publication-card operations-card">
+              <header class="publication-head">
+                <strong>${escapeHtml(item.name || "pipeline")}</strong>
+                <span class="chip ${operationStatusClass(item.status)}">${escapeHtml(item.status || "unknown")}</span>
+              </header>
+              <div class="publication-meta">
+                <span>started: ${escapeHtml(item.started_at || "")}</span>
+                <span>finished: ${escapeHtml(item.finished_at || "")}</span>
+                <span>duration: ${escapeHtml(String(item.duration_ms || 0))}ms</span>
+              </div>
+              ${
+                summarizePairs(item.context)
+                  ? `<p class="article-brief"><strong>context:</strong> ${escapeHtml(summarizePairs(item.context))}</p>`
+                  : ""
+              }
+              ${
+                summarizePairs(item.metrics)
+                  ? `<p class="article-brief"><strong>metrics:</strong> ${escapeHtml(summarizePairs(item.metrics))}</p>`
+                  : ""
+              }
+            </article>
+          `
+        )
+        .join("")
+    : '<p class="muted">最近还没有记录到 pipeline 运行。</p>';
+}
+
+function renderOperationsSources(sources) {
+  refs.operationsSources.innerHTML = sources.length
+    ? sources
+        .map(
+          (source) => `
+            <article class="publication-card operations-card">
+              <header class="publication-head">
+                <strong>${escapeHtml(source.name || source.id || "unknown source")}</strong>
+                <div class="chip-row compact">
+                  ${
+                    source.cooldown_active
+                      ? `<span class="chip ${source.cooldown_status === "blocked" ? "warn" : "pending"}">${escapeHtml(source.cooldown_status || "cooldown")}</span>`
+                      : '<span class="chip good">normal</span>'
+                  }
+                  ${source.maintenance_mode ? '<span class="chip pending">maintenance</span>' : ""}
+                  ${source.silenced_active ? '<span class="chip">silenced</span>' : ""}
+                </div>
+              </header>
+              <div class="publication-meta">
+                ${
+                  source.recent_success_rate !== null && source.recent_success_rate !== undefined
+                    ? `<span>success_rate: ${escapeHtml(String(source.recent_success_rate))}%</span>`
+                    : "<span>success_rate: n/a</span>"
+                }
+                <span>failures: ${escapeHtml(String(source.consecutive_failures || 0))}</span>
+                ${
+                  source.cooldown_until
+                    ? `<span>until: ${escapeHtml(source.cooldown_until)}</span>`
+                    : "<span>until: none</span>"
+                }
+              </div>
+              ${
+                Object.keys(source.recent_failure_categories || {}).length
+                  ? `<p class="article-brief"><strong>failure_mix:</strong> ${escapeHtml(
+                      Object.entries(source.recent_failure_categories)
+                        .map(([key, value]) => `${key}=${value}`)
+                        .join(", ")
+                    )}</p>`
+                  : ""
+              }
+            </article>
+          `
+        )
+        .join("")
+    : '<p class="muted">当前没有处于冷却、静默或维护中的来源。</p>';
+}
+
+function renderOperationsAlerts(sourceAlerts) {
+  refs.operationsAlerts.innerHTML = sourceAlerts.length
+    ? sourceAlerts
+        .map(
+          (item) => `
+            <article class="publication-card operations-card">
+              <header class="publication-head">
+                <strong>${escapeHtml(item.source_name || item.source_id || "unknown source")}</strong>
+                <span class="chip ${sourceAlertStatusClass(item.alert_status)}">${escapeHtml(sourceAlertStatusLabel(item.alert_status))}</span>
+              </header>
+              <div class="publication-meta">
+                <span>${escapeHtml(item.created_at || "")}</span>
+                ${item.severity ? `<span>${escapeHtml(item.severity)}</span>` : ""}
+              </div>
+              <p class="article-brief">${escapeHtml(item.title || "source alert")}</p>
+            </article>
+          `
+        )
+        .join("")
+    : '<p class="muted">最近没有来源级告警。</p>';
+}
+
+function renderOperationsPublicationFailures(failures, pending) {
+  const cards = [];
+  if (failures.length) {
+    cards.push(
+      ...failures.map(
+        (item) => `
+          <article class="publication-card operations-card">
+            <header class="publication-head">
+              <strong>${escapeHtml(publicationTargetLabel(item.target))}</strong>
+              <span class="chip warn">error</span>
+            </header>
+            <div class="publication-meta">
+              <span>digest #${escapeHtml(String(item.digest_id || ""))}</span>
+              <span>${escapeHtml(item.updated_at || item.created_at || "")}</span>
+            </div>
+            <p class="article-brief">${escapeHtml(item.message || "publication failed")}</p>
+          </article>
+        `
+      )
+    );
+  }
+  if (pending.length) {
+    cards.push(
+      ...pending.map(
+        (item) => `
+          <article class="publication-card operations-card">
+            <header class="publication-head">
+              <strong>${escapeHtml(publicationTargetLabel(item.target))}</strong>
+              <span class="chip pending">pending</span>
+            </header>
+            <div class="publication-meta">
+              <span>digest #${escapeHtml(String(item.digest_id || ""))}</span>
+              <span>${escapeHtml(item.updated_at || item.created_at || "")}</span>
+            </div>
+            <p class="article-brief">${escapeHtml(item.message || "publication pending")}</p>
+          </article>
+        `
+      )
+    );
+  }
+  refs.operationsPublicationFailures.innerHTML = cards.length
+    ? cards.join("")
+    : '<p class="muted">最近没有发布失败或待完成记录。</p>';
+}
+
+function renderOperations(payload) {
+  renderOperationsSummary(payload);
+  renderOperationsHealth(payload);
+  renderOperationsPipelineRuns(payload.pipeline_runs || []);
+  renderOperationsSources(payload.source_runtime || []);
+  renderOperationsAlerts(payload.source_alerts || []);
+  renderOperationsPublicationFailures(
+    payload.publication_failures || [],
+    payload.pending_publications || []
+  );
 }
 
 function renderSources(sources) {
@@ -603,6 +855,13 @@ async function loadStats() {
   renderStats(stats);
 }
 
+async function loadOperations() {
+  const payload = await fetchJson("/admin/operations", {
+    headers: adminHeaders(),
+  });
+  renderOperations(payload);
+}
+
 async function loadSources() {
   const payload = await fetchJson("/admin/sources", { headers: adminHeaders() });
   renderSources(payload.sources || []);
@@ -717,6 +976,7 @@ async function refreshPublications() {
 async function refreshAll() {
   try {
     await Promise.all([
+      loadOperations(),
       loadStats(),
       loadSources(),
       loadArticles(),

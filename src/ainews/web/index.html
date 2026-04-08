@@ -35,6 +35,62 @@
 
       <section class="stats-grid" id="statsGrid"></section>
 
+      <section class="panel operations-panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Operations</p>
+            <h2>运维总览</h2>
+          </div>
+        </div>
+        <p class="muted">
+          把 `/health`、最近 pipeline、冷却来源、来源告警和发布失败收成一屏。细节操作仍保留在下方来源与抽取面板里。
+        </p>
+        <div id="operationsSummary" class="operations-summary-grid"></div>
+        <div class="operations-grid">
+          <article class="operations-slab">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Health</p>
+                <h3>系统状态</h3>
+              </div>
+            </div>
+            <div id="operationsHealth"></div>
+            <div id="operationsMetrics" class="chip-row"></div>
+          </article>
+
+          <article class="operations-slab">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Pipeline</p>
+                <h3>最近运行</h3>
+              </div>
+            </div>
+            <div id="operationsPipelineRuns" class="publication-list compact-list"></div>
+          </article>
+
+          <article class="operations-slab">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Runtime</p>
+                <h3>热点来源</h3>
+              </div>
+            </div>
+            <div id="operationsSources" class="publication-list compact-list"></div>
+          </article>
+
+          <article class="operations-slab">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Incidents</p>
+                <h3>告警与发布失败</h3>
+              </div>
+            </div>
+            <div id="operationsAlerts" class="publication-list compact-list"></div>
+            <div id="operationsPublicationFailures" class="publication-list compact-list"></div>
+          </article>
+        </div>
+      </section>
+
       <section class="controls-grid">
         <article class="panel">
           <div class="section-head">

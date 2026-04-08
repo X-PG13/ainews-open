@@ -210,6 +210,65 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("publish", payload["operations"])
         self.assertEqual(payload["operations"]["publish"]["status"], "ok")
 
+    def test_admin_operations_includes_runtime_summary_sections(self) -> None:
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.upsert_source_state(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            cooldown_status="blocked",
+            cooldown_until="2999-01-01T00:00:00+00:00",
+            consecutive_failures=2,
+            last_error_category="blocked",
+            last_http_status=403,
+            last_error="blocked",
+            last_error_at=utc_now().isoformat(),
+        )
+        repository.record_source_event(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            event_type="extract",
+            status="blocked",
+            error_category="blocked",
+            http_status=403,
+            message="blocked extraction",
+        )
+        repository.record_source_alert(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            alert_key="source_cooldown:openai-news",
+            alert_status="sent",
+            severity="warning",
+            title="source cooldown active: OpenAI News",
+            message="OpenAI News entered blocked cooldown",
+            fingerprint="blocked|2999-01-01T00:00:00+00:00|2|403",
+            targets=[{"target": "telegram", "status": "ok"}],
+        )
+        repository.save_publication(
+            digest_id=1,
+            target="wechat",
+            status="error",
+            external_id="PUBLISH123",
+            message="publish failed",
+            response_payload={"status_query_error": {"message": "publish failed"}},
+        )
+
+        response = self.client.get(
+            "/admin/operations",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("health", payload)
+        self.assertIn("metrics", payload)
+        self.assertIn("source_runtime", payload)
+        self.assertIn("source_alerts", payload)
+        self.assertIn("publication_failures", payload)
+        self.assertEqual(payload["health"]["status"], "degraded")
+        self.assertEqual(payload["source_runtime"][0]["id"], "openai-news")
+        self.assertEqual(payload["source_alerts"][0]["source_id"], "openai-news")
+        self.assertEqual(payload["publication_failures"][0]["status"], "error")
+
     def test_admin_extract_sanitizes_internal_error_message(self) -> None:
         with patch(
             "ainews.api.NewsService.extract_articles",

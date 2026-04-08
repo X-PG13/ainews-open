@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections import Counter
+from collections import Counter, deque
 from dataclasses import dataclass
 from threading import Lock
-from typing import Dict, Optional
+from typing import Deque, Dict, Optional
 
 from .utils import utc_now
 
@@ -20,11 +20,12 @@ class OperationToken:
 
 
 class OperationTracker:
-    def __init__(self) -> None:
+    def __init__(self, *, history_limit: int = 50) -> None:
         self._lock = Lock()
         self._operations: Dict[str, Dict[str, object]] = {}
         self._failure_categories: Counter[str] = Counter()
         self._operation_totals: Dict[str, Counter[str]] = {}
+        self._history: Deque[Dict[str, object]] = deque(maxlen=max(10, history_limit))
 
     def start(self, name: str, *, context: Optional[Dict[str, object]] = None) -> OperationToken:
         return OperationToken(
@@ -60,6 +61,7 @@ class OperationTracker:
 
         with self._lock:
             self._operations[token.name] = record
+            self._history.append(dict(record))
             if error_category:
                 self._failure_categories[error_category] += 1
             totals = self._operation_totals.setdefault(token.name, Counter())
@@ -74,4 +76,5 @@ class OperationTracker:
                 "operation_totals": {
                     name: dict(counter) for name, counter in self._operation_totals.items()
                 },
+                "recent_operations": [dict(item) for item in reversed(self._history)],
             }
