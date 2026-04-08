@@ -1,0 +1,29 @@
+groups:
+  - name: ainews-open
+    rules:
+      - alert: AINewsSourceCooldownsActive
+        expr: ainews_source_cooldowns_active > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI News Open has active source cooldowns
+          description: One or more sources have remained in cooldown for at least 15 minutes.
+
+      - alert: AINewsPipelineErrors
+        expr: increase(ainews_pipeline_runs_total{status=~"partial_error|error"}[30m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: AI News Open pipeline reported errors
+          description: A pipeline run finished with partial_error or error in the last 30 minutes.
+
+      - alert: AINewsBlockedExtractionSpike
+        expr: increase(ainews_extract_failures_total{category="blocked"}[30m]) >= 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI News Open is seeing blocked extraction failures
+          description: Blocked extraction failures spiked in the last 30 minutes.

@@ -82,7 +82,7 @@ make coverage
 make smoke
 ```
 
-## v1.0 Readiness Docs
+## Operator Docs
 
 - [Compatibility Contract](docs/compatibility.md)
 - [Configuration Matrix](docs/configuration.md)
@@ -191,6 +191,12 @@ If you prefer to run it in containers:
 docker compose up --build
 ```
 
+If you want Prometheus and Grafana alongside the API:
+
+```bash
+docker compose --profile monitoring up --build
+```
+
 If your local `pip` is recent enough and you want editable installs:
 
 ```bash
@@ -207,6 +213,7 @@ This repository already includes the expected open-source project baseline:
 - Automation: CI, tag-based release workflow, CodeQL, Dependabot
 - Packaging and runtime: non-root Docker runtime, `HEALTHCHECK`, `compose.yaml`, `.dockerignore`, `.editorconfig`
 - Supply chain: release checksums, CycloneDX SBOM, build provenance, PyPI trusted publishing workflow
+- Observability: Prometheus-compatible `/metrics`, source runtime history, housekeeping workflow, and ready-to-run monitoring profile
 - Demo assets: sample site content, GitHub Pages workflow, sample digest markdown and JSON output
 
 Before publishing the repository, still confirm two things:

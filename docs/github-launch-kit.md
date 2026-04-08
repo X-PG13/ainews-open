@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.0.0`
+`v1.1.0`
 
 ### Suggested Title
 
-`AI News Open v1.0.0 · First Stable Release`
+`AI News Open v1.1.0 · Operations And Monitoring Update`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.0.0
+## AI News Open v1.1.0
 
-AI News Open reaches `v1.0.0` with a stable workflow for turning domestic and international AI news into a publishable Chinese daily digest.
+AI News Open `v1.1.0` expands the stable workflow with source runtime controls, alerting, Google News resolution, and direct Prometheus/Grafana monitoring assets.
 
 ### What it does
 
@@ -40,10 +40,10 @@ AI News Open reaches `v1.0.0` with a stable workflow for turning domestic and in
 
 ### Highlights in this release
 
-- Stable `v1.x` contract for config, CLI, API, export payloads, and SQLite upgrade path
-- Publication idempotency for `digest + target`, with explicit `force_republish` bypass
-- Export payload `schema_version` and repository `schema_version` metadata
-- Operator docs for local runs, Docker, `systemd`, GitHub Actions, and common failure cases
+- Source cooldown, maintenance mode, acknowledgement, snooze, and automatic recovery lifecycle
+- Google News wrapper resolution before ingest, with historical backfill and stronger deduplication
+- Runtime alerting for degraded health, publication failures, pipeline errors, and source cooldown transitions
+- Prometheus `/metrics`, housekeeping workflow, and Docker Compose monitoring profile with Prometheus and Grafana assets
 
 ### Quick start
 
@@ -54,7 +54,7 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install .
 cp .env.example .env
 python -m ainews run-pipeline --since-hours 48 --limit 30 --max-items 30 --use-llm --export
-python -m ainews serve --port 8000
+docker compose --profile monitoring up --build
 ```
 
 Open the dashboard at `http://127.0.0.1:8000/`.
@@ -62,6 +62,7 @@ Open the dashboard at `http://127.0.0.1:8000/`.
 ### Release Notes
 
 - Private vulnerability reports are routed through GitHub Security Advisories
+- Grafana defaults to `admin / admin` in the local monitoring profile and should be changed before remote exposure
 - Repeat publishing for the same stored digest and target is skipped by default
 - Use `--force-republish` only when you intentionally want another outbound publish attempt
 - Configure your own LLM, Telegram, Feishu, or WeChat credentials in `.env`

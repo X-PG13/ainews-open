@@ -2,7 +2,7 @@
 
 [English](./monitoring.md) · [简体中文](./monitoring.zh-CN.md)
 
-AI News Open 现在提供 Prometheus 兼容的 `/metrics` 端点，以及一个定时执行的 housekeeping 工作流，用于裁剪旧的来源运行态历史。
+AI News Open 现在提供 Prometheus 兼容的 `/metrics` 端点、可直接运行的 Docker Compose monitoring profile，以及一个定时执行的 housekeeping 工作流，用于裁剪旧的来源运行态历史。
 
 ## Metrics 端点
 
@@ -35,6 +35,28 @@ scrape_configs:
 ```
 
 如果 AI News Open 在反向代理后面，请把 `targets` 改成你的真实对外 API 地址。
+
+## 可直接运行的 Docker Compose 监控栈
+
+仓库已经带了这几份监控资产：
+
+- `deploy/prometheus/prometheus.yml`
+- `deploy/prometheus/rules.yml`
+- `deploy/grafana/ainews-dashboard.json`
+
+直接启动 API、Prometheus 和 Grafana：
+
+```bash
+docker compose --profile monitoring up --build
+```
+
+默认本地地址：
+
+- AI News Open API：`http://127.0.0.1:8000`
+- Prometheus：`http://127.0.0.1:9090`
+- Grafana：`http://127.0.0.1:3000`
+
+Grafana 在本地 compose profile 下默认账号密码是 `admin / admin`。如果你要对外暴露，先改掉这组默认值。
 
 ## 推荐 Grafana 面板
 

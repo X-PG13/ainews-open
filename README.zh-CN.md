@@ -82,7 +82,7 @@ make coverage
 make smoke
 ```
 
-## v1.0 就绪文档
+## 运维与交付文档
 
 - [兼容性约定](docs/compatibility.md)
 - [配置矩阵](docs/configuration.zh-CN.md)
@@ -191,6 +191,12 @@ uvicorn ainews.api:create_app --factory --host 0.0.0.0 --port 8000
 docker compose up --build
 ```
 
+如果你想把 Prometheus 和 Grafana 一起跑起来：
+
+```bash
+docker compose --profile monitoring up --build
+```
+
 如果你准备二次开发，且本地 `pip` 足够新，可以改用 editable 安装：
 
 ```bash
@@ -207,6 +213,7 @@ python -m pip install -e ".[dev]"
 - 自动化：CI、tag release workflow、CodeQL、Dependabot
 - 打包与运行：非 root Docker 运行、`HEALTHCHECK`、`compose.yaml`、`.dockerignore`、`.editorconfig`
 - 供应链：release checksums、CycloneDX SBOM、build provenance、PyPI trusted publishing workflow
+- 可观测性：Prometheus `/metrics`、来源运行态历史、housekeeping 工作流、可直接运行的 monitoring profile
 - Demo：示例站内容、GitHub Pages 工作流、样例 digest/JSON 输出
 
 发布仓库前你还应该确认两件事：

@@ -2,7 +2,7 @@
 
 [English](./monitoring.md) · [简体中文](./monitoring.zh-CN.md)
 
-AI News Open exposes a Prometheus-compatible `/metrics` endpoint and a scheduled housekeeping workflow for pruning old source runtime history.
+AI News Open exposes a Prometheus-compatible `/metrics` endpoint, a ready-to-run Docker Compose monitoring profile, and a scheduled housekeeping workflow for pruning old source runtime history.
 
 ## Metrics Endpoint
 
@@ -35,6 +35,28 @@ scrape_configs:
 ```
 
 If AI News Open is behind a reverse proxy, scrape the published API address instead.
+
+## Ready-To-Run Docker Compose Monitoring
+
+The repository ships monitoring assets under `deploy/`:
+
+- `deploy/prometheus/prometheus.yml`
+- `deploy/prometheus/rules.yml`
+- `deploy/grafana/ainews-dashboard.json`
+
+Start the API, Prometheus, and Grafana together:
+
+```bash
+docker compose --profile monitoring up --build
+```
+
+Default local URLs:
+
+- AI News Open API: `http://127.0.0.1:8000`
+- Prometheus: `http://127.0.0.1:9090`
+- Grafana: `http://127.0.0.1:3000`
+
+Grafana defaults to `admin / admin` in the local compose profile. Change those values before exposing the stack beyond a local machine.
 
 ## Suggested Grafana Panels
 

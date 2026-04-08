@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping lint build sbom check serve test coverage smoke
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping monitoring-up monitoring-down lint build sbom check serve test coverage smoke
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -28,6 +28,12 @@ refresh-publications:
 
 housekeeping:
 	$(PYTHON) -m ainews prune-source-runtime-history --retention-days 45
+
+monitoring-up:
+	docker compose --profile monitoring up --build -d
+
+monitoring-down:
+	docker compose --profile monitoring down
 
 lint:
 	$(PYTHON) -m ruff check src tests

@@ -2,6 +2,32 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.1.0] - 2026-04-08
+
+### Added
+
+- Source runtime protections with cooldown state, maintenance mode, alert acknowledgement, snooze controls, and recovery lifecycle automation
+- Source operations coverage across API, dashboard, and CLI, including runtime history pruning and cooldown reset commands
+- Google News wrapper resolution at ingest time, historical backfill support, and end-to-end coverage for wrapper-to-article extraction flow
+- Prometheus-compatible `/metrics` endpoint, monitoring docs, and Docker Compose monitoring profile with Prometheus and Grafana assets
+- Scheduled housekeeping workflow for pruning archived source runtime history
+- Expanded regression fixtures for Chinese, international, and noise-heavy media pages including TechCrunch, VentureBeat, Reuters, Wired, Google AI Blog, and Google News wrapper samples
+
+### Changed
+
+- Package version is now `1.1.0`
+- Smoke workflow now runs on `push` to `main` and on all pull requests so it can be used as a required branch check
+- Source extraction retries now classify `throttled`, `blocked`, `temporary_error`, and `permanent_error` states with explicit retry metadata
+- `/health`, stats, and runtime views now surface source cooldown and recovery state instead of treating all extraction failures as generic degradation
+- Alert delivery now covers degraded health, publication failures, pipeline errors, and source cooldown transitions with deduplication and recovery notices
+
+### Fixed
+
+- Stopped Google News wrapper URLs from polluting deduplication and downstream publication links by resolving canonical targets before ingest
+- Prevented repeated extraction pressure on blocked or throttled sources by honoring source cooldowns, maintenance state, and retry windows
+- Sanitized API and service error payloads so internal exception details are not exposed to clients
+- Reduced false-positive extraction failures by improving source-specific cleanup for blog-style and noisy article layouts
+
 ## [1.0.0] - 2026-04-07
 
 ### Added
