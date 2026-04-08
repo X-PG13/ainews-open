@@ -8,7 +8,7 @@ from typing import Any, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -128,6 +128,23 @@ def _request_id_from_state(request: Request) -> str:
     return str(getattr(request.state, "request_id", "") or "")
 
 
+def _error_response(status_code: int, detail: str, headers: Optional[dict[str, str]] = None) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": detail},
+        headers=headers,
+    )
+
+
+def _sanitize_http_exception(exc: HTTPException) -> JSONResponse:
+    detail = SANITIZED_ERROR_MESSAGE
+    if exc.status_code == 404:
+        detail = NOT_FOUND_MESSAGE
+    elif 400 <= exc.status_code < 500:
+        detail = BAD_REQUEST_MESSAGE
+    return _error_response(exc.status_code, detail, headers=exc.headers)
+
+
 def _run_service_action(
     request: Request,
     action_name: str,
@@ -136,8 +153,17 @@ def _run_service_action(
     request_id = _request_id_from_state(request)
     try:
         return _sanitize_service_payload(runner())
-    except HTTPException:
-        raise
+    except HTTPException as exc:
+        logger.warning(
+            "service action returned an http error",
+            extra={
+                "event": "api.action_http_error",
+                "action": action_name,
+                "request_id": request_id,
+                "status_code": exc.status_code,
+            },
+        )
+        return _sanitize_http_exception(exc)
     except LookupError:
         logger.warning(
             "requested resource was not found",
@@ -147,7 +173,7 @@ def _run_service_action(
                 "request_id": request_id,
             },
         )
-        raise HTTPException(status_code=404, detail=NOT_FOUND_MESSAGE)
+        return _error_response(404, NOT_FOUND_MESSAGE)
     except ValueError:
         logger.warning(
             "request could not be processed",
@@ -157,7 +183,7 @@ def _run_service_action(
                 "request_id": request_id,
             },
         )
-        raise HTTPException(status_code=400, detail=BAD_REQUEST_MESSAGE)
+        return _error_response(400, BAD_REQUEST_MESSAGE)
     except Exception:
         logger.exception(
             "service action failed",
@@ -167,7 +193,7 @@ def _run_service_action(
                 "request_id": request_id,
             },
         )
-        raise HTTPException(status_code=500, detail=SANITIZED_ERROR_MESSAGE)
+        return _error_response(500, SANITIZED_ERROR_MESSAGE)
 
 
 def create_app() -> FastAPI:
@@ -238,49 +264,79 @@ def create_app() -> FastAPI:
         if settings.admin_token and x_admin_token != settings.admin_token:
             raise HTTPException(status_code=401, detail="invalid admin token")
 
+    def curate_article_payload(article_id: int, payload: ArticleCurationRequest) -> dict[str, Any]:
+        article = service.curate_article(
+            article_id,
+            is_hidden=payload.is_hidden,
+            is_pinned=payload.is_pinned,
+            editorial_note=payload.editorial_note,
+        )
+        if article is None:
+            raise LookupError("article not found")
+        return {"article": article}
+
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(web_dir / "index.html")
 
     @app.get("/health")
-    def health() -> dict:
-        payload = service.get_health()
-        payload["version"] = __version__
-        return payload
+    def health(request: Request) -> dict:
+        return _run_service_action(
+            request,
+            "health",
+            lambda: {
+                **service.get_health(),
+                "version": __version__,
+            },
+        )
 
     @app.get("/sources")
-    def list_sources() -> dict:
-        return {"sources": service.list_sources()}
+    def list_sources(request: Request) -> dict:
+        return _run_service_action(
+            request,
+            "list_sources",
+            lambda: {"sources": service.list_sources()},
+        )
 
     @app.post("/ingest")
     def ingest(
+        request: Request,
         source_id: Optional[List[str]] = Query(default=None),
         max_items_per_source: Optional[int] = Query(default=None, ge=1, le=200),
         _: None = Depends(require_admin),
     ) -> dict:
-        return service.ingest(
-            source_ids=source_id,
-            max_items_per_source=max_items_per_source,
+        return _run_service_action(
+            request,
+            "ingest",
+            lambda: service.ingest(
+                source_ids=source_id,
+                max_items_per_source=max_items_per_source,
+            ),
         )
 
     @app.get("/articles")
     def list_articles(
+        request: Request,
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
         since_hours: int = Query(default=settings.default_lookback_hours, ge=1, le=720),
         limit: int = Query(default=50, ge=1, le=200),
     ) -> dict:
-        return {
-            "articles": service.list_articles(
-                region=region,
-                language=language,
-                source_id=source_id,
-                since_hours=since_hours,
-                limit=limit,
-                include_hidden=False,
-            )
-        }
+        return _run_service_action(
+            request,
+            "list_articles",
+            lambda: {
+                "articles": service.list_articles(
+                    region=region,
+                    language=language,
+                    source_id=source_id,
+                    since_hours=since_hours,
+                    limit=limit,
+                    include_hidden=False,
+                )
+            },
+        )
 
     @app.get("/digest/daily")
     def digest_daily(
@@ -320,6 +376,7 @@ def create_app() -> FastAPI:
 
     @app.get("/admin/articles")
     def admin_articles(
+        request: Request,
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
@@ -328,16 +385,20 @@ def create_app() -> FastAPI:
         include_hidden: bool = Query(default=True),
         _: None = Depends(require_admin),
     ) -> dict:
-        return {
-            "articles": service.list_articles(
-                region=region,
-                language=language,
-                source_id=source_id,
-                since_hours=since_hours,
-                limit=limit,
-                include_hidden=include_hidden,
-            )
-        }
+        return _run_service_action(
+            request,
+            "admin_articles",
+            lambda: {
+                "articles": service.list_articles(
+                    region=region,
+                    language=language,
+                    source_id=source_id,
+                    since_hours=since_hours,
+                    limit=limit,
+                    include_hidden=include_hidden,
+                )
+            },
+        )
 
     @app.post("/admin/ingest")
     def admin_ingest(
@@ -457,28 +518,38 @@ def create_app() -> FastAPI:
 
     @app.get("/admin/digests")
     def admin_digests(
+        request: Request,
         region: str = Query(default="all"),
         limit: int = Query(default=20, ge=1, le=100),
         _: None = Depends(require_admin),
     ) -> dict:
-        return {"digests": service.list_digests(region=region, limit=limit)}
+        return _run_service_action(
+            request,
+            "admin_digests",
+            lambda: {"digests": service.list_digests(region=region, limit=limit)},
+        )
 
     @app.get("/admin/publications")
     def admin_publications(
+        request: Request,
         digest_id: Optional[int] = Query(default=None, ge=1),
         target: Optional[str] = Query(default=None),
         status: Optional[str] = Query(default=None),
         limit: int = Query(default=20, ge=1, le=100),
         _: None = Depends(require_admin),
     ) -> dict:
-        return {
-            "publications": service.list_publications(
-                digest_id=digest_id,
-                target=target,
-                status=status,
-                limit=limit,
-            )
-        }
+        return _run_service_action(
+            request,
+            "admin_publications",
+            lambda: {
+                "publications": service.list_publications(
+                    digest_id=digest_id,
+                    target=target,
+                    status=status,
+                    limit=limit,
+                )
+            },
+        )
 
     @app.post("/admin/publications/refresh")
     def admin_refresh_publications(
@@ -501,17 +572,14 @@ def create_app() -> FastAPI:
     @app.patch("/admin/articles/{article_id}")
     def admin_curate_article(
         article_id: int,
-        request: ArticleCurationRequest,
+        payload: ArticleCurationRequest,
+        request: Request,
         _: None = Depends(require_admin),
     ) -> dict:
-        article = service.curate_article(
-            article_id,
-            is_hidden=request.is_hidden,
-            is_pinned=request.is_pinned,
-            editorial_note=request.editorial_note,
+        return _run_service_action(
+            request,
+            "admin_curate_article",
+            lambda: curate_article_payload(article_id, payload),
         )
-        if article is None:
-            raise HTTPException(status_code=404, detail="article not found")
-        return {"article": article}
 
     return app
