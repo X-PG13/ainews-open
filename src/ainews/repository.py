@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from .models import ArticleEnrichment, ArticleRecord, DailyDigest
-from .utils import utc_now
+from .utils import canonicalize_url, clean_text, utc_now
 
 ARTICLE_EXTRA_COLUMNS = {
     "extracted_text": "TEXT NOT NULL DEFAULT ''",
@@ -522,6 +522,77 @@ class ArticleRepository:
             ).fetchall()
         return [self._row_to_article_dict(row) for row in rows]
 
+    def list_google_news_articles(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        article_ids: Optional[Iterable[int]] = None,
+        since_hours: Optional[int] = None,
+        limit: int = 50,
+    ) -> List[dict]:
+        clauses = ["(url LIKE ? OR canonical_url LIKE ?)"]
+        params: List[object] = ["https://news.google.com/%", "https://news.google.com/%"]
+
+        source_list = list(source_ids or [])
+        if source_list:
+            placeholders = ",".join("?" for _ in source_list)
+            clauses.append(f"source_id IN ({placeholders})")
+            params.extend(source_list)
+
+        article_list = list(article_ids or [])
+        if article_list:
+            placeholders = ",".join("?" for _ in article_list)
+            clauses.append(f"id IN ({placeholders})")
+            params.extend(article_list)
+
+        if since_hours:
+            clauses.append("published_at >= ?")
+            params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
+
+        params.append(limit)
+        where_sql = "WHERE " + " AND ".join(clauses)
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    id,
+                    source_id,
+                    source_name,
+                    title,
+                    url,
+                    canonical_url,
+                    summary,
+                    published_at,
+                    discovered_at,
+                    language,
+                    region,
+                    country,
+                    topic,
+                    extracted_text,
+                    extraction_status,
+                    extraction_error,
+                    extraction_updated_at,
+                    llm_title_zh,
+                    llm_summary_zh,
+                    llm_brief_zh,
+                    llm_status,
+                    llm_provider,
+                    llm_model,
+                    llm_error,
+                    llm_updated_at,
+                    is_hidden,
+                    is_pinned,
+                    editorial_note
+                FROM articles
+                {where_sql}
+                ORDER BY published_at DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_article_dict(row) for row in rows]
+
     def save_article_extraction(
         self,
         article_id: int,
@@ -596,6 +667,297 @@ class ArticleRepository:
                     ),
                 )
         return self.get_article(article_id)
+
+    def resolve_article_urls(
+        self,
+        article_id: int,
+        *,
+        url: str,
+        canonical_url: str,
+    ) -> Dict[str, object]:
+        normalized_url = clean_text(url)
+        normalized_canonical = canonicalize_url(canonical_url or normalized_url)
+        target_id = article_id
+        action = "updated"
+        merged_from_article_id = None
+
+        with self._connect() as connection:
+            source_row = connection.execute(
+                "SELECT * FROM articles WHERE id = ? LIMIT 1",
+                (article_id,),
+            ).fetchone()
+            if source_row is None:
+                return {"action": "missing", "article": None}
+
+            conflict_row = connection.execute(
+                """
+                SELECT *
+                FROM articles
+                WHERE canonical_url = ? AND id != ?
+                LIMIT 1
+                """,
+                (
+                    normalized_canonical,
+                    article_id,
+                ),
+            ).fetchone()
+
+            if conflict_row is None:
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET
+                        url = ?,
+                        canonical_url = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        normalized_url,
+                        normalized_canonical,
+                        article_id,
+                    ),
+                )
+            else:
+                target_id = int(conflict_row["id"])
+                merged_from_article_id = article_id
+                action = "merged"
+                merged_payload = self._merge_article_rows(
+                    dict(conflict_row),
+                    dict(source_row),
+                    resolved_url=normalized_url,
+                    resolved_canonical_url=normalized_canonical,
+                )
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET
+                        url = ?,
+                        canonical_url = ?,
+                        summary = ?,
+                        discovered_at = ?,
+                        extracted_text = ?,
+                        extraction_status = ?,
+                        extraction_error = ?,
+                        extraction_updated_at = ?,
+                        llm_title_zh = ?,
+                        llm_summary_zh = ?,
+                        llm_brief_zh = ?,
+                        llm_status = ?,
+                        llm_provider = ?,
+                        llm_model = ?,
+                        llm_error = ?,
+                        llm_updated_at = ?,
+                        is_hidden = ?,
+                        is_pinned = ?,
+                        editorial_note = ?,
+                        raw_payload = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        merged_payload["url"],
+                        merged_payload["canonical_url"],
+                        merged_payload["summary"],
+                        merged_payload["discovered_at"],
+                        merged_payload["extracted_text"],
+                        merged_payload["extraction_status"],
+                        merged_payload["extraction_error"],
+                        merged_payload["extraction_updated_at"],
+                        merged_payload["llm_title_zh"],
+                        merged_payload["llm_summary_zh"],
+                        merged_payload["llm_brief_zh"],
+                        merged_payload["llm_status"],
+                        merged_payload["llm_provider"],
+                        merged_payload["llm_model"],
+                        merged_payload["llm_error"],
+                        merged_payload["llm_updated_at"],
+                        merged_payload["is_hidden"],
+                        merged_payload["is_pinned"],
+                        merged_payload["editorial_note"],
+                        json.dumps(merged_payload["raw_payload"], ensure_ascii=False),
+                        target_id,
+                    ),
+                )
+                connection.execute("DELETE FROM articles WHERE id = ?", (article_id,))
+
+        return {
+            "action": action,
+            "article": self.get_article(target_id),
+            "merged_into_article_id": target_id if action == "merged" else None,
+            "merged_from_article_id": merged_from_article_id,
+        }
+
+    @staticmethod
+    def _merge_article_rows(
+        target: Dict[str, object],
+        source: Dict[str, object],
+        *,
+        resolved_url: str,
+        resolved_canonical_url: str,
+    ) -> Dict[str, object]:
+        extracted_text = ArticleRepository._prefer_longer_text(
+            str(target.get("extracted_text") or ""),
+            str(source.get("extracted_text") or ""),
+        )
+        extraction_status = "ready" if extracted_text else ArticleRepository._best_status(
+            str(target.get("extraction_status") or "pending"),
+            str(source.get("extraction_status") or "pending"),
+        )
+        llm_title_zh = ArticleRepository._prefer_longer_text(
+            str(target.get("llm_title_zh") or ""),
+            str(source.get("llm_title_zh") or ""),
+        )
+        llm_summary_zh = ArticleRepository._prefer_longer_text(
+            str(target.get("llm_summary_zh") or ""),
+            str(source.get("llm_summary_zh") or ""),
+        )
+        llm_brief_zh = ArticleRepository._prefer_longer_text(
+            str(target.get("llm_brief_zh") or ""),
+            str(source.get("llm_brief_zh") or ""),
+        )
+        llm_status = (
+            "ready"
+            if any([llm_title_zh, llm_summary_zh, llm_brief_zh])
+            else ArticleRepository._best_status(
+                str(target.get("llm_status") or "pending"),
+                str(source.get("llm_status") or "pending"),
+            )
+        )
+        preferred_llm_row = target
+        if llm_status == "ready":
+            target_llm_score = sum(
+                len(str(target.get(key) or ""))
+                for key in ("llm_title_zh", "llm_summary_zh", "llm_brief_zh")
+            )
+            source_llm_score = sum(
+                len(str(source.get(key) or ""))
+                for key in ("llm_title_zh", "llm_summary_zh", "llm_brief_zh")
+            )
+            if source_llm_score > target_llm_score:
+                preferred_llm_row = source
+        elif ArticleRepository._status_rank(
+            str(source.get("llm_status") or "pending")
+        ) > ArticleRepository._status_rank(str(target.get("llm_status") or "pending")):
+            preferred_llm_row = source
+
+        merged_raw_payload = ArticleRepository._merge_raw_payloads(
+            str(target.get("raw_payload") or "{}"),
+            str(source.get("raw_payload") or "{}"),
+            resolved_url=resolved_url,
+            original_url=str(source.get("url") or ""),
+        )
+
+        return {
+            "url": resolved_url,
+            "canonical_url": resolved_canonical_url,
+            "summary": ArticleRepository._prefer_longer_text(
+                str(target.get("summary") or ""),
+                str(source.get("summary") or ""),
+            ),
+            "discovered_at": ArticleRepository._min_text(
+                str(target.get("discovered_at") or ""),
+                str(source.get("discovered_at") or ""),
+            ),
+            "extracted_text": extracted_text,
+            "extraction_status": extraction_status,
+            "extraction_error": ""
+            if extraction_status == "ready"
+            else ArticleRepository._prefer_longer_text(
+                str(target.get("extraction_error") or ""),
+                str(source.get("extraction_error") or ""),
+            ),
+            "extraction_updated_at": ArticleRepository._max_text(
+                str(target.get("extraction_updated_at") or ""),
+                str(source.get("extraction_updated_at") or ""),
+            ),
+            "llm_title_zh": llm_title_zh,
+            "llm_summary_zh": llm_summary_zh,
+            "llm_brief_zh": llm_brief_zh,
+            "llm_status": llm_status,
+            "llm_provider": str(preferred_llm_row.get("llm_provider") or ""),
+            "llm_model": str(preferred_llm_row.get("llm_model") or ""),
+            "llm_error": ""
+            if llm_status == "ready"
+            else ArticleRepository._prefer_longer_text(
+                str(target.get("llm_error") or ""),
+                str(source.get("llm_error") or ""),
+            ),
+            "llm_updated_at": ArticleRepository._max_text(
+                str(target.get("llm_updated_at") or ""),
+                str(source.get("llm_updated_at") or ""),
+            ),
+            "is_hidden": 1
+            if bool(target.get("is_hidden")) and bool(source.get("is_hidden"))
+            else 0,
+            "is_pinned": 1
+            if bool(target.get("is_pinned")) or bool(source.get("is_pinned"))
+            else 0,
+            "editorial_note": ArticleRepository._merge_editorial_notes(
+                str(target.get("editorial_note") or ""),
+                str(source.get("editorial_note") or ""),
+            ),
+            "raw_payload": merged_raw_payload,
+        }
+
+    @staticmethod
+    def _status_rank(value: str) -> int:
+        return {"pending": 0, "skipped": 1, "error": 2, "ready": 3}.get(value, 0)
+
+    @staticmethod
+    def _best_status(left: str, right: str) -> str:
+        return left if ArticleRepository._status_rank(left) >= ArticleRepository._status_rank(right) else right
+
+    @staticmethod
+    def _prefer_longer_text(left: str, right: str) -> str:
+        return right if len(clean_text(right)) > len(clean_text(left)) else left
+
+    @staticmethod
+    def _min_text(left: str, right: str) -> str:
+        values = [item for item in (left, right) if item]
+        return min(values) if values else ""
+
+    @staticmethod
+    def _max_text(left: str, right: str) -> str:
+        values = [item for item in (left, right) if item]
+        return max(values) if values else ""
+
+    @staticmethod
+    def _merge_editorial_notes(left: str, right: str) -> str:
+        left_clean = left.strip()
+        right_clean = right.strip()
+        if not left_clean:
+            return right_clean
+        if not right_clean or left_clean == right_clean:
+            return left_clean
+        return f"{left_clean}\n\n{right_clean}"
+
+    @staticmethod
+    def _merge_raw_payloads(
+        target_payload: str,
+        source_payload: str,
+        *,
+        resolved_url: str,
+        original_url: str,
+    ) -> Dict[str, object]:
+        try:
+            merged = json.loads(target_payload or "{}")
+        except json.JSONDecodeError:
+            merged = {}
+        if not isinstance(merged, dict):
+            merged = {}
+        try:
+            incoming = json.loads(source_payload or "{}")
+        except json.JSONDecodeError:
+            incoming = {}
+        if not isinstance(incoming, dict):
+            incoming = {}
+        for key, value in incoming.items():
+            merged.setdefault(key, value)
+        if original_url and original_url != resolved_url:
+            merged.setdefault("original_link", incoming.get("original_link") or original_url)
+            merged["resolved_link"] = resolved_url
+            merged["link_resolution"] = "google_news"
+        merged["link"] = resolved_url
+        return merged
 
     def mark_article_extraction_error(
         self,

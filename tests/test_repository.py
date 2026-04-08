@@ -232,6 +232,70 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(updated["url"], "https://techcrunch.com/2026/04/07/arcee/")
             self.assertEqual(updated["canonical_url"], "https://news.google.com/rss/articles/demo?oc=5")
 
+    def test_repository_resolve_article_urls_merges_conflicting_google_news_duplicate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+            direct = ArticleRecord(
+                source_id="direct",
+                source_name="Direct Source",
+                title="Direct article",
+                url="https://techcrunch.com/2026/04/07/arcee/",
+                canonical_url="https://techcrunch.com/2026/04/07/arcee",
+                summary="Short direct summary",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Direct article", "Short direct summary"),
+                dedup_key=make_dedup_key("Direct article"),
+                raw_payload={"link": "https://techcrunch.com/2026/04/07/arcee/"},
+            )
+            wrapped = ArticleRecord(
+                source_id="google-news",
+                source_name="Google News",
+                title="Wrapped article",
+                url="https://news.google.com/rss/articles/demo?oc=5",
+                canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                summary="Longer wrapped summary with more detail",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Wrapped article", "Longer wrapped summary with more detail"),
+                dedup_key=make_dedup_key("Wrapped article"),
+                raw_payload={"link": "https://news.google.com/rss/articles/demo?oc=5"},
+            )
+            repository.insert_if_new(direct)
+            repository.insert_if_new(wrapped)
+            wrapped_row = next(
+                row
+                for row in repository.list_articles(limit=10, include_hidden=True)
+                if row["source_id"] == "google-news"
+            )
+            repository.save_article_extraction(
+                int(wrapped_row["id"]),
+                extracted_text="Wrapped article extraction body survives the merge.",
+            )
+
+            merged = repository.resolve_article_urls(
+                int(wrapped_row["id"]),
+                url="https://techcrunch.com/2026/04/07/arcee/",
+                canonical_url="https://techcrunch.com/2026/04/07/arcee/",
+            )
+
+            self.assertEqual(merged["action"], "merged")
+            self.assertEqual(repository.count_articles(), 1)
+            stored = repository.list_articles(limit=10, include_hidden=True)[0]
+            self.assertEqual(stored["url"], "https://techcrunch.com/2026/04/07/arcee/")
+            self.assertEqual(stored["canonical_url"], "https://techcrunch.com/2026/04/07/arcee")
+            self.assertEqual(stored["summary"], "Longer wrapped summary with more detail")
+            self.assertIn("survives the merge", stored["extracted_text"])
+
     def test_repository_migrates_legacy_schema_and_sets_version(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir) / "ainews.db"

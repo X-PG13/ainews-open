@@ -79,6 +79,32 @@ class CliTestCase(unittest.TestCase):
             reload=False,
         )
 
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_resolve_google_news_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.resolve_google_news_urls.return_value = {"status": "ok", "updated": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(["resolve-google-news", "--since-hours", "72", "--limit", "10"])
+
+        self.assertEqual(exit_code, 0)
+        service.resolve_google_news_urls.assert_called_once_with(
+            source_ids=None,
+            article_ids=None,
+            since_hours=72,
+            limit=10,
+        )
+        self.assertIn('"updated": 1', stdout.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

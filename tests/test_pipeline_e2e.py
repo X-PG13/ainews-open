@@ -53,6 +53,14 @@ class StubLLMClient:
         )
 
 
+class StubGoogleNewsResolver:
+    def __init__(self, mapping):
+        self.mapping = dict(mapping)
+
+    def resolve(self, url):
+        return self.mapping[url]
+
+
 class PipelineE2ETestCase(unittest.TestCase):
     def test_pipeline_runs_from_feed_fixture_to_static_publish(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -127,6 +135,86 @@ class PipelineE2ETestCase(unittest.TestCase):
             self.assertEqual(result["digest"]["generation_mode"], "llm")
             self.assertEqual(result["publish"]["published"], 1)
             self.assertTrue(result["publish"]["publication_records"])
+
+    def test_pipeline_resolves_google_news_wrapper_before_extract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                output_dir=Path(temp_dir) / "output",
+                static_site_dir=Path(temp_dir) / "site",
+                llm_base_url="https://example.com/v1",
+                llm_api_key="token",
+                llm_model="stub-model",
+            )
+            settings.output_dir.mkdir(parents=True, exist_ok=True)
+            settings.static_site_dir.mkdir(parents=True, exist_ok=True)
+
+            source = SourceDefinition(
+                id="google-news-global-ai",
+                name="Google News Global AI",
+                url="https://example.com/feed/google-news-openai.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="news",
+            )
+            repository = ArticleRepository(settings.database_path)
+            extractor = ArticleContentExtractor(
+                timeout=10,
+                user_agent="test-agent",
+                text_limit=5000,
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=FixtureRegistry([source]),
+                llm_client=StubLLMClient(),
+                content_extractor=extractor,
+                google_news_resolver=StubGoogleNewsResolver(
+                    {
+                        "https://news.google.com/rss/articles/demo-openai?oc=5": "https://example.com/news/openai-enterprise?utm_source=google-news",
+                    }
+                ),
+            )
+
+            feed_xml = (
+                FIXTURE_ROOT / "feed" / "google-news-openai.xml"
+            ).read_text(encoding="utf-8")
+            article_html = (
+                FIXTURE_ROOT / "extraction" / "openai-article.html"
+            ).read_text(encoding="utf-8")
+
+            def fake_service_fetch(url, **kwargs):
+                if url == source.url:
+                    return feed_xml
+                raise AssertionError(f"unexpected service fetch url: {url}")
+
+            def fake_extractor_fetch(url, **kwargs):
+                if url.startswith("https://example.com/news/openai-enterprise"):
+                    return article_html
+                raise AssertionError(f"unexpected extractor fetch url: {url}")
+
+            with patch("ainews.service.fetch_text", side_effect=fake_service_fetch), patch(
+                "ainews.content_extractor.fetch_text", side_effect=fake_extractor_fetch
+            ):
+                result = service.run_pipeline(
+                    region="all",
+                    since_hours=72,
+                    limit=5,
+                    use_llm=True,
+                    persist=True,
+                    export=True,
+                    publish=False,
+                )
+
+            article = repository.list_articles(limit=10, include_hidden=True)[0]
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["ingest"]["resolved_total"], 1)
+            self.assertEqual(article["url"], "https://example.com/news/openai-enterprise?utm_source=google-news")
+            self.assertEqual(article["canonical_url"], "https://example.com/news/openai-enterprise")
+            self.assertEqual(result["extract"]["updated"], 1)
+            self.assertEqual(result["enrich"]["updated"], 1)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ainews.config import Settings
 from ainews.content_extractor import ExtractedContent, ExtractionSkippedError
@@ -86,6 +87,18 @@ class AggregateSkipExtractor:
         raise ExtractionSkippedError(
             "skipped aggregated Google News shell page; direct article URL required"
         )
+
+
+class StubGoogleNewsResolver:
+    def __init__(self, mapping):
+        self.mapping = dict(mapping)
+        self.calls = []
+
+    def resolve(self, url):
+        self.calls.append(url)
+        if url not in self.mapping:
+            raise RuntimeError(f"missing mapping for {url}")
+        return self.mapping[url]
 
 
 class ResolvedUrlExtractor:
@@ -912,6 +925,141 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(result["updated"], 1)
             self.assertEqual(article["url"], "https://techcrunch.com/2026/04/07/arcee/")
             self.assertEqual(article["canonical_url"], "https://techcrunch.com/2026/04/07/arcee/")
+
+    def test_ingest_resolves_google_news_urls_before_insert_and_dedupes(self) -> None:
+        feed_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Google News AI</title>
+    <item>
+      <title>OpenAI launches a new reasoning model</title>
+      <link>https://news.google.com/rss/articles/demo-one?oc=5</link>
+      <description><![CDATA[<p>First summary.</p>]]></description>
+      <pubDate>Tue, 08 Apr 2026 08:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Why OpenAI's new reasoning model matters</title>
+      <link>https://news.google.com/rss/articles/demo-two?oc=5</link>
+      <description><![CDATA[<p>Second summary.</p>]]></description>
+      <pubDate>Tue, 08 Apr 2026 08:05:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+"""
+        resolver = StubGoogleNewsResolver(
+            {
+                "https://news.google.com/rss/articles/demo-one?oc=5": "https://openai.com/index/new-model/",
+                "https://news.google.com/rss/articles/demo-two?oc=5": "https://openai.com/index/new-model/",
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            source = SourceDefinition(
+                id="google-news-global-ai",
+                name="Google News Global AI",
+                url="https://example.com/feed/google-news.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="news",
+            )
+            service = NewsService(
+                settings,
+                repository=ArticleRepository(settings.database_path),
+                source_registry=StubRegistry([source]),
+                google_news_resolver=resolver,
+            )
+
+            with patch("ainews.service.fetch_text", return_value=feed_xml):
+                result = service.ingest(source_ids=[source.id], max_items_per_source=10)
+
+            articles = service.list_articles(limit=10)
+            self.assertEqual(result["inserted_total"], 1)
+            self.assertEqual(result["resolved_total"], 2)
+            self.assertEqual(result["resolution_errors"], 0)
+            self.assertEqual(articles[0]["url"], "https://openai.com/index/new-model/")
+            self.assertEqual(articles[0]["canonical_url"], "https://openai.com/index/new-model")
+
+    def test_resolve_google_news_urls_merges_existing_direct_article(self) -> None:
+        resolver = StubGoogleNewsResolver(
+            {
+                "https://news.google.com/rss/articles/demo?oc=5": "https://openai.com/index/new-model/",
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="direct",
+                    source_name="OpenAI News",
+                    title="OpenAI model story",
+                    url="https://openai.com/index/new-model/",
+                    canonical_url="https://openai.com/index/new-model",
+                    summary="Short direct summary",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("OpenAI model story", "Short direct summary"),
+                    dedup_key=make_dedup_key("OpenAI model story"),
+                    raw_payload={"link": "https://openai.com/index/new-model/"},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="google-news",
+                    source_name="Google News",
+                    title="OpenAI model story",
+                    url="https://news.google.com/rss/articles/demo?oc=5",
+                    canonical_url="https://news.google.com/rss/articles/demo?oc=5",
+                    summary="Longer wrapper summary with more context",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="news",
+                    content_hash=make_content_hash("OpenAI model story wrapper", "Longer wrapper summary with more context"),
+                    dedup_key=make_dedup_key("OpenAI model story wrapper"),
+                    raw_payload={"link": "https://news.google.com/rss/articles/demo?oc=5"},
+                )
+            )
+            wrapped_article = next(
+                article
+                for article in repository.list_google_news_articles(limit=10)
+                if article["source_id"] == "google-news"
+            )
+            repository.save_article_extraction(
+                int(wrapped_article["id"]),
+                extracted_text="A long extracted body from the wrapped article that should survive merge.",
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                google_news_resolver=resolver,
+            )
+
+            result = service.resolve_google_news_urls(limit=10)
+
+            self.assertEqual(result["updated"], 0)
+            self.assertEqual(result["merged"], 1)
+            self.assertEqual(repository.count_articles(), 1)
+            article = repository.list_articles(limit=10, include_hidden=True)[0]
+            self.assertEqual(article["url"], "https://openai.com/index/new-model/")
+            self.assertIn("wrapped article", article["extracted_text"])
 
     def test_enrich_articles_masks_internal_error_details(self) -> None:
         class FailingLLMClient(StubLLMClient):

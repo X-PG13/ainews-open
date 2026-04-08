@@ -74,6 +74,15 @@ def _build_parser() -> argparse.ArgumentParser:
     extract_parser.add_argument("--limit", type=int, default=20)
     extract_parser.add_argument("--force", action="store_true")
 
+    resolve_google_news_parser = subparsers.add_parser(
+        "resolve-google-news",
+        help="Resolve stored Google News wrapper URLs to direct article URLs",
+    )
+    resolve_google_news_parser.add_argument("--source", action="append", dest="sources")
+    resolve_google_news_parser.add_argument("--article-id", action="append", dest="article_ids", type=int)
+    resolve_google_news_parser.add_argument("--since-hours", type=int, default=None)
+    resolve_google_news_parser.add_argument("--limit", type=int, default=50)
+
     digests_parser = subparsers.add_parser("list-digests", help="Print stored digests")
     digests_parser.add_argument(
         "--region", default="all", choices=["all", "domestic", "international"]
@@ -197,6 +206,17 @@ def main(argv: list[str] | None = None) -> int:
                 since_hours=args.since_hours,
                 limit=args.limit,
                 force=args.force,
+            )
+        )
+        return 0
+
+    if args.command == "resolve-google-news":
+        _json_dump(
+            service.resolve_google_news_urls(
+                source_ids=args.sources,
+                article_ids=args.article_ids,
+                since_hours=args.since_hours,
+                limit=args.limit,
             )
         )
         return 0

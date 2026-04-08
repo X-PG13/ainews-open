@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from dataclasses import replace
 from typing import List, Optional
 
 from .models import ArticleRecord, SourceDefinition
@@ -69,6 +70,30 @@ def _build_article(source: SourceDefinition, item: ET.Element) -> Optional[Artic
             "link": link,
             "summary": summary,
         },
+    )
+
+
+def replace_article_url(
+    article: ArticleRecord,
+    *,
+    url: str,
+    canonical_url: Optional[str] = None,
+    original_url: Optional[str] = None,
+    resolution: str = "",
+) -> ArticleRecord:
+    resolved_url = url.strip()
+    payload = dict(article.raw_payload)
+    if original_url and original_url.strip() and original_url.strip() != resolved_url:
+        payload.setdefault("original_link", original_url.strip())
+        payload["resolved_link"] = resolved_url
+        if resolution:
+            payload["link_resolution"] = resolution
+    payload["link"] = resolved_url
+    return replace(
+        article,
+        url=resolved_url,
+        canonical_url=canonicalize_url(canonical_url or resolved_url),
+        raw_payload=payload,
     )
 
 

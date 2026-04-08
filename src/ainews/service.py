@@ -7,7 +7,8 @@ from typing import Dict, Iterable, List, Optional
 
 from .config import Settings, load_settings
 from .content_extractor import ArticleContentExtractor, ExtractionSkippedError
-from .feed_parser import parse_feed_document
+from .feed_parser import parse_feed_document, replace_article_url
+from .google_news import GoogleNewsResolutionError, GoogleNewsURLResolver, is_google_news_url
 from .http import fetch_text
 from .llm import LLMClient, OpenAICompatibleLLMClient
 from .models import ArticleRecord, DailyDigest
@@ -32,16 +33,30 @@ class NewsService:
         llm_client: Optional[LLMClient] = None,
         content_extractor: Optional[ArticleContentExtractor] = None,
         publisher: Optional[DigestPublisher] = None,
+        google_news_resolver: Optional[GoogleNewsURLResolver] = None,
     ):
         self.settings = settings or load_settings()
         self.repository = repository or ArticleRepository(self.settings.database_path)
         self.source_registry = source_registry or SourceRegistry(self.settings.sources_file)
         self.llm_client = llm_client or OpenAICompatibleLLMClient(self.settings)
-        self.content_extractor = content_extractor or ArticleContentExtractor(
-            timeout=self.settings.request_timeout,
-            user_agent=self.settings.user_agent,
-            text_limit=self.settings.extraction_text_limit,
-        )
+        resolver = google_news_resolver or getattr(content_extractor, "google_news_resolver", None)
+        if resolver is None:
+            resolver = GoogleNewsURLResolver(
+                timeout=self.settings.request_timeout,
+                user_agent=self.settings.user_agent,
+            )
+        if content_extractor is None:
+            self.content_extractor = ArticleContentExtractor(
+                timeout=self.settings.request_timeout,
+                user_agent=self.settings.user_agent,
+                text_limit=self.settings.extraction_text_limit,
+                google_news_resolver=resolver,
+            )
+        else:
+            self.content_extractor = content_extractor
+            if hasattr(self.content_extractor, "google_news_resolver"):
+                setattr(self.content_extractor, "google_news_resolver", resolver)
+        self.google_news_resolver = resolver
         self.publisher = publisher or DigestPublisher(self.settings)
         self.telemetry = OperationTracker()
 
@@ -141,7 +156,10 @@ class NewsService:
         results = []
         inserted_total = 0
         fetched_total = 0
+        resolved_total = 0
+        resolution_errors = 0
         failure_categories: Counter[str] = Counter()
+        resolution_cache: Dict[str, Optional[str]] = {}
 
         for source in self.source_registry.list_sources(source_ids=source_ids):
             status = {
@@ -150,6 +168,8 @@ class NewsService:
                 "fetched": 0,
                 "inserted": 0,
                 "skipped": 0,
+                "resolved_urls": 0,
+                "resolution_errors": 0,
                 "status": "ok",
             }
             try:
@@ -166,8 +186,34 @@ class NewsService:
                     source.exclude_keywords,
                     articles,
                 )
+                normalized_articles = []
+                for article in filtered_articles:
+                    try:
+                        normalized_article, resolution_state = self._resolve_ingested_article(
+                            article,
+                            cache=resolution_cache,
+                        )
+                    except Exception:
+                        normalized_article = article
+                        resolution_state = "error"
+                        logger.exception(
+                            "google news url resolution failed during ingest",
+                            extra={
+                                "event": "ingest.google_news_resolution_error",
+                                "source_id": source.id,
+                                "article_title": article.title,
+                            },
+                        )
+                    if resolution_state == "resolved":
+                        status["resolved_urls"] += 1
+                    elif resolution_state == "error":
+                        status["resolution_errors"] += 1
+                    normalized_articles.append(normalized_article)
+                filtered_articles = normalized_articles
                 status["fetched"] = len(filtered_articles)
                 fetched_total += len(filtered_articles)
+                resolved_total += int(status["resolved_urls"])
+                resolution_errors += int(status["resolution_errors"])
 
                 for article in filtered_articles:
                     if self.repository.insert_if_new(article):
@@ -197,6 +243,8 @@ class NewsService:
             "sources": results,
             "fetched_total": fetched_total,
             "inserted_total": inserted_total,
+            "resolved_total": resolved_total,
+            "resolution_errors": resolution_errors,
             "stored_total": self.repository.count_articles(),
             "failure_categories": dict(failure_categories),
         }
@@ -207,6 +255,8 @@ class NewsService:
                 "requested": len(results),
                 "fetched_total": fetched_total,
                 "inserted_total": inserted_total,
+                "resolved_total": resolved_total,
+                "resolution_errors": resolution_errors,
                 "stored_total": payload["stored_total"],
             },
             error_category=self._top_failure_category(failure_categories),
@@ -219,6 +269,120 @@ class NewsService:
                 "operation_id": operation.operation_id,
                 "requested": len(results),
                 "stored_total": payload["stored_total"],
+                "duration_ms": operation_record["duration_ms"],
+            },
+        )
+        return payload
+
+    def resolve_google_news_urls(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        article_ids: Optional[Iterable[int]] = None,
+        since_hours: Optional[int] = None,
+        limit: int = 50,
+    ) -> Dict[str, object]:
+        operation = self.telemetry.start(
+            "resolve_google_news",
+            context={
+                "source_ids": list(source_ids or []),
+                "article_ids": list(article_ids or []),
+                "since_hours": since_hours,
+                "limit": limit,
+            },
+        )
+        candidates = self.repository.list_google_news_articles(
+            source_ids=source_ids,
+            article_ids=article_ids,
+            since_hours=since_hours,
+            limit=limit,
+        )
+        results = []
+        updated = 0
+        merged = 0
+        errors = 0
+        failure_categories: Counter[str] = Counter()
+        cache: Dict[str, Optional[str]] = {}
+
+        for article in candidates:
+            original_url = clean_text(str(article.get("url", "")))
+            try:
+                resolved_url = self._resolve_google_news_url(original_url, cache=cache)
+                if not resolved_url:
+                    raise GoogleNewsResolutionError("Google News URL could not be resolved")
+                repository_result = self.repository.resolve_article_urls(
+                    int(article["id"]),
+                    url=resolved_url,
+                    canonical_url=resolved_url,
+                )
+                action = str(repository_result.get("action", "updated"))
+                if action == "merged":
+                    merged += 1
+                else:
+                    updated += 1
+                results.append(
+                    {
+                        "article_id": article["id"],
+                        "status": action,
+                        "title": article["title"],
+                        "original_url": original_url,
+                        "resolved_url": resolved_url,
+                        "merged_into_article_id": repository_result.get("merged_into_article_id"),
+                    }
+                )
+            except Exception as exc:
+                category = self._classify_error(exc)
+                logger.exception(
+                    "google news url resolution failed",
+                    extra={
+                        "event": "resolve_google_news.article_error",
+                        "article_id": int(article["id"]),
+                        "error_category": category,
+                    },
+                )
+                results.append(
+                    {
+                        "article_id": article["id"],
+                        "status": "error",
+                        "title": article["title"],
+                        "original_url": original_url,
+                        "error": self._public_error_message(exc),
+                        "error_category": category,
+                    }
+                )
+                errors += 1
+                failure_categories[category] += 1
+
+        payload = {
+            "status": "partial_error" if errors else "ok",
+            "requested": len(candidates),
+            "updated": updated,
+            "merged": merged,
+            "errors": errors,
+            "articles": results,
+            "failure_categories": dict(failure_categories),
+        }
+        operation_record = self.telemetry.finish(
+            operation,
+            status=str(payload["status"]),
+            metrics={
+                "requested": len(candidates),
+                "updated": updated,
+                "merged": merged,
+                "errors": errors,
+            },
+            error_category=self._top_failure_category(failure_categories),
+        )
+        payload["operation"] = operation_record
+        logger.info(
+            "completed google news url resolution",
+            extra={
+                "event": "resolve_google_news.finish",
+                "operation_id": operation.operation_id,
+                "requested": len(candidates),
+                "updated": updated,
+                "merged": merged,
+                "errors": errors,
                 "duration_ms": operation_record["duration_ms"],
             },
         )
@@ -1166,6 +1330,51 @@ class NewsService:
                 else None,
             )
         return updated
+
+    def _resolve_ingested_article(
+        self,
+        article: ArticleRecord,
+        *,
+        cache: Dict[str, Optional[str]],
+    ) -> tuple[ArticleRecord, str]:
+        original_url = clean_text(article.url)
+        if not is_google_news_url(original_url):
+            return article, "unchanged"
+        resolved_url = self._resolve_google_news_url(original_url, cache=cache)
+        if not resolved_url or resolved_url == original_url:
+            return article, "error"
+        return (
+            replace_article_url(
+                article,
+                url=resolved_url,
+                canonical_url=resolved_url,
+                original_url=original_url,
+                resolution="google_news",
+            ),
+            "resolved",
+        )
+
+    def _resolve_google_news_url(
+        self,
+        url: str,
+        *,
+        cache: Optional[Dict[str, Optional[str]]] = None,
+    ) -> Optional[str]:
+        normalized_url = clean_text(url)
+        if not is_google_news_url(normalized_url):
+            return normalized_url
+        if cache is not None and normalized_url in cache:
+            return cache[normalized_url]
+        try:
+            resolved_url = self.google_news_resolver.resolve(normalized_url)
+        except Exception:
+            if cache is not None:
+                cache[normalized_url] = None
+            raise
+        resolved_url = clean_text(resolved_url)
+        if cache is not None:
+            cache[normalized_url] = resolved_url or None
+        return resolved_url or None
 
     @staticmethod
     def _present_article(article: Optional[dict]) -> Optional[dict]:
