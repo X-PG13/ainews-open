@@ -73,6 +73,37 @@ API 示例：
 
 把这段 JSON 以 `POST` 方式发到 `/admin/extract/retry`，并带上 `X-Admin-Token`。
 
+## 某个来源突然不再继续抽取，`/health` 里出现 `source_cooldowns_active`
+
+这表示来源级保护逻辑已经把某个发布源打入冷却，通常原因是连续出现了
+`429`、`403` 或 challenge/反爬页面。
+
+建议先看：
+
+- `python -m ainews list-sources --runtime`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/sources`
+- 重点看 `cooldown_status`、`cooldown_until`、`consecutive_failures`、`last_http_status`
+
+如果确认这个来源可以恢复，可以手动解除冷却：
+
+```bash
+python -m ainews reset-source-cooldowns --source venturebeat
+```
+
+或者解除全部活动冷却：
+
+```bash
+python -m ainews reset-source-cooldowns --all
+```
+
+API 示例：
+
+```json
+{"source_ids": ["venturebeat"], "active_only": false}
+```
+
+把这段 JSON 以 `POST` 方式发到 `/admin/sources/cooldowns/reset`，并带上 `X-Admin-Token`。
+
 ## LLM 日报没有生成
 
 先检查：

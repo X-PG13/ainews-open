@@ -256,6 +256,71 @@ class RepositoryTestCase(unittest.TestCase):
             )
             self.assertEqual(queued, [])
 
+    def test_repository_excludes_articles_from_active_source_cooldowns(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+            article = ArticleRecord(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                title="Cooldown article",
+                url="https://venturebeat.com/ai/cooldown",
+                canonical_url="https://venturebeat.com/ai/cooldown",
+                summary="Cooling down",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="news",
+                content_hash=make_content_hash("Cooldown article", "Cooling down"),
+                dedup_key=make_dedup_key("Cooldown article"),
+                raw_payload={},
+            )
+            repository.insert_if_new(article)
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error="blocked",
+                last_error_at=utc_now().isoformat(),
+            )
+
+            queued = repository.list_articles_for_extraction(limit=10, force=False)
+            source_states = repository.list_source_states(active_only=True, limit=10)
+
+            self.assertEqual(queued, [])
+            self.assertEqual(len(source_states), 1)
+            self.assertEqual(source_states[0]["source_id"], "venturebeat")
+            self.assertTrue(source_states[0]["cooldown_active"])
+
+    def test_repository_can_reset_source_cooldowns(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="throttled",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=3,
+                last_error_category="throttled",
+                last_http_status=429,
+                last_error="retry later",
+                last_error_at=utc_now().isoformat(),
+            )
+
+            cleared = repository.reset_source_cooldowns(source_ids=["venturebeat"], active_only=False)
+            state = repository.get_source_state("venturebeat")
+
+            self.assertEqual(len(cleared), 1)
+            self.assertEqual(state["cooldown_status"], "")
+            self.assertEqual(state["cooldown_until"], "")
+            self.assertEqual(state["consecutive_failures"], 0)
+
     def test_repository_updates_url_even_when_canonical_url_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")

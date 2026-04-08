@@ -211,6 +211,38 @@ curl -X POST http://127.0.0.1:8000/admin/extract/retry \
 3. 优先重试已到窗口的条目
 4. `blocked` 或 `permanent_error` 先人工判断站点行为，再决定是否手动重试
 
+## 来源级冷却策略
+
+正文抽取现在还带一层来源级保护。
+
+当同一个来源连续出现这些保护型失败时：
+
+- `429`
+- `403`
+- challenge / 反爬页面
+
+AI News Open 会把这个来源打入冷却窗口。冷却期间：
+
+- 默认抽取队列会跳过这个来源的文章
+- `/health` 会出现 `source_cooldowns_active`
+- `/admin/sources` 和控制台会展示受影响来源以及冷却截止时间
+
+手动解除冷却示例：
+
+```bash
+python -m ainews reset-source-cooldowns --source venturebeat
+```
+
+```bash
+python -m ainews reset-source-cooldowns --all
+```
+
+相关环境变量：
+
+- `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD`
+- `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
+- `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
+
 ## 升级前检查
 
 升级前建议先做：

@@ -145,6 +145,30 @@ class CliTestCase(unittest.TestCase):
         )
         self.assertIn('"requested": 1', stdout.getvalue())
 
+    @patch("ainews.cli.configure_logging")
+    @patch("ainews.cli.NewsService")
+    @patch("ainews.cli.load_settings")
+    def test_reset_source_cooldowns_command(
+        self,
+        mock_load_settings,
+        mock_service_class,
+        mock_configure_logging,
+    ) -> None:
+        mock_load_settings.return_value = MagicMock()
+        service = mock_service_class.return_value
+        service.reset_source_cooldowns.return_value = {"status": "ok", "cleared": 1}
+        stdout = io.StringIO()
+
+        with patch("sys.stdout", stdout):
+            exit_code = main(["reset-source-cooldowns", "--source", "venturebeat"])
+
+        self.assertEqual(exit_code, 0)
+        service.reset_source_cooldowns.assert_called_once_with(
+            source_ids=["venturebeat"],
+            active_only=True,
+        )
+        self.assertIn('"cleared": 1', stdout.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

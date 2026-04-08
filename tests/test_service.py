@@ -894,6 +894,147 @@ class ServiceFilterTestCase(unittest.TestCase):
             self.assertEqual(health["stats"]["blocked_extractions"], 1)
             self.assertEqual(stats["extraction_error_categories"]["blocked"], 1)
 
+    def test_consecutive_source_failures_trigger_runtime_cooldown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_cooldown_failure_threshold=2,
+                source_blocked_cooldown_minutes=720,
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            for index in range(2):
+                repository.insert_if_new(
+                    ArticleRecord(
+                        source_id="venturebeat",
+                        source_name="VentureBeat",
+                        title=f"Blocked source story {index}",
+                        url=f"https://venturebeat.com/ai/blocked-{index}",
+                        canonical_url=f"https://venturebeat.com/ai/blocked-{index}",
+                        summary="A release update",
+                        published_at=now,
+                        discovered_at=now,
+                        language="en",
+                        region="international",
+                        country="US",
+                        topic="news",
+                        content_hash=make_content_hash(
+                            f"Blocked source story {index}", "A release update"
+                        ),
+                        dedup_key=make_dedup_key(f"Blocked source story {index}"),
+                        raw_payload={},
+                    )
+                )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry(
+                    [
+                        SourceDefinition(
+                            id="venturebeat",
+                            name="VentureBeat",
+                            url="https://venturebeat.com/feed",
+                            region="international",
+                            language="en",
+                            country="US",
+                            topic="news",
+                        )
+                    ]
+                ),
+                llm_client=StubLLMClient(),
+                content_extractor=ForbiddenExtractor(),
+            )
+
+            result = service.extract_articles(limit=10)
+            state = repository.get_source_state("venturebeat")
+            health = service.get_health()
+            sources = service.list_sources(include_runtime=True)
+
+            self.assertEqual(result["errors"], 2)
+            self.assertEqual(state["consecutive_failures"], 2)
+            self.assertEqual(state["cooldown_status"], "blocked")
+            self.assertTrue(state["cooldown_until"])
+            self.assertEqual(health["stats"]["active_source_cooldowns"], 1)
+            self.assertIn("source_cooldowns_active", health["degraded_reasons"])
+            self.assertTrue(sources[0]["cooldown_active"])
+            self.assertEqual(sources[0]["cooldown_status"], "blocked")
+
+    def test_source_cooldown_skips_remaining_articles_in_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+                source_cooldown_failure_threshold=2,
+            )
+            repository = ArticleRepository(settings.database_path)
+            now = utc_now()
+            for index in range(3):
+                repository.insert_if_new(
+                    ArticleRecord(
+                        source_id="venturebeat",
+                        source_name="VentureBeat",
+                        title=f"Cooldown batch story {index}",
+                        url=f"https://venturebeat.com/ai/cooldown-{index}",
+                        canonical_url=f"https://venturebeat.com/ai/cooldown-{index}",
+                        summary="A release update",
+                        published_at=now,
+                        discovered_at=now,
+                        language="en",
+                        region="international",
+                        country="US",
+                        topic="news",
+                        content_hash=make_content_hash(
+                            f"Cooldown batch story {index}", "A release update"
+                        ),
+                        dedup_key=make_dedup_key(f"Cooldown batch story {index}"),
+                        raw_payload={},
+                    )
+                )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+                llm_client=StubLLMClient(),
+                content_extractor=ForbiddenExtractor(),
+            )
+
+            result = service.extract_articles(limit=10)
+
+            self.assertEqual(result["articles"][2]["status"], "skipped")
+            self.assertIn("cooldown", result["articles"][2]["message"])
+
+    def test_reset_source_cooldowns_clears_runtime_block(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            repository.upsert_source_state(
+                source_id="venturebeat",
+                source_name="VentureBeat",
+                cooldown_status="blocked",
+                cooldown_until="2999-01-01T00:00:00+00:00",
+                consecutive_failures=2,
+                last_error_category="blocked",
+                last_http_status=403,
+                last_error=PUBLIC_ERROR_MESSAGE,
+                last_error_at=utc_now().isoformat(),
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([]),
+            )
+
+            result = service.reset_source_cooldowns(source_ids=["venturebeat"], active_only=False)
+            state = repository.get_source_state("venturebeat")
+
+            self.assertEqual(result["cleared"], 1)
+            self.assertEqual(state["cooldown_status"], "")
+            self.assertEqual(state["cooldown_until"], "")
+
     def test_extract_articles_marks_short_body_as_permanent_error(self) -> None:
         class ShortBodyExtractor:
             def fetch_and_extract(self, url):

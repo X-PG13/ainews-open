@@ -224,6 +224,49 @@ class ApiTestCase(unittest.TestCase):
             limit=5,
         )
 
+    def test_admin_sources_includes_runtime_cooldown_state(self) -> None:
+        self._seed_article(title="Blocked article", url="https://example.com/blocked-source")
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        repository.upsert_source_state(
+            source_id="openai-news",
+            source_name="OpenAI News",
+            cooldown_status="blocked",
+            cooldown_until="2999-01-01T00:00:00+00:00",
+            consecutive_failures=2,
+            last_error_category="blocked",
+            last_http_status=403,
+            last_error="blocked",
+            last_error_at=utc_now().isoformat(),
+        )
+
+        response = self.client.get(
+            "/admin/sources",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        source = next(item for item in payload["sources"] if item["id"] == "openai-news")
+        self.assertEqual(source["cooldown_status"], "blocked")
+        self.assertTrue(source["cooldown_active"])
+
+    def test_admin_reset_source_cooldowns_passes_filters(self) -> None:
+        with patch(
+            "ainews.api.NewsService.reset_source_cooldowns",
+            return_value={"status": "ok", "cleared": 1, "sources": []},
+        ) as mock_reset:
+            response = self.client.post(
+                "/admin/sources/cooldowns/reset",
+                headers={"X-Admin-Token": "secret-token"},
+                json={"source_ids": ["venturebeat"], "active_only": False},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        mock_reset.assert_called_once_with(
+            source_ids=["venturebeat"],
+            active_only=False,
+        )
+
     def test_admin_refresh_publications_sanitizes_nested_error_message(self) -> None:
         with patch(
             "ainews.api.NewsService.refresh_publications",

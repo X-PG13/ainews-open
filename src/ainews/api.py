@@ -98,6 +98,11 @@ class ArticleCurationRequest(BaseModel):
     editorial_note: Optional[str] = Field(default=None, max_length=500)
 
 
+class ResetSourceCooldownRequest(BaseModel):
+    source_ids: Optional[List[str]] = None
+    active_only: bool = True
+
+
 logger = logging.getLogger("ainews.api")
 SANITIZED_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
 BAD_REQUEST_MESSAGE = "request could not be processed; inspect server logs with the response X-Request-ID"
@@ -392,6 +397,14 @@ def create_app() -> FastAPI:
             service.get_operations,
         )
 
+    @app.get("/admin/sources")
+    def admin_sources(request: Request, _: None = Depends(require_admin)) -> dict:
+        return _run_service_action(
+            request,
+            "admin_sources",
+            lambda: {"sources": service.list_sources(include_runtime=True)},
+        )
+
     @app.get("/admin/articles")
     def admin_articles(
         request: Request,
@@ -472,6 +485,21 @@ def create_app() -> FastAPI:
                 since_hours=payload.since_hours,
                 limit=payload.limit,
                 force=payload.force,
+            ),
+        )
+
+    @app.post("/admin/sources/cooldowns/reset")
+    def admin_reset_source_cooldowns(
+        payload: ResetSourceCooldownRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        return _run_service_action(
+            request,
+            "admin_reset_source_cooldowns",
+            lambda: service.reset_source_cooldowns(
+                source_ids=payload.source_ids,
+                active_only=payload.active_only,
             ),
         )
 

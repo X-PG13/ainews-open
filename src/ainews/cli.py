@@ -43,7 +43,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Cap the number of entries pulled per source",
     )
 
-    subparsers.add_parser("list-sources", help="Print all configured source definitions")
+    list_sources_parser = subparsers.add_parser(
+        "list-sources",
+        help="Print all configured source definitions",
+    )
+    list_sources_parser.add_argument(
+        "--runtime",
+        action="store_true",
+        help="Include runtime cooldown state for each source",
+    )
 
     digest_parser = subparsers.add_parser("print-digest", help="Print the latest digest as JSON")
     digest_parser.add_argument(
@@ -89,6 +97,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     retry_extract_parser.add_argument("--due-only", action="store_true")
     retry_extract_parser.add_argument("--limit", type=int, default=20)
+
+    reset_source_cooldowns_parser = subparsers.add_parser(
+        "reset-source-cooldowns",
+        help="Clear active source cooldowns so the extraction queue can resume",
+    )
+    reset_source_cooldowns_parser.add_argument("--source", action="append", dest="sources")
+    reset_source_cooldowns_parser.add_argument("--all", action="store_true")
 
     resolve_google_news_parser = subparsers.add_parser(
         "resolve-google-news",
@@ -187,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "list-sources":
-        _json_dump({"sources": service.list_sources()})
+        _json_dump({"sources": service.list_sources(include_runtime=args.runtime)})
         return 0
 
     if args.command == "print-digest":
@@ -236,6 +251,15 @@ def main(argv: list[str] | None = None) -> int:
                 extraction_error_category=args.extraction_error_category,
                 due_only=args.due_only,
                 limit=args.limit,
+            )
+        )
+        return 0
+
+    if args.command == "reset-source-cooldowns":
+        _json_dump(
+            service.reset_source_cooldowns(
+                source_ids=args.sources,
+                active_only=not args.all,
             )
         )
         return 0

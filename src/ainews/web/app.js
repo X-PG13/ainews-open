@@ -17,6 +17,8 @@ const refs = {
   jobOutput: document.getElementById("jobOutput"),
   statsGrid: document.getElementById("statsGrid"),
   sourcesList: document.getElementById("sourcesList"),
+  refreshSourcesButton: document.getElementById("refreshSourcesButton"),
+  resetSourceCooldownsButton: document.getElementById("resetSourceCooldownsButton"),
   digestView: document.getElementById("digestView"),
   digestArchive: document.getElementById("digestArchive"),
   articlesList: document.getElementById("articlesList"),
@@ -81,6 +83,7 @@ function renderStats(stats) {
     ["可见文章", stats.visible_articles || 0],
     ["已抓正文", stats.extracted_articles || 0],
     ["已翻译国际稿", stats.enriched_articles || 0],
+    ["来源冷却", stats.active_source_cooldowns || 0],
     ["已发布", stats.total_publications || 0],
     ["日报存档", stats.total_digests || 0],
     ["LLM", stats.llm_configured ? (stats.llm_model || "已配置") : "未配置"],
@@ -103,13 +106,57 @@ function renderSources(sources) {
     .map(
       (source) => `
       <article class="source-item">
-        <strong>${source.name}</strong>
+        <header class="publication-head">
+          <strong>${source.name}</strong>
+          <div class="chip-row compact">
+            ${
+              source.cooldown_active
+                ? `<span class="chip ${source.cooldown_status === "blocked" ? "warn" : "pending"}">${escapeHtml(source.cooldown_status || "cooldown")}</span>`
+                : '<span class="chip good">normal</span>'
+            }
+          </div>
+        </header>
         <div class="chip-row">
           <span class="chip">${source.region}</span>
           <span class="chip">${source.language}</span>
           <span class="chip">${source.topic}</span>
           <span class="chip ${source.enabled ? "good" : "warn"}">${source.enabled ? "enabled" : "disabled"}</span>
         </div>
+        <div class="publication-meta">
+          <span>streak: ${escapeHtml(String(source.consecutive_failures || 0))}</span>
+          ${
+            source.cooldown_until
+              ? `<span>cooldown_until: ${escapeHtml(source.cooldown_until)}</span>`
+              : "<span>cooldown_until: none</span>"
+          }
+          ${
+            source.last_error_category
+              ? `<span>last_error: ${escapeHtml(source.last_error_category)}</span>`
+              : ""
+          }
+          ${
+            source.last_http_status
+              ? `<span>http: ${escapeHtml(String(source.last_http_status))}</span>`
+              : ""
+          }
+        </div>
+        <div class="publication-meta">
+          ${
+            source.last_error_at
+              ? `<span>last_error_at: ${escapeHtml(source.last_error_at)}</span>`
+              : "<span>last_error_at: none</span>"
+          }
+          ${
+            source.last_success_at
+              ? `<span>last_success_at: ${escapeHtml(source.last_success_at)}</span>`
+              : "<span>last_success_at: none</span>"
+          }
+        </div>
+        ${
+          source.cooldown_active
+            ? `<div class="article-actions"><button class="button ghost" data-action="reset-source-cooldown" data-source-id="${escapeAttribute(source.id)}">解除冷却</button></div>`
+            : ""
+        }
       </article>
     `
     )
@@ -436,7 +483,7 @@ async function loadStats() {
 }
 
 async function loadSources() {
-  const payload = await fetchJson("/sources");
+  const payload = await fetchJson("/admin/sources", { headers: adminHeaders() });
   renderSources(payload.sources || []);
 }
 
@@ -512,6 +559,19 @@ async function refreshAll() {
   } catch (error) {
     logJob("refresh failed", { error: error.message });
   }
+}
+
+async function resetSourceCooldowns(sourceIds = null) {
+  const payload = await fetchJson("/admin/sources/cooldowns/reset", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      source_ids: sourceIds,
+      active_only: sourceIds ? false : true,
+    }),
+  });
+  logJob("reset source cooldowns", payload);
+  await refreshAll();
 }
 
 async function runIngest() {
@@ -659,6 +719,12 @@ refs.saveTokenButton.addEventListener("click", () => {
 });
 
 refs.refreshAllButton.addEventListener("click", refreshAll);
+refs.refreshSourcesButton.addEventListener("click", () =>
+  loadSources().catch((error) => logJob("load sources failed", { error: error.message }))
+);
+refs.resetSourceCooldownsButton.addEventListener("click", () =>
+  resetSourceCooldowns().catch((error) => logJob("reset source cooldowns failed", { error: error.message }))
+);
 refs.ingestButton.addEventListener("click", () => runIngest().catch((error) => logJob("ingest failed", { error: error.message })));
 refs.extractButton.addEventListener("click", () => runExtract().catch((error) => logJob("extract failed", { error: error.message })));
 refs.enrichButton.addEventListener("click", () => runEnrich().catch((error) => logJob("enrich failed", { error: error.message })));
@@ -719,6 +785,18 @@ refs.articlesList.addEventListener("click", async (event) => {
     }
   } catch (error) {
     logJob("article update failed", { error: error.message, articleId });
+  }
+});
+
+refs.sourcesList.addEventListener("click", async (event) => {
+  const button = event.target.closest('button[data-action="reset-source-cooldown"]');
+  if (!button) return;
+
+  const sourceId = button.dataset.sourceId;
+  try {
+    await resetSourceCooldowns(sourceId ? [sourceId] : null);
+  } catch (error) {
+    logJob("reset source cooldown failed", { error: error.message, sourceId });
   }
 });
 

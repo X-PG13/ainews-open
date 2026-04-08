@@ -27,6 +27,7 @@ from .utils import clean_text, format_local_date, matches_keywords, truncate_tex
 EXPORT_SCHEMA_VERSION = "1.0"
 PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
 logger = logging.getLogger("ainews.service")
+SOURCE_COOLDOWN_CATEGORIES = {"throttled", "blocked"}
 
 
 class NewsService:
@@ -66,8 +67,16 @@ class NewsService:
         self.publisher = publisher or DigestPublisher(self.settings)
         self.telemetry = OperationTracker()
 
-    def list_sources(self) -> List[dict]:
-        return [source.to_dict() for source in self.source_registry.list_sources()]
+    def list_sources(self, *, include_runtime: bool = False) -> List[dict]:
+        sources = self.source_registry.list_sources()
+        if not include_runtime:
+            return [source.to_dict() for source in sources]
+
+        source_states = {
+            str(item["source_id"]): item
+            for item in self.repository.list_source_states(limit=max(200, len(sources) * 2))
+        }
+        return [self._present_source(source.to_dict(), source_states.get(source.id)) for source in sources]
 
     def get_stats(self) -> Dict[str, object]:
         payload = self.repository.get_stats()
@@ -99,6 +108,8 @@ class NewsService:
             degraded_reasons.append("article_extraction_throttled")
         if stats["blocked_extractions"]:
             degraded_reasons.append("article_extraction_blocked")
+        if stats["active_source_cooldowns"]:
+            degraded_reasons.append("source_cooldowns_active")
         if stats["llm_errors"]:
             degraded_reasons.append("llm_enrichment_errors")
         if stats["publication_errors"]:
@@ -140,12 +151,16 @@ class NewsService:
                 "temporary_extraction_errors": stats["temporary_extraction_errors"],
                 "permanent_extraction_errors": stats["permanent_extraction_errors"],
                 "scheduled_extraction_retries": stats["scheduled_extraction_retries"],
+                "active_source_cooldowns": stats["active_source_cooldowns"],
+                "throttled_source_cooldowns": stats["throttled_source_cooldowns"],
+                "blocked_source_cooldowns": stats["blocked_source_cooldowns"],
                 "llm_errors": stats["llm_errors"],
                 "pending_publications": stats["pending_publications"],
                 "publication_errors": stats["publication_errors"],
             },
             "extraction_status_counts": stats["extraction_status_counts"],
             "extraction_error_categories": stats["extraction_error_categories"],
+            "source_cooldowns": stats["source_cooldowns"],
             "operations": telemetry["operations"],
             "failure_categories": telemetry["failure_categories"],
         }
@@ -597,11 +612,36 @@ class NewsService:
         skipped = 0
         errors = 0
         failure_categories: Counter[str] = Counter()
+        source_state_cache: Dict[str, Optional[dict]] = {}
 
         for article in candidates:
+            source_id = clean_text(str(article.get("source_id", "")))
+            source_name = clean_text(str(article.get("source_name", source_id)))
+            source_state = source_state_cache.get(source_id)
+            if source_state is None and source_id:
+                source_state = self.repository.get_source_state(source_id)
+                source_state_cache[source_id] = source_state
+            if self._source_cooldown_active(source_state):
+                results.append(
+                    {
+                        "article_id": article["id"],
+                        "status": "skipped",
+                        "title": article["title"],
+                        "message": self._source_cooldown_message(source_state),
+                        "source_id": source_id,
+                        "source_cooldown_until": str(source_state.get("cooldown_until", "")),
+                    }
+                )
+                skipped += 1
+                continue
             try:
                 extracted = self.content_extractor.fetch_and_extract(str(article["url"]))
                 self._store_extracted_article(article, extracted)
+                if source_id:
+                    source_state_cache[source_id] = self.repository.mark_source_success(
+                        source_id=source_id,
+                        source_name=source_name,
+                    )
                 results.append(
                     {
                         "article_id": article["id"],
@@ -629,6 +669,15 @@ class NewsService:
             except Exception as exc:
                 failure = self._classify_extraction_failure(exc, attempts=int(article.get("extraction_attempts") or 0))
                 public_error = self._public_error_message(exc)
+                source_state = None
+                if source_id:
+                    source_state = self._record_source_failure(
+                        source_id=source_id,
+                        source_name=source_name,
+                        failure=failure,
+                        error=public_error,
+                    )
+                    source_state_cache[source_id] = source_state
                 logger.exception(
                     "article extraction failed",
                     extra={
@@ -655,6 +704,7 @@ class NewsService:
                         "error_category": str(failure["error_category"]),
                         "http_status": int(failure["http_status"]),
                         "next_retry_at": str(failure["next_retry_at"]),
+                        "source_cooldown_until": str((source_state or {}).get("cooldown_until", "")),
                     }
                 )
                 errors += 1
@@ -722,6 +772,23 @@ class NewsService:
             "limit": limit,
         }
         return payload
+
+    def reset_source_cooldowns(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        active_only: bool = True,
+    ) -> Dict[str, object]:
+        cleared_sources = self.repository.reset_source_cooldowns(
+            source_ids=source_ids,
+            active_only=active_only,
+        )
+        return {
+            "status": "ok",
+            "cleared": len(cleared_sources),
+            "active_only": active_only,
+            "sources": cleared_sources,
+        }
 
     def curate_article(
         self,
@@ -1493,6 +1560,21 @@ class NewsService:
         return payload
 
     @staticmethod
+    def _present_source(source: dict, source_state: Optional[dict] = None) -> dict:
+        payload = dict(source)
+        runtime = dict(source_state or {})
+        cooldown_until = clean_text(str(runtime.get("cooldown_until", "")))
+        payload["cooldown_status"] = clean_text(str(runtime.get("cooldown_status", "")))
+        payload["cooldown_until"] = cooldown_until
+        payload["cooldown_active"] = bool(cooldown_until and cooldown_until > utc_now().isoformat())
+        payload["consecutive_failures"] = int(runtime.get("consecutive_failures") or 0)
+        payload["last_error_category"] = clean_text(str(runtime.get("last_error_category", "")))
+        payload["last_http_status"] = int(runtime.get("last_http_status") or 0)
+        payload["last_error_at"] = clean_text(str(runtime.get("last_error_at", "")))
+        payload["last_success_at"] = clean_text(str(runtime.get("last_success_at", "")))
+        return payload
+
+    @staticmethod
     def _publication_record_status(item: dict) -> str:
         target = clean_text(str(item.get("target", ""))).lower()
         status = clean_text(str(item.get("status", ""))) or "ok"
@@ -1539,6 +1621,61 @@ class NewsService:
         ):
             return True
         return publication.get("status") == "pending"
+
+    @staticmethod
+    def _source_cooldown_active(source_state: Optional[dict]) -> bool:
+        if not isinstance(source_state, dict):
+            return False
+        cooldown_until = clean_text(str(source_state.get("cooldown_until", "")))
+        return bool(cooldown_until and cooldown_until > utc_now().isoformat())
+
+    @staticmethod
+    def _source_cooldown_message(source_state: Optional[dict]) -> str:
+        if not isinstance(source_state, dict):
+            return "source cooldown is active"
+        status = clean_text(str(source_state.get("cooldown_status", ""))) or "cooldown"
+        until = clean_text(str(source_state.get("cooldown_until", "")))
+        if until:
+            return f"source {status} cooldown active until {until}"
+        return f"source {status} cooldown is active"
+
+    def _record_source_failure(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+        failure: Dict[str, object],
+        error: str,
+    ) -> Optional[dict]:
+        category = clean_text(str(failure.get("error_category", "")))
+        http_status = int(failure.get("http_status") or 0)
+        previous = self.repository.get_source_state(source_id) or {}
+        if category in SOURCE_COOLDOWN_CATEGORIES:
+            consecutive_failures = int(previous.get("consecutive_failures") or 0) + 1
+            cooldown_until = ""
+            cooldown_status = ""
+            if consecutive_failures >= self.settings.source_cooldown_failure_threshold:
+                cooldown_until = self._next_source_cooldown_at(
+                    category,
+                    consecutive_failures=consecutive_failures,
+                )
+                cooldown_status = category
+        else:
+            consecutive_failures = 0
+            cooldown_until = ""
+            cooldown_status = ""
+
+        return self.repository.upsert_source_state(
+            source_id=source_id,
+            source_name=source_name,
+            cooldown_status=cooldown_status,
+            cooldown_until=cooldown_until,
+            consecutive_failures=consecutive_failures,
+            last_error_category=category,
+            last_http_status=http_status,
+            last_error=error,
+            last_error_at=utc_now().isoformat(),
+        )
 
     @classmethod
     def _classify_error(cls, exc: Exception) -> str:
@@ -1599,6 +1736,21 @@ class NewsService:
             delay_minutes = min(12 * 60, 15 * (2 ** min(attempts, 4)))
             return (utc_now() + timedelta(minutes=delay_minutes)).isoformat()
         return ""
+
+    def _next_source_cooldown_at(self, category: str, *, consecutive_failures: int) -> str:
+        threshold = max(1, int(self.settings.source_cooldown_failure_threshold))
+        escalation = max(0, consecutive_failures - threshold)
+        if category == "blocked":
+            delay_minutes = min(
+                72 * 60,
+                int(self.settings.source_blocked_cooldown_minutes) * (2 ** min(escalation, 3)),
+            )
+            return (utc_now() + timedelta(minutes=delay_minutes)).isoformat()
+        delay_minutes = min(
+            24 * 60,
+            int(self.settings.source_throttle_cooldown_minutes) * (2 ** min(escalation, 3)),
+        )
+        return (utc_now() + timedelta(minutes=delay_minutes)).isoformat()
 
     @staticmethod
     def _classify_error_message(message: str) -> str:

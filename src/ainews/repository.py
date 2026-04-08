@@ -35,7 +35,7 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 
 class ArticleRepository:
@@ -120,6 +120,20 @@ class ArticleRepository:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL DEFAULT ''
                 );
+
+                CREATE TABLE IF NOT EXISTS source_states (
+                    source_id TEXT PRIMARY KEY,
+                    source_name TEXT NOT NULL DEFAULT '',
+                    cooldown_status TEXT NOT NULL DEFAULT '',
+                    cooldown_until TEXT NOT NULL DEFAULT '',
+                    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+                    last_error_category TEXT NOT NULL DEFAULT '',
+                    last_http_status INTEGER NOT NULL DEFAULT 0,
+                    last_error TEXT NOT NULL DEFAULT '',
+                    last_error_at TEXT NOT NULL DEFAULT '',
+                    last_success_at TEXT NOT NULL DEFAULT '',
+                    updated_at TEXT NOT NULL DEFAULT ''
+                );
                 """
             )
             self._ensure_article_migrations(connection)
@@ -161,6 +175,12 @@ class ArticleRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_publications_digest_target
                     ON publications(digest_id, target, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_source_states_cooldown_until
+                    ON source_states(cooldown_until);
+
+                CREATE INDEX IF NOT EXISTS idx_source_states_cooldown_status
+                    ON source_states(cooldown_status);
                 """
             )
             self._set_meta(connection, "schema_version", str(CURRENT_SCHEMA_VERSION))
@@ -214,6 +234,15 @@ class ArticleRepository:
         payload["is_pinned"] = bool(payload.get("is_pinned"))
         payload["extraction_attempts"] = int(payload.get("extraction_attempts") or 0)
         payload["extraction_last_http_status"] = int(payload.get("extraction_last_http_status") or 0)
+        return payload
+
+    @staticmethod
+    def _row_to_source_state_dict(row: sqlite3.Row) -> Dict[str, object]:
+        payload = dict(row)
+        payload["consecutive_failures"] = int(payload.get("consecutive_failures") or 0)
+        payload["last_http_status"] = int(payload.get("last_http_status") or 0)
+        cooldown_until = clean_text(str(payload.get("cooldown_until") or ""))
+        payload["cooldown_active"] = bool(cooldown_until and cooldown_until > utc_now().isoformat())
         return payload
 
     def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
@@ -506,6 +535,19 @@ class ArticleRepository:
             clauses.append("published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
+        clauses.append(
+            """
+            NOT EXISTS (
+                SELECT 1
+                FROM source_states
+                WHERE source_states.source_id = articles.source_id
+                  AND source_states.cooldown_until != ''
+                  AND source_states.cooldown_until > ?
+            )
+            """
+        )
+        params.append(utc_now().isoformat())
+
         if extraction_status:
             clauses.append("extraction_status = ?")
             params.append(extraction_status)
@@ -580,6 +622,199 @@ class ArticleRepository:
                 params,
             ).fetchall()
         return [self._row_to_article_dict(row) for row in rows]
+
+    def get_source_state(self, source_id: str) -> Optional[dict]:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    source_id,
+                    source_name,
+                    cooldown_status,
+                    cooldown_until,
+                    consecutive_failures,
+                    last_error_category,
+                    last_http_status,
+                    last_error,
+                    last_error_at,
+                    last_success_at,
+                    updated_at
+                FROM source_states
+                WHERE source_id = ?
+                LIMIT 1
+                """,
+                (source_id,),
+            ).fetchone()
+        return self._row_to_source_state_dict(row) if row else None
+
+    def list_source_states(
+        self,
+        *,
+        active_only: bool = False,
+        limit: int = 200,
+    ) -> List[dict]:
+        clauses = []
+        params: List[object] = []
+        if active_only:
+            clauses.append("cooldown_until != '' AND cooldown_until > ?")
+            params.append(utc_now().isoformat())
+
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    source_id,
+                    source_name,
+                    cooldown_status,
+                    cooldown_until,
+                    consecutive_failures,
+                    last_error_category,
+                    last_http_status,
+                    last_error,
+                    last_error_at,
+                    last_success_at,
+                    updated_at
+                FROM source_states
+                {where_sql}
+                ORDER BY cooldown_until DESC, updated_at DESC, source_id ASC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [self._row_to_source_state_dict(row) for row in rows]
+
+    def upsert_source_state(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+        cooldown_status: str = "",
+        cooldown_until: str = "",
+        consecutive_failures: int = 0,
+        last_error_category: str = "",
+        last_http_status: int = 0,
+        last_error: str = "",
+        last_error_at: str = "",
+        last_success_at: str = "",
+    ) -> Optional[dict]:
+        updated_at = utc_now().isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO source_states (
+                    source_id,
+                    source_name,
+                    cooldown_status,
+                    cooldown_until,
+                    consecutive_failures,
+                    last_error_category,
+                    last_http_status,
+                    last_error,
+                    last_error_at,
+                    last_success_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(source_id) DO UPDATE SET
+                    source_name = excluded.source_name,
+                    cooldown_status = excluded.cooldown_status,
+                    cooldown_until = excluded.cooldown_until,
+                    consecutive_failures = excluded.consecutive_failures,
+                    last_error_category = excluded.last_error_category,
+                    last_http_status = excluded.last_http_status,
+                    last_error = excluded.last_error,
+                    last_error_at = CASE
+                        WHEN excluded.last_error_at != '' THEN excluded.last_error_at
+                        ELSE source_states.last_error_at
+                    END,
+                    last_success_at = CASE
+                        WHEN excluded.last_success_at != '' THEN excluded.last_success_at
+                        ELSE source_states.last_success_at
+                    END,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    source_id,
+                    source_name,
+                    cooldown_status,
+                    cooldown_until,
+                    consecutive_failures,
+                    last_error_category,
+                    last_http_status,
+                    last_error,
+                    last_error_at,
+                    last_success_at,
+                    updated_at,
+                ),
+            )
+        return self.get_source_state(source_id)
+
+    def mark_source_success(
+        self,
+        *,
+        source_id: str,
+        source_name: str,
+    ) -> Optional[dict]:
+        return self.upsert_source_state(
+            source_id=source_id,
+            source_name=source_name,
+            cooldown_status="",
+            cooldown_until="",
+            consecutive_failures=0,
+            last_success_at=utc_now().isoformat(),
+        )
+
+    def reset_source_cooldowns(
+        self,
+        *,
+        source_ids: Optional[Iterable[str]] = None,
+        active_only: bool = True,
+    ) -> List[dict]:
+        clauses = []
+        params: List[object] = []
+        source_list = [str(item) for item in (source_ids or []) if str(item)]
+        if source_list:
+            placeholders = ",".join("?" for _ in source_list)
+            clauses.append(f"source_id IN ({placeholders})")
+            params.extend(source_list)
+        if active_only:
+            clauses.append("cooldown_until != '' AND cooldown_until > ?")
+            params.append(utc_now().isoformat())
+
+        where_sql = ""
+        if clauses:
+            where_sql = "WHERE " + " AND ".join(clauses)
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT source_id
+                FROM source_states
+                {where_sql}
+                ORDER BY source_id
+                """,
+                params,
+            ).fetchall()
+            source_id_rows = [str(row["source_id"]) for row in rows]
+            if source_id_rows:
+                placeholders = ",".join("?" for _ in source_id_rows)
+                connection.execute(
+                    f"""
+                    UPDATE source_states
+                    SET
+                        cooldown_status = '',
+                        cooldown_until = '',
+                        consecutive_failures = 0,
+                        updated_at = ?
+                    WHERE source_id IN ({placeholders})
+                    """,
+                    [utc_now().isoformat(), *source_id_rows],
+                )
+        return [state for source_id in source_id_rows if (state := self.get_source_state(source_id))]
 
     def list_google_news_articles(
         self,
@@ -1636,6 +1871,37 @@ class ArticleRepository:
                 ORDER BY total DESC
                 """
             ).fetchall()
+            source_state_row = connection.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_source_states,
+                    SUM(CASE WHEN cooldown_until != '' AND cooldown_until > ? THEN 1 ELSE 0 END) AS active_source_cooldowns,
+                    SUM(CASE WHEN cooldown_status = 'throttled' AND cooldown_until > ? THEN 1 ELSE 0 END) AS throttled_source_cooldowns,
+                    SUM(CASE WHEN cooldown_status = 'blocked' AND cooldown_until > ? THEN 1 ELSE 0 END) AS blocked_source_cooldowns
+                FROM source_states
+                """,
+                (utc_now().isoformat(), utc_now().isoformat(), utc_now().isoformat()),
+            ).fetchone()
+            source_cooldown_rows = connection.execute(
+                """
+                SELECT
+                    source_id,
+                    source_name,
+                    cooldown_status,
+                    cooldown_until,
+                    consecutive_failures,
+                    last_error_category,
+                    last_http_status,
+                    last_error_at,
+                    last_success_at,
+                    updated_at
+                FROM source_states
+                WHERE cooldown_until != '' AND cooldown_until > ?
+                ORDER BY cooldown_until DESC, updated_at DESC
+                LIMIT 20
+                """,
+                (utc_now().isoformat(),),
+            ).fetchall()
         publication_status_counts = {
             str(row["status"]): int(row["total"] or 0) for row in publication_status_rows
         }
@@ -1645,6 +1911,7 @@ class ArticleRepository:
         extraction_error_categories = {
             str(row["category"]): int(row["total"] or 0) for row in extraction_category_rows
         }
+        source_cooldowns = [self._row_to_source_state_dict(row) for row in source_cooldown_rows]
 
         return {
             "schema_version": self.get_schema_version(),
@@ -1669,6 +1936,11 @@ class ArticleRepository:
             "publication_status_counts": publication_status_counts,
             "pending_publications": int(publication_status_counts.get("pending", 0)),
             "publication_errors": int(publication_status_counts.get("error", 0)),
+            "total_source_states": int(source_state_row["total_source_states"] or 0),
+            "active_source_cooldowns": int(source_state_row["active_source_cooldowns"] or 0),
+            "throttled_source_cooldowns": int(source_state_row["throttled_source_cooldowns"] or 0),
+            "blocked_source_cooldowns": int(source_state_row["blocked_source_cooldowns"] or 0),
+            "source_cooldowns": source_cooldowns,
             "counts_by_region": {
                 str(row["region"]): int(row["total"] or 0) for row in region_rows
             },

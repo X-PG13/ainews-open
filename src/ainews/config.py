@@ -44,6 +44,9 @@ class Settings:
     log_level: str = "INFO"
     log_format: str = "text"
     extraction_text_limit: int = 12000
+    source_cooldown_failure_threshold: int = 2
+    source_throttle_cooldown_minutes: int = 120
+    source_blocked_cooldown_minutes: int = 720
     llm_article_context_chars: int = 6000
     llm_provider: str = "openai_compatible"
     llm_base_url: str = ""
@@ -124,6 +127,15 @@ def load_settings() -> Settings:
         log_level=os.getenv("AINEWS_LOG_LEVEL", "INFO").strip().upper() or "INFO",
         log_format=os.getenv("AINEWS_LOG_FORMAT", "text").strip().lower() or "text",
         extraction_text_limit=int(os.getenv("AINEWS_EXTRACTION_TEXT_LIMIT", "12000")),
+        source_cooldown_failure_threshold=int(
+            os.getenv("AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD", "2")
+        ),
+        source_throttle_cooldown_minutes=int(
+            os.getenv("AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES", "120")
+        ),
+        source_blocked_cooldown_minutes=int(
+            os.getenv("AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES", "720")
+        ),
         llm_article_context_chars=int(os.getenv("AINEWS_LLM_ARTICLE_CONTEXT_CHARS", "6000")),
         llm_provider=os.getenv("AINEWS_LLM_PROVIDER", "openai_compatible"),
         llm_base_url=os.getenv("AINEWS_LLM_BASE_URL", "").rstrip("/"),

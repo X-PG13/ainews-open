@@ -71,6 +71,37 @@ API example:
 
 POST it to `/admin/extract/retry` with `X-Admin-Token`.
 
+## A source stops getting extracted and `/health` shows `source_cooldowns_active`
+
+This means the source-level protection logic has cooled down a publisher after consecutive
+`429`, `403`, or challenge-style extraction failures.
+
+Checks:
+
+- `python -m ainews list-sources --runtime`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/sources`
+- inspect `cooldown_status`, `cooldown_until`, `consecutive_failures`, and `last_http_status`
+
+If the source is safe to resume, clear the cooldown:
+
+```bash
+python -m ainews reset-source-cooldowns --source venturebeat
+```
+
+Or clear all active cooldowns:
+
+```bash
+python -m ainews reset-source-cooldowns --all
+```
+
+API:
+
+```json
+{"source_ids": ["venturebeat"], "active_only": false}
+```
+
+POST it to `/admin/sources/cooldowns/reset` with `X-Admin-Token`.
+
 ## LLM digest generation does not happen
 
 Checks:

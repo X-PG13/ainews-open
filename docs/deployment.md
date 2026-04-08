@@ -221,6 +221,38 @@ Recommended operator loop:
 3. Retry only the due subset first.
 4. Retry `blocked` or `permanent_error` items manually after reviewing the source behavior.
 
+## Source Cooldown Policy
+
+Extraction retries now also have a source-level protection layer.
+
+When the same source hits consecutive protective failures such as:
+
+- `429`
+- `403`
+- anti-bot challenge pages
+
+AI News Open can put the source into a cooldown window. During that cooldown:
+
+- queued articles from that source are skipped by the default extraction queue
+- `/health` reports `source_cooldowns_active`
+- `/admin/sources` and the console show the affected source and cooldown deadline
+
+Manual reset examples:
+
+```bash
+python -m ainews reset-source-cooldowns --source venturebeat
+```
+
+```bash
+python -m ainews reset-source-cooldowns --all
+```
+
+Relevant environment variables:
+
+- `AINEWS_SOURCE_COOLDOWN_FAILURE_THRESHOLD`
+- `AINEWS_SOURCE_THROTTLE_COOLDOWN_MINUTES`
+- `AINEWS_SOURCE_BLOCKED_COOLDOWN_MINUTES`
+
 ## Upgrade Checklist
 
 Before upgrading:
