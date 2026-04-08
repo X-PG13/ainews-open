@@ -241,7 +241,9 @@ def create_app() -> FastAPI:
                     "duration_ms": duration_ms,
                 },
             )
-            raise
+            response = _error_response(500, SANITIZED_ERROR_MESSAGE)
+            response.headers["X-Request-ID"] = request_id
+            return response
 
         duration_ms = round((time.perf_counter() - started) * 1000, 2)
         response.headers["X-Request-ID"] = request_id
