@@ -17,6 +17,7 @@
 </div>
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
+![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
 
 ## 产品概览
 
@@ -60,6 +61,7 @@ python -m ainews serve --port 8000
 启动后你可以：
 
 - 在 `http://127.0.0.1:8000/` 打开控制台
+- 直接在 Operations 总览里查看 `/health`、最近 pipeline、来源冷却、来源告警和发布失败
 - 查看新闻池、日报存档、发布历史和微信发布状态
 - 直接从控制台触发抓取、翻译、生成日报和发布
 
@@ -70,6 +72,7 @@ python -m ainews serve --port 8000
 - 示例日报 Markdown（英文）：[docs/demo/sample-digest.en.md](docs/demo/sample-digest.en.md)
 - 示例日报 JSON：[docs/demo/sample-digest.json](docs/demo/sample-digest.json)
 - 示例健康检查返回：[docs/demo/sample-health.json](docs/demo/sample-health.json)
+- 示例运维聚合返回：[docs/demo/sample-operations.json](docs/demo/sample-operations.json)
 - 示例发布记录：[docs/demo/sample-publications.json](docs/demo/sample-publications.json)
 
 ## 维护者工作流

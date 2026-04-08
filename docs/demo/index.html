@@ -114,6 +114,7 @@
             <a class="secondary" href="./sample-digest.en.md">English Digest</a>
             <a class="secondary" href="./sample-digest.json">Digest JSON</a>
             <a class="secondary" href="./sample-health.json">Health JSON</a>
+            <a class="secondary" href="./sample-operations.json">Operations JSON</a>
           </div>
         </div>
         <div class="card">
@@ -142,8 +143,17 @@
           <li>Digest Markdown 输出长什么样。</li>
           <li>下游系统可以依赖的 JSON 顶层结构。</li>
           <li>运维层 `/health` 和发布记录大概长什么样。</li>
+          <li>管理台新的 Operations 总览如何把健康状态、pipeline、告警和发布失败收成一屏。</li>
           <li>项目在 GitHub Pages 上公开承载示例站的方式。</li>
         </ul>
+      </section>
+
+      <section class="card" style="margin-top: 24px;">
+        <h2>Operations Overview</h2>
+        <p>
+          这张预览图对应控制台里的新运维总览区。它会把 `/health`、最近 pipeline、来源冷却、来源级告警和发布失败收成一屏。
+        </p>
+        <img src="../assets/operations-panel-preview.svg" alt="AI News Open operations panel preview" />
       </section>
 
       <section class="card" style="margin-top: 24px;">
@@ -153,6 +163,7 @@
           <li><a href="./sample-digest.en.md">English digest sample</a></li>
           <li><a href="./sample-digest.json">Digest JSON payload</a></li>
           <li><a href="./sample-health.json">Health payload sample</a></li>
+          <li><a href="./sample-operations.json">Operations payload sample</a></li>
           <li><a href="./sample-publications.json">Publication history sample</a></li>
           <li><a href="../use-cases.md">Use cases</a> / <a href="../use-cases.zh-CN.md">使用场景</a></li>
         </ul>

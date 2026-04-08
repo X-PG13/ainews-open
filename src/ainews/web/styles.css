@@ -169,6 +169,7 @@ textarea {
 }
 
 .stats-grid,
+.operations-summary-grid,
 .controls-grid,
 .content-grid {
   display: grid;
@@ -176,13 +177,56 @@ textarea {
   margin-bottom: 18px;
 }
 
-.stats-grid {
+.stats-grid,
+.operations-summary-grid {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .controls-grid,
 .content-grid {
   grid-template-columns: 1.25fr 0.95fr;
+}
+
+.operations-panel {
+  margin-bottom: 18px;
+}
+
+.operations-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.operations-slab {
+  border: 1px solid rgba(23, 23, 23, 0.1);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.44);
+}
+
+.operations-stat-card .stat-value {
+  font-size: 24px;
+}
+
+.status-good {
+  color: #2d6e3d;
+}
+
+.status-pending {
+  color: #7b5a14;
+}
+
+.status-warn {
+  color: var(--accent-deep);
+}
+
+.operations-card {
+  padding: 12px;
+}
+
+.compact-list {
+  gap: 10px;
 }
 
 .side-stack {
@@ -439,6 +483,7 @@ textarea {
 
 @media (max-width: 1100px) {
   .hero,
+  .operations-grid,
   .controls-grid,
   .content-grid,
   .stats-grid {

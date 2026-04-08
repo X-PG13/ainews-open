@@ -114,7 +114,48 @@ class NewsService:
         return payload
 
     def get_operations(self) -> Dict[str, object]:
-        return self.telemetry.snapshot()
+        telemetry = self.telemetry.snapshot()
+        stats = self.repository.get_stats()
+        health = self.get_health()
+        metrics = self.get_metrics_snapshot()
+        recent_operations = list(telemetry.get("recent_operations", []))
+        pipeline_runs = [
+            item for item in recent_operations if clean_text(str(item.get("name", ""))) == "pipeline"
+        ][:6]
+        recent_publication_failures = self.repository.list_publications(status="error", limit=6)
+        pending_publications = self.repository.list_publications(status="pending", limit=6)
+        source_alerts = self.list_source_alerts(limit=8)
+        runtime_sources = [
+            source
+            for source in self.list_sources(include_runtime=True)
+            if source.get("cooldown_active")
+            or source.get("maintenance_mode")
+            or source.get("silenced_active")
+        ][:8]
+        return {
+            "generated_at": utc_now().isoformat(),
+            "health": health,
+            "metrics": metrics,
+            "stats": {
+                "active_source_cooldowns": int(stats.get("active_source_cooldowns") or 0),
+                "blocked_source_cooldowns": int(stats.get("blocked_source_cooldowns") or 0),
+                "throttled_source_cooldowns": int(stats.get("throttled_source_cooldowns") or 0),
+                "publication_errors": int(stats.get("publication_errors") or 0),
+                "pending_publications": int(stats.get("pending_publications") or 0),
+                "scheduled_extraction_retries": int(stats.get("scheduled_extraction_retries") or 0),
+                "blocked_extractions": int(stats.get("blocked_extractions") or 0),
+                "throttled_extractions": int(stats.get("throttled_extractions") or 0),
+            },
+            "operations": telemetry.get("operations", {}),
+            "operation_totals": telemetry.get("operation_totals", {}),
+            "failure_categories": telemetry.get("failure_categories", {}),
+            "recent_operations": recent_operations[:12],
+            "pipeline_runs": pipeline_runs,
+            "source_runtime": runtime_sources,
+            "source_alerts": source_alerts,
+            "publication_failures": recent_publication_failures,
+            "pending_publications": pending_publications,
+        }
 
     def get_metrics_snapshot(self) -> Dict[str, object]:
         stats = self.repository.get_stats()
