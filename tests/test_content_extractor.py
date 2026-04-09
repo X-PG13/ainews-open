@@ -1011,6 +1011,52 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Security bulletin menu", content.text)
         self.assertNotIn("Related cloud controls", content.text)
 
+    def test_prefers_openai_pricing_update_body_and_drops_pricing_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-pricing-update.html"),
+            url="https://openai.com/pricing/enterprise-inference-update",
+        )
+
+        self.assertIn("Pricing updates are useful when they explain which workloads move to a new billing tier", content.text)
+        self.assertIn("reservation and overage behavior changes", content.text)
+        self.assertIn("fallback options", content.text)
+        self.assertIn("reporting fields", content.text)
+        self.assertNotIn("Pricing update navigation", content.text)
+        self.assertNotIn("Service tier grid", content.text)
+        self.assertNotIn("Related pricing updates", content.text)
+
+    def test_prefers_anthropic_service_tier_notice_body_and_drops_tier_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-service-tier-notice.html"),
+            url="https://www.anthropic.com/news/enterprise-throughput-tier-notice",
+        )
+
+        self.assertIn("Service tier notices are useful when they explain which latency and throughput guarantees changed", content.text)
+        self.assertIn("rollout sequencing affects existing", content.text)
+        self.assertIn("production commitments", content.text)
+        self.assertIn("downgrade behavior, billing reconciliation points", content.text)
+        self.assertNotIn("Contact sales", content.text)
+        self.assertNotIn("Tier comparison", content.text)
+        self.assertNotIn("Related product announcements", content.text)
+
+    def test_prefers_together_sku_change_body_and_drops_plan_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-sku-change.html"),
+            url="https://www.together.ai/pricing/hosted-model-bundle-sku-change",
+        )
+
+        self.assertIn("SKU change notices matter when they explain which bundled capabilities are moving", content.text)
+        self.assertIn("entitlements", content.text)
+        self.assertIn("map from old plans to new ones", content.text)
+        self.assertIn("fallback purchase paths, invoice mapping", content.text)
+        self.assertIn("transition window", content.text)
+        self.assertNotIn("SKU change overview", content.text)
+        self.assertNotIn("Plan comparison", content.text)
+        self.assertNotIn("Related product updates", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

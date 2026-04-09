@@ -395,6 +395,16 @@ HOST_SELECTORS = {
         ".content-body",
         ".docs-content",
     ),
+    "openai.com": (
+        ".content-body",
+        ".article-body",
+        ".prose",
+    ),
+    "anthropic.com": (
+        ".content-body",
+        ".article-body",
+        ".prose",
+    ),
     "platform.openai.com": (
         ".docs-body",
         ".prose",
@@ -429,6 +439,11 @@ HOST_SELECTORS = {
         ".incident-detail",
         ".rca-body",
         ".update-body",
+    ),
+    "together.ai": (
+        ".content-body",
+        ".article-body",
+        ".prose",
     ),
     "docs.vllm.ai": (
         ".md-content",
@@ -894,6 +909,20 @@ HOST_DROP_SELECTORS = {
         ".cta-panel",
         ".sidebar-toc",
     ),
+    "openai.com": (
+        ".pricing-sidebar",
+        ".tier-card-grid",
+        ".related-updates",
+        ".contact-sales-banner",
+        ".pricing-nav",
+    ),
+    "anthropic.com": (
+        ".service-tier-sidebar",
+        ".tier-comparison-grid",
+        ".related-announcements",
+        ".contact-sales-banner",
+        ".page-nav",
+    ),
     "platform.openai.com": (
         ".faq-nav",
         ".deprecation-callout",
@@ -942,6 +971,13 @@ HOST_DROP_SELECTORS = {
         ".status-banner",
         ".subscribe-pane",
         ".incident-nav",
+    ),
+    "together.ai": (
+        ".sku-sidebar",
+        ".plan-comparison-grid",
+        ".related-updates",
+        ".contact-sales-banner",
+        ".page-nav",
     ),
     "docs.vllm.ai": (
         ".version-warning",
@@ -1290,6 +1326,18 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related upgrade guides$"),
         re.compile(r"^Start building$"),
     ),
+    "openai.com": (
+        re.compile(r"^Pricing update navigation$"),
+        re.compile(r"^Service tier grid$"),
+        re.compile(r"^Related pricing updates$"),
+        re.compile(r"^Talk to sales$"),
+    ),
+    "anthropic.com": (
+        re.compile(r"^Service tier notice$"),
+        re.compile(r"^Tier comparison$"),
+        re.compile(r"^Related product announcements$"),
+        re.compile(r"^Contact sales$"),
+    ),
     "platform.openai.com": (
         re.compile(r"^Deprecation FAQ$"),
         re.compile(r"^Related answers$"),
@@ -1328,6 +1376,12 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related incidents$"),
         re.compile(r"^Subscribe to updates$"),
         re.compile(r"^Incident navigation$"),
+    ),
+    "together.ai": (
+        re.compile(r"^SKU change overview$"),
+        re.compile(r"^Plan comparison$"),
+        re.compile(r"^Related product updates$"),
+        re.compile(r"^Talk to sales$"),
     ),
     "docs.vllm.ai": (
         re.compile(r"^Version notice$"),
@@ -1664,6 +1718,16 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
     ),
+    "openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+    ),
+    "anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+    ),
     "platform.openai.com": (
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
@@ -1698,6 +1762,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"incident-detail"}},
         {"tags": {"div", "section"}, "class_tokens": {"rca-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"update-body"}},
+    ),
+    "together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "docs.vllm.ai": (
         {"tags": {"div", "section"}, "class_tokens": {"md-content"}},

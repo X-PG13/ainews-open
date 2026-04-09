@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.22] - 2026-04-09
+
+### Added
+
+- Pricing-update, service-tier-notice, and SKU-change extraction fixtures for `openai.com`, `anthropic.com`, and `together.ai`
+
+### Changed
+
+- Package version is now `1.2.22`
+- International extraction coverage now includes pricing-update, service-tier-notice, and SKU-change layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, and compliance-update layouts
+
+### Fixed
+
+- Reduced pricing sidebars, service-tier grids, plan-comparison modules, and related-update recirculation noise on product pricing and commercial notice pages
+- Locked another class of pricing and commercial-notice layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.21] - 2026-04-09
 
 ### Added
