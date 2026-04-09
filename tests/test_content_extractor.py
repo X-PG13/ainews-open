@@ -778,6 +778,56 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related updates", content.text)
         self.assertNotIn("Watch the launch clip", content.text)
 
+    def test_prefers_langchain_migration_guide_body_and_drops_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("langchain-migration-guide.html"),
+            url="https://docs.langchain.com/docs/migration/ai-operations-observability",
+        )
+
+        self.assertIn("Migration guides are useful only when they explain how operators move production systems", content.text)
+        self.assertIn("losing observability", content.text)
+        self.assertIn("cutover steps, fallback plans", content.text)
+        self.assertIn("which dashboards must stay", content.text)
+        self.assertIn("comparable", content.text)
+        self.assertNotIn("Migration guide menu", content.text)
+        self.assertNotIn("Related migration steps", content.text)
+        self.assertNotIn("Was this page helpful?", content.text)
+
+    def test_prefers_atlassian_deprecation_notice_body_and_drops_banner_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("atlassian-deprecation-notice.html"),
+            url="https://developer.atlassian.com/platform/ai/deprecations/incident-response-api",
+        )
+
+        self.assertIn("Deprecation notices matter when they tell operators what breaks", content.text)
+        self.assertIn("how to", content.text)
+        self.assertIn("migrate safely", content.text)
+        self.assertIn("shutdown dates, compatibility windows", content.text)
+        self.assertIn("which ownership checks must be", content.text)
+        self.assertIn("updated", content.text)
+        self.assertNotIn("Deprecation timeline", content.text)
+        self.assertNotIn("Related Atlassian docs", content.text)
+        self.assertNotIn("Was this helpful?", content.text)
+
+    def test_prefers_supabase_upgrade_guide_body_and_drops_cta_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("supabase-upgrade-guide.html"),
+            url="https://supabase.com/docs/guides/upgrade/ai-operations-rollout",
+        )
+
+        self.assertIn("Upgrade guides are strongest when they tell teams how to move production traffic", content.text)
+        self.assertIn("hiding new", content.text)
+        self.assertIn("failure modes", content.text)
+        self.assertIn("verification steps, rollback handles", content.text)
+        self.assertIn("how incident review should", content.text)
+        self.assertIn("change", content.text)
+        self.assertNotIn("Watch the migration walkthrough", content.text)
+        self.assertNotIn("Related upgrade guides", content.text)
+        self.assertNotIn("Start building", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

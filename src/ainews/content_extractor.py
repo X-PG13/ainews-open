@@ -368,6 +368,21 @@ HOST_SELECTORS = {
         ".content-body",
         ".article-body",
     ),
+    "docs.langchain.com": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".migration-guide",
+    ),
+    "developer.atlassian.com": (
+        ".doc-content",
+        ".article-body",
+        ".content-body",
+    ),
+    "supabase.com": (
+        ".prose",
+        ".content-body",
+        ".docs-content",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -787,6 +802,27 @@ HOST_DROP_SELECTORS = {
         ".video-embed",
         ".author-card",
     ),
+    "docs.langchain.com": (
+        ".table-of-contents",
+        ".pagination-nav",
+        ".related-links",
+        ".feedback-widget",
+        ".theme-doc-breadcrumbs",
+    ),
+    "developer.atlassian.com": (
+        ".left-nav",
+        ".deprecation-banner",
+        ".related-resources",
+        ".feedback-prompt",
+        ".page-actions",
+    ),
+    "supabase.com": (
+        ".steps-nav",
+        ".video-callout",
+        ".related-guides",
+        ".cta-panel",
+        ".sidebar-toc",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -1095,6 +1131,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related updates$"),
         re.compile(r"^Watch the launch clip$"),
     ),
+    "docs.langchain.com": (
+        re.compile(r"^Migration guide menu$"),
+        re.compile(r"^Related migration steps$"),
+        re.compile(r"^Was this page helpful\?$"),
+    ),
+    "developer.atlassian.com": (
+        re.compile(r"^Deprecation timeline$"),
+        re.compile(r"^Related Atlassian docs$"),
+        re.compile(r"^Was this helpful\?$"),
+    ),
+    "supabase.com": (
+        re.compile(r"^Watch the migration walkthrough$"),
+        re.compile(r"^Related upgrade guides$"),
+        re.compile(r"^Start building$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1397,6 +1448,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "docs.langchain.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"migration-guide"}},
+    ),
+    "developer.atlassian.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "supabase.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
