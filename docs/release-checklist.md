@@ -13,8 +13,9 @@ Use this checklist before cutting a new public release.
 
 ```bash
 make check
-make smoke
 ```
+
+`make check` now includes the local smoke check, so a separate `make smoke` rerun is only needed when you are debugging startup behavior by itself.
 
 5. Confirm `docker compose config -q` passes with the current compose profile.
 6. Confirm open code scanning alerts are `0`.

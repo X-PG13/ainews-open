@@ -81,9 +81,9 @@ python -m ainews serve --port 8000
 python -m pip install -e ".[dev]"
 pre-commit install
 make check
-make coverage
-make smoke
 ```
+
+`make check` 现在就是本地维护者总门禁，会一次跑完 lint、coverage、构建校验和 `/health` smoke。只有在你单独调某一层时，才需要单跑 `make coverage` 或 `make smoke`。
 
 ## 运维与交付文档
 

@@ -143,6 +143,11 @@ HOST_SELECTORS = {
         ".post-content",
         "article",
     ),
+    "technologyreview.com": (
+        ".content--body",
+        ".article-body__content",
+        ".article-body",
+    ),
     "substack.com": (
         ".body.markup",
         ".available-content",
@@ -240,6 +245,13 @@ HOST_DROP_SELECTORS = {
         ".sidebar",
         ".newsletter-callout",
     ),
+    "technologyreview.com": (
+        ".inline-newsletter",
+        ".article-callout",
+        ".article-footer__related",
+        ".most-popular",
+        ".paywall-inline",
+    ),
     "substack.com": (
         ".subscription-widget-wrap",
         ".subscribe-widget",
@@ -311,6 +323,11 @@ HOST_NOISE_LINE_PATTERNS = {
     "arstechnica.com": (
         re.compile(r"^Ars Technica may earn compensation.*$"),
         re.compile(r"^Stay tuned for.*$"),
+    ),
+    "technologyreview.com": (
+        re.compile(r"^Subscribe to The Algorithm$"),
+        re.compile(r"^Stay connected with MIT Technology Review.*$"),
+        re.compile(r"^More from MIT Technology Review$"),
     ),
     "substack.com": (
         re.compile(r"^Thanks for reading.*$"),
@@ -384,6 +401,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
         {"tags": {"article"}},
+    ),
+    "technologyreview.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content--body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "substack.com": (
         {"tags": {"div", "section"}, "class_tokens": {"body", "markup"}},
