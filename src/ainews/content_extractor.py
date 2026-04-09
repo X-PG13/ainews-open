@@ -383,6 +383,21 @@ HOST_SELECTORS = {
         ".content-body",
         ".docs-content",
     ),
+    "platform.openai.com": (
+        ".docs-body",
+        ".prose",
+        ".article-body",
+    ),
+    "docs.pinecone.io": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".migration-checklist",
+    ),
+    "docs.vllm.ai": (
+        ".md-content",
+        ".content-body",
+        ".document",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -823,6 +838,27 @@ HOST_DROP_SELECTORS = {
         ".cta-panel",
         ".sidebar-toc",
     ),
+    "platform.openai.com": (
+        ".faq-nav",
+        ".deprecation-callout",
+        ".related-answers",
+        ".feedback-widget",
+        ".docs-sidebar",
+    ),
+    "docs.pinecone.io": (
+        ".table-of-contents",
+        ".checklist-nav",
+        ".related-guides",
+        ".feedback-widget",
+        ".breadcrumbs",
+    ),
+    "docs.vllm.ai": (
+        ".version-warning",
+        ".related-pages",
+        ".page-nav",
+        ".edit-link",
+        ".sidebar-toc",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -1146,6 +1182,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related upgrade guides$"),
         re.compile(r"^Start building$"),
     ),
+    "platform.openai.com": (
+        re.compile(r"^Deprecation FAQ$"),
+        re.compile(r"^Related answers$"),
+        re.compile(r"^Was this helpful\?$"),
+    ),
+    "docs.pinecone.io": (
+        re.compile(r"^Migration checklist$"),
+        re.compile(r"^Related Pinecone guides$"),
+        re.compile(r"^Need more help\?$"),
+    ),
+    "docs.vllm.ai": (
+        re.compile(r"^Version notice$"),
+        re.compile(r"^Related versioned pages$"),
+        re.compile(r"^Edit on GitHub$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1463,6 +1514,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+    ),
+    "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "docs.pinecone.io": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
+    ),
+    "docs.vllm.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"md-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"document"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

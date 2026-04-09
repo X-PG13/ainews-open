@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.17`
+`v1.2.18`
 
 ### Suggested Title
 
-`AI News Open v1.2.17 · Migration and Deprecation Extraction Coverage`
+`AI News Open v1.2.18 · Deprecation FAQ and Versioned Docs Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.17
+## AI News Open v1.2.18
 
-AI News Open `v1.2.17` hardens extraction quality for migration guides, deprecation notices, and upgrade-guide layouts across more international publishers.
+AI News Open `v1.2.18` hardens extraction quality for deprecation FAQs, migration checklists, and versioned-doc notice layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.17` hardens extraction quality for migration guides, deprecat
 
 ### Highlights in this release
 
-- New deterministic documentation-style fixtures for `LangChain Docs`, `Atlassian Developer`, and `Supabase Docs`
-- Better cleanup for migration navigation, deprecation banners, upgrade CTAs, and related-doc recirculation on change-management-heavy developer pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, and migration/deprecation layouts
+- New deterministic documentation-style fixtures for `OpenAI Platform Docs`, `Pinecone Docs`, and `vLLM Docs`
+- Better cleanup for deprecation sidebars, checklist navigation, version banners, and related-doc recirculation on AI developer-doc pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, and versioned-doc-notice layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

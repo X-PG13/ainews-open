@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.18] - 2026-04-09
+
+### Added
+
+- Deprecation FAQ, migration checklist, and versioned-doc notice extraction fixtures for `platform.openai.com`, `docs.pinecone.io`, and `docs.vllm.ai`
+
+### Changed
+
+- Package version is now `1.2.18`
+- International extraction coverage now includes deprecation-FAQ, migration-checklist, and versioned-doc-notice layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, and migration/deprecation layouts
+
+### Fixed
+
+- Reduced deprecation sidebars, checklist navigation, version banners, and related-doc recirculation noise on AI developer-documentation pages
+- Locked another class of deprecation and versioned-doc layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.17] - 2026-04-09
 
 ### Added
