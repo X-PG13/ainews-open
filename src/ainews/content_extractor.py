@@ -308,6 +308,21 @@ HOST_SELECTORS = {
         ".story-content",
         ".content-body",
     ),
+    "mckinsey.com": (
+        ".content-body",
+        ".article-body",
+        ".wysiwyg",
+    ),
+    "cloud.google.com": (
+        ".devsite-article-body",
+        ".article-body",
+        ".case-study-body",
+    ),
+    "databricks.com": (
+        ".article-body",
+        ".resource-body",
+        ".content-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -643,6 +658,27 @@ HOST_DROP_SELECTORS = {
         ".audio-player",
         ".author-card",
     ),
+    "mckinsey.com": (
+        ".newsletter-signup",
+        ".listen-module",
+        ".related-insights",
+        ".author-bio",
+        ".download-prompt",
+    ),
+    "cloud.google.com": (
+        ".devsite-page-rating",
+        ".newsletter-callout",
+        ".benchmark-cta",
+        ".related-products",
+        ".audio-player",
+    ),
+    "databricks.com": (
+        ".case-study-cta",
+        ".related-resources",
+        ".video-module",
+        ".author-card",
+        ".newsletter-signup",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -891,6 +927,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Read more from Rest of World$"),
         re.compile(r"^Sign up for our weekly newsletter$"),
     ),
+    "mckinsey.com": (
+        re.compile(r"^Listen to the article$"),
+        re.compile(r"^Explore more insights$"),
+        re.compile(r"^Download the full report$"),
+    ),
+    "cloud.google.com": (
+        re.compile(r"^Benchmark methodology$"),
+        re.compile(r"^Related products$"),
+        re.compile(r"^Listen to this benchmark note$"),
+    ),
+    "databricks.com": (
+        re.compile(r"^Watch the customer story$"),
+        re.compile(r"^Read related resources$"),
+        re.compile(r"^Sign up for Databricks updates$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1132,6 +1183,21 @@ FALLBACK_HOST_RULES = {
     "restofworld.org": (
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"story-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "mckinsey.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"wysiwyg"}},
+    ),
+    "cloud.google.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"devsite-article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"case-study-body"}},
+    ),
+    "databricks.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"resource-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
     ),
     "theguardian.com": (

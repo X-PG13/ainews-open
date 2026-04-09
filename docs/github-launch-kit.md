@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.12`
+`v1.2.13`
 
 ### Suggested Title
 
-`AI News Open v1.2.12 · Policy Memo and Feature Extraction Coverage`
+`AI News Open v1.2.13 · Whitepaper and Benchmark Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.12
+## AI News Open v1.2.13
 
-AI News Open `v1.2.12` hardens extraction quality for policy memo, research note, and magazine-feature newsroom layouts across more international publishers.
+AI News Open `v1.2.13` hardens extraction quality for whitepaper, vendor benchmark, and enterprise case-study layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.12` hardens extraction quality for policy memo, research note
 
 ### Highlights in this release
 
-- New deterministic policy and feature fixtures for `Brookings`, `RAND`, and `Rest of World`
-- Better cleanup for briefing modules, pull quotes, audio prompts, and related-content recirculation on fragmented longform publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, and policy/research feature layouts
+- New deterministic whitepaper and case-study fixtures for `McKinsey`, `Google Cloud`, and `Databricks`
+- Better cleanup for methodology blurbs, download prompts, video modules, and related-resource recirculation on vendor and research pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, and vendor benchmark layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

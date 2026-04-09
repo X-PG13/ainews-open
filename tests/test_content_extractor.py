@@ -611,6 +611,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Read more from Rest of World", content.text)
         self.assertNotIn("The system is only as trustworthy as the people rehearsing the fallback path.", content.text)
 
+    def test_prefers_mckinsey_whitepaper_body_and_drops_report_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("mckinsey-whitepaper.html"),
+            url="https://www.mckinsey.com/capabilities/quantumblack/our-insights/2026/04/ai-operations-benchmark",
+        )
+
+        self.assertIn("Executives reviewing AI programs now ask for evidence that operating controls survive real incident pressure", content.text)
+        self.assertIn("approval checkpoints, rollback ownership, and escalation paths", content.text)
+        self.assertNotIn("Listen to the article", content.text)
+        self.assertNotIn("Explore more insights", content.text)
+        self.assertNotIn("Download the full report", content.text)
+
+    def test_prefers_cloud_google_benchmark_body_and_drops_methodology_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("cloud-google-benchmark.html"),
+            url="https://cloud.google.com/blog/products/ai-machine-learning/ai-inference-benchmark-operations-guide",
+        )
+
+        self.assertIn("Benchmark writeups now matter less for raw throughput than for the operating discipline around rollout", content.text)
+        self.assertIn("fallback controls, rollback sequencing, and clear human escalation", content.text)
+        self.assertNotIn("Benchmark methodology", content.text)
+        self.assertNotIn("Related products", content.text)
+        self.assertNotIn("Listen to this benchmark note", content.text)
+
+    def test_prefers_databricks_case_study_body_and_drops_video_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("databricks-case-study.html"),
+            url="https://www.databricks.com/resources/case-studies/ai-ops-governance-at-scale",
+        )
+
+        self.assertIn("Enterprise case studies now emphasize the operating work required after AI launch", content.text)
+        self.assertIn("named owners, incident review, and the safeguards that keep models useful during drift", content.text)
+        self.assertNotIn("Watch the customer story", content.text)
+        self.assertNotIn("Read related resources", content.text)
+        self.assertNotIn("Sign up for Databricks updates", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
