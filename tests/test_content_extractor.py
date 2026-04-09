@@ -966,6 +966,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related incidents", content.text)
         self.assertNotIn("Incident navigation", content.text)
 
+    def test_prefers_openai_trust_advisory_body_and_drops_trust_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-trust-advisory.html"),
+            url="https://trust.openai.com/advisories/enterprise-access-token-handling",
+        )
+
+        self.assertIn("Trust center advisories are useful when they explain which controls changed", content.text)
+        self.assertIn("what customers should verify", content.text)
+        self.assertIn("residual risk, rollout sequencing", content.text)
+        self.assertIn("audit follow-up", content.text)
+        self.assertNotIn("Trust center advisory", content.text)
+        self.assertNotIn("Related advisories", content.text)
+        self.assertNotIn("Subscribe for trust updates", content.text)
+
+    def test_prefers_anthropic_security_bulletin_body_and_drops_bulletin_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-security-bulletin.html"),
+            url="https://docs.anthropic.com/en/security/tool-invocation-isolation-bulletin",
+        )
+
+        self.assertIn("Security bulletins are useful when they explain the affected integration surface", content.text)
+        self.assertIn("customer actions close the remaining exposure", content.text)
+        self.assertIn("patch windows, rollback constraints", content.text)
+        self.assertIn("restoring normal traffic", content.text)
+        self.assertNotIn("Severity level", content.text)
+        self.assertNotIn("Related bulletins", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_google_cloud_compliance_update_body_and_drops_compliance_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("google-cloud-compliance-update.html"),
+            url="https://cloud.google.com/security/compliance/ai-service-evidence-retention-update",
+        )
+
+        self.assertIn("Compliance updates matter when they explain which controls were re-audited", content.text)
+        self.assertIn("what operators must update in deployment records", content.text)
+        self.assertIn("retention changes, exception handling", content.text)
+        self.assertIn("review cycle before launch gates can close", content.text)
+        self.assertNotIn("Rate this page", content.text)
+        self.assertNotIn("Security bulletin menu", content.text)
+        self.assertNotIn("Related cloud controls", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
