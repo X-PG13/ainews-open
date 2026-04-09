@@ -173,6 +173,21 @@ HOST_SELECTORS = {
         ".n-content-body",
         ".article-body",
     ),
+    "semafor.com": (
+        ".article-content",
+        ".story-body",
+        ".article-body",
+    ),
+    "morningbrew.com": (
+        ".article-body",
+        ".post-content",
+        ".content-body",
+    ),
+    "theinformation.com": (
+        ".article__body",
+        ".article-body",
+        ".paywall-layout__body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -319,6 +334,27 @@ HOST_DROP_SELECTORS = {
         ".article-footer",
         ".related-articles",
     ),
+    "semafor.com": (
+        ".signals-inline",
+        ".article-recirculation",
+        ".signup-card",
+        ".article-footer",
+        ".related-stories",
+    ),
+    "morningbrew.com": (
+        ".inline-cta",
+        ".newsletter-signup",
+        ".related-brews",
+        ".share-tools",
+        ".post-footer",
+    ),
+    "theinformation.com": (
+        ".subscription-callout",
+        ".related-coverage",
+        ".article-footer",
+        ".signup-promo",
+        ".story-meta",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -432,6 +468,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Recommended$"),
         re.compile(r"^Read next$"),
     ),
+    "semafor.com": (
+        re.compile(r"^View in browser$"),
+        re.compile(r"^Read the full signal$"),
+        re.compile(r"^More from Semafor$"),
+    ),
+    "morningbrew.com": (
+        re.compile(r"^Join millions of readers.*$"),
+        re.compile(r"^Was this forwarded to you\?$"),
+        re.compile(r"^Read more from Morning Brew$"),
+    ),
+    "theinformation.com": (
+        re.compile(r"^Subscriber-only content$"),
+        re.compile(r"^Read more from The Information$"),
+        re.compile(r"^Already a subscriber\?$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -539,6 +590,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article__content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"n-content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "semafor.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"story-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "morningbrew.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "theinformation.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"paywall-layout__body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

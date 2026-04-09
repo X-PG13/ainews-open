@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.4] - 2026-04-09
+
+### Added
+
+- Briefing and newsletter-style extraction fixtures for `semafor.com`, `morningbrew.com`, and `theinformation.com`
+
+### Changed
+
+- Package version is now `1.2.4`
+- International extraction coverage now includes briefing, digest, and subscriber-prompt-heavy newsroom layouts in addition to standard articles and live updates
+
+### Fixed
+
+- Reduced newsletter CTA, subscriber prompt, and related-coverage noise on briefing-style publisher pages
+- Locked another class of digest-style international media layouts into deterministic fixture coverage so content cleanup regressions are caught in CI
+
 ## [1.2.3] - 2026-04-09
 
 ### Added
