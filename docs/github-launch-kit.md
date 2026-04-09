@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.13`
+`v1.2.14`
 
 ### Suggested Title
 
-`AI News Open v1.2.13 · Whitepaper and Benchmark Extraction Coverage`
+`AI News Open v1.2.14 · Conference Recap Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.13
+## AI News Open v1.2.14
 
-AI News Open `v1.2.13` hardens extraction quality for whitepaper, vendor benchmark, and enterprise case-study layouts across more international publishers.
+AI News Open `v1.2.14` hardens extraction quality for conference recap, event takeaways, and transcript-summary hybrid layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.13` hardens extraction quality for whitepaper, vendor benchma
 
 ### Highlights in this release
 
-- New deterministic whitepaper and case-study fixtures for `McKinsey`, `Google Cloud`, and `Databricks`
-- Better cleanup for methodology blurbs, download prompts, video modules, and related-resource recirculation on vendor and research pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, and vendor benchmark layouts
+- New deterministic recap and session-summary fixtures for `Tech Policy Press`, `a16z`, and `TED`
+- Better cleanup for event metadata, session promos, transcript navigation, and related-content recirculation on recap-heavy pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, and conference recap layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

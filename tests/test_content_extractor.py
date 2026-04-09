@@ -650,6 +650,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Read related resources", content.text)
         self.assertNotIn("Sign up for Databricks updates", content.text)
 
+    def test_prefers_techpolicy_press_recap_body_and_drops_event_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("techpolicypress-recap.html"),
+            url="https://www.techpolicy.press/2026/04/09/what-the-ai-governance-summit-revealed-about-operations/",
+        )
+
+        self.assertIn("Conference recaps are increasingly about the operational systems behind AI promises", content.text)
+        self.assertIn("incident review, escalation ownership, and fallback discipline", content.text)
+        self.assertNotIn("Event recap hub", content.text)
+        self.assertNotIn("Related posts", content.text)
+        self.assertNotIn("Listen to the session recap", content.text)
+
+    def test_prefers_a16z_event_takeaways_body_and_drops_session_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("a16z-event-takeaways.html"),
+            url="https://a16z.com/2026/04/09/ai-infrastructure-event-takeaways/",
+        )
+
+        self.assertIn("Event takeaway posts now spend less time on stagecraft and more on the systems that keep AI products reliable", content.text)
+        self.assertIn("review checkpoints, rollback readiness, and how teams practice failure before customers see it", content.text)
+        self.assertNotIn("Watch the full session", content.text)
+        self.assertNotIn("More from a16z", content.text)
+        self.assertNotIn("Subscribe for future updates", content.text)
+
+    def test_prefers_ted_transcript_summary_body_and_drops_transcript_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("ted-transcript-summary.html"),
+            url="https://www.ted.com/talks/2026/ai_operators_and_the_hidden_work_of_reliability/transcript",
+        )
+
+        self.assertIn("Transcript-summary pages are useful only when the editorial framing survives the transcript scaffolding", content.text)
+        self.assertIn("what matters after launch is who reviews exceptions and how teams recover when models drift", content.text)
+        self.assertNotIn("Transcript navigation", content.text)
+        self.assertNotIn("More TED talks on AI", content.text)
+        self.assertNotIn("Listen to the episode", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
