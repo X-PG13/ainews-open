@@ -1150,6 +1150,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Region matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_soft_limit_warning_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-soft-limit-warning.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/soft-limit-warning",
+        )
+
+        self.assertIn("Soft limit warnings matter when they explain which workload classes", content.text)
+        self.assertIn("advisory thresholds", content.text)
+        self.assertIn("backpressure", content.text)
+        self.assertIn("retry smoothing", content.text)
+        self.assertNotIn("Soft limit summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_grace_period_notice_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-grace-period-notice.html"),
+            url="https://docs.anthropic.com/en/docs/usage/grace-period-notice",
+        )
+
+        self.assertIn("Grace period notices are useful when they explain which customers retain temporary access", content.text)
+        self.assertIn("exemption windows", content.text)
+        self.assertIn("traffic shaping", content.text)
+        self.assertIn("queueing controls", content.text)
+        self.assertNotIn("Grace period summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_throughput_exception_policy_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-throughput-exception-policy.html"),
+            url="https://docs.together.ai/docs/inference/throughput-exception-policy",
+        )
+
+        self.assertIn("Throughput exception policies matter when they explain which workloads qualify", content.text)
+        self.assertIn("regional routing", content.text)
+        self.assertIn("production traffic", content.text)
+        self.assertIn("expiry signals, dashboard markers", content.text)
+        self.assertNotIn("Exception policy summary", content.text)
+        self.assertNotIn("Exception thresholds", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
