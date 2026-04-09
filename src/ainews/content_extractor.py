@@ -338,6 +338,21 @@ HOST_SELECTORS = {
         ".transcript__body",
         ".article-body",
     ),
+    "aws.amazon.com": (
+        ".awsdocs-content",
+        ".article-body",
+        ".doc-content",
+    ),
+    "docs.anthropic.com": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".article-body",
+    ),
+    "learn.microsoft.com": (
+        ".content-body",
+        ".article-body",
+        ".main-content",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -715,6 +730,27 @@ HOST_DROP_SELECTORS = {
         ".audio-player",
         ".transcript-nav",
     ),
+    "aws.amazon.com": (
+        ".feedback-section",
+        ".related-links",
+        ".video-module",
+        ".cta-banner",
+        ".sidebar-nav",
+    ),
+    "docs.anthropic.com": (
+        ".table-of-contents",
+        ".docs-feedback",
+        ".related-links",
+        ".callout-banner",
+        ".breadcrumbs",
+    ),
+    "learn.microsoft.com": (
+        ".next-steps",
+        ".feedback-section",
+        ".training-banner",
+        ".related-content",
+        ".metadata-panel",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -993,6 +1029,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^More TED talks on AI$"),
         re.compile(r"^Listen to the episode$"),
     ),
+    "aws.amazon.com": (
+        re.compile(r"^Best practices checklist$"),
+        re.compile(r"^Related AWS guidance$"),
+        re.compile(r"^Watch the walkthrough$"),
+    ),
+    "docs.anthropic.com": (
+        re.compile(r"^Troubleshooting menu$"),
+        re.compile(r"^Related topics$"),
+        re.compile(r"^Need more help\?$"),
+    ),
+    "learn.microsoft.com": (
+        re.compile(r"^Additional resources$"),
+        re.compile(r"^Feedback$"),
+        re.compile(r"^Training available$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1265,6 +1316,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"talk-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"transcript__body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "aws.amazon.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"awsdocs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
+    ),
+    "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "learn.microsoft.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"main-content"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

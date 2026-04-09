@@ -689,6 +689,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("More TED talks on AI", content.text)
         self.assertNotIn("Listen to the episode", content.text)
 
+    def test_prefers_aws_best_practices_body_and_drops_checklist_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("aws-best-practices-guide.html"),
+            url="https://aws.amazon.com/architecture/2026/04/ai-operations-best-practices/",
+        )
+
+        self.assertIn("Best-practices guides are increasingly explicit about what AI teams must rehearse before launch", content.text)
+        self.assertIn("approval checkpoints, rollback exercises, and fallback ownership", content.text)
+        self.assertNotIn("Best practices checklist", content.text)
+        self.assertNotIn("Related AWS guidance", content.text)
+        self.assertNotIn("Watch the walkthrough", content.text)
+
+    def test_prefers_anthropic_troubleshooting_body_and_drops_help_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-troubleshooting.html"),
+            url="https://docs.anthropic.com/en/docs/troubleshooting/ai-operations-incident-response",
+        )
+
+        self.assertIn("Troubleshooting docs become more useful when they explain how operators should respond after a model misbehaves in production", content.text)
+        self.assertIn("retry boundaries, human escalation, and how to recover without compounding the incident", content.text)
+        self.assertNotIn("Troubleshooting menu", content.text)
+        self.assertNotIn("Related topics", content.text)
+        self.assertNotIn("Need more help?", content.text)
+
+    def test_prefers_microsoft_faq_body_and_drops_resource_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("microsoft-faq-guide.html"),
+            url="https://learn.microsoft.com/en-us/azure/ai-services/faq/operational-governance",
+        )
+
+        self.assertIn("FAQ pages are valuable when they answer the operational questions teams ask after the first outage or rollback", content.text)
+        self.assertIn("who approves risky changes, how recovery is triggered, and what gets documented for review", content.text)
+        self.assertNotIn("Additional resources", content.text)
+        self.assertNotIn("Feedback", content.text)
+        self.assertNotIn("Training available", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

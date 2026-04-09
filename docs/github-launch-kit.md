@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.14`
+`v1.2.15`
 
 ### Suggested Title
 
-`AI News Open v1.2.14 · Conference Recap Extraction Coverage`
+`AI News Open v1.2.15 · Vendor Documentation Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.14
+## AI News Open v1.2.15
 
-AI News Open `v1.2.14` hardens extraction quality for conference recap, event takeaways, and transcript-summary hybrid layouts across more international publishers.
+AI News Open `v1.2.15` hardens extraction quality for vendor FAQ, troubleshooting, and best-practices guide layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.14` hardens extraction quality for conference recap, event ta
 
 ### Highlights in this release
 
-- New deterministic recap and session-summary fixtures for `Tech Policy Press`, `a16z`, and `TED`
-- Better cleanup for event metadata, session promos, transcript navigation, and related-content recirculation on recap-heavy pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, and conference recap layouts
+- New deterministic documentation-style fixtures for `AWS`, `Anthropic Docs`, and `Microsoft Learn`
+- Better cleanup for resource sidebars, help navigation, feedback modules, and checklist recirculation on vendor documentation pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, and vendor documentation layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

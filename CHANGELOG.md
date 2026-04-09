@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.15] - 2026-04-09
+
+### Added
+
+- Vendor FAQ, troubleshooting, and best-practices extraction fixtures for `aws.amazon.com`, `docs.anthropic.com`, and `learn.microsoft.com`
+
+### Changed
+
+- Package version is now `1.2.15`
+- International extraction coverage now includes vendor FAQ, troubleshooting, and best-practices guide layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, and conference recap layouts
+
+### Fixed
+
+- Reduced resource sidebars, help navigation, feedback modules, and checklist noise on documentation-heavy vendor pages
+- Locked another class of documentation-style operational pages into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.14] - 2026-04-09
 
 ### Added
