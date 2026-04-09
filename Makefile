@@ -45,7 +45,7 @@ sbom:
 	PYTHON_BIN="$$( $(PYTHON) -c 'import sys; print(sys.executable)' )"; \
 	$(PYTHON) -m cyclonedx_py environment "$$PYTHON_BIN" --pyproject pyproject.toml --mc-type application --output-reproducible --of JSON -o sbom.json
 
-check: lint test build
+check: lint coverage build smoke
 
 serve:
 	$(PYTHON) -m uvicorn ainews.api:create_app --factory --host 0.0.0.0 --port 8000

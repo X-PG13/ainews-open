@@ -15,7 +15,8 @@ make check
 
 - Run `make lint` before opening a pull request.
 - Run `make test` for behavior changes.
-- Run `make coverage` when behavior or contracts change.
+- Run `make check` before merging behavior, contract, release, or workflow changes. It is the local maintainer gate and includes lint, coverage, build, and smoke.
+- Run `make coverage` separately only when you need to iterate on coverage failures without re-running the full local gate.
 - Run `make build` when packaging, entry points, or included assets change.
 - Run `make sbom` when supply chain or release files change.
 - Keep CI green on all supported Python versions before merging.

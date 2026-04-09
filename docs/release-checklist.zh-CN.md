@@ -13,8 +13,9 @@
 
 ```bash
 make check
-make smoke
 ```
+
+`make check` 现在已经包含本地 smoke 校验，所以只有在你单独排查启动问题时，才需要额外再跑一次 `make smoke`。
 
 5. 用当前 compose profile 验证 `docker compose config -q` 能通过。
 6. 确认 open code scanning alerts 为 `0`。

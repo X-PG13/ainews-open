@@ -81,9 +81,9 @@ After startup you can:
 python -m pip install -e ".[dev]"
 pre-commit install
 make check
-make coverage
-make smoke
 ```
+
+`make check` is the local maintainer gate. It runs lint, coverage, package build validation, and the `/health` smoke check in one command. Use `make coverage` or `make smoke` separately only when you are iterating on one layer.
 
 ## Operator Docs
 
