@@ -278,6 +278,21 @@ HOST_SELECTORS = {
         ".article-body",
         ".content-body",
     ),
+    "theatlantic.com": (
+        ".ArticleBody",
+        ".article-body",
+        ".ContentBody",
+    ),
+    "foreignpolicy.com": (
+        ".post-content",
+        ".article-content",
+        ".entry-content",
+    ),
+    "newstatesman.com": (
+        ".article__body",
+        ".c-content-body",
+        ".article-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -571,6 +586,27 @@ HOST_DROP_SELECTORS = {
         ".author-card",
         ".article-footer",
     ),
+    "theatlantic.com": (
+        ".article-sidebar",
+        ".newsletter-callout",
+        ".listen-bar",
+        ".author-note",
+        ".related-content",
+    ),
+    "foreignpolicy.com": (
+        ".subscription-banner",
+        ".read-next",
+        ".podcast-module",
+        ".author-bio",
+        ".related-coverage",
+    ),
+    "newstatesman.com": (
+        ".newsletter-promo",
+        ".audio-player",
+        ".author-box",
+        ".recommended-links",
+        ".article-footer",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -789,6 +825,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^More from IEEE Spectrum$"),
         re.compile(r"^Subscribe to our newsletters$"),
     ),
+    "theatlantic.com": (
+        re.compile(r"^Listen to the article$"),
+        re.compile(r"^Read more from The Atlantic$"),
+        re.compile(r"^Sign up for The Atlantic Daily$"),
+    ),
+    "foreignpolicy.com": (
+        re.compile(r"^Subscribe to Foreign Policy$"),
+        re.compile(r"^Read More$"),
+        re.compile(r"^Listen to the conversation$"),
+    ),
+    "newstatesman.com": (
+        re.compile(r"^Listen to this piece$"),
+        re.compile(r"^Continue reading with a subscription$"),
+        re.compile(r"^Recommended$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1001,6 +1052,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-main__content"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "theatlantic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"articlebody"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"contentbody"}},
+    ),
+    "foreignpolicy.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
+    ),
+    "newstatesman.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"c-content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

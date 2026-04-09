@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.10`
+`v1.2.11`
 
 ### Suggested Title
 
-`AI News Open v1.2.10 · Interview and Transcript Extraction Coverage`
+`AI News Open v1.2.11 · Longform Analysis Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.10
+## AI News Open v1.2.11
 
-AI News Open `v1.2.10` hardens extraction quality for interview, transcript, and Q&A newsroom layouts across more international publishers.
+AI News Open `v1.2.11` hardens extraction quality for analysis-, essay-, and longform-feature newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.10` hardens extraction quality for interview, transcript, and
 
 ### Highlights in this release
 
-- New deterministic interview / transcript extraction fixtures for `Fast Company`, `Business Insider`, and `IEEE Spectrum`
-- Better cleanup for inline audio prompts, read-next modules, and promo blocks on speaker-label-heavy publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, and interview/transcript layouts
+- New deterministic longform analysis fixtures for `The Atlantic`, `Foreign Policy`, and `New Statesman`
+- Better cleanup for audio prompts, subscription banners, and read-more recirculation modules on essay-heavy publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, and longform analysis layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

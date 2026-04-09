@@ -533,6 +533,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("More from IEEE Spectrum", content.text)
         self.assertNotIn("Subscribe to our newsletters", content.text)
 
+    def test_prefers_theatlantic_longform_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("theatlantic-longform.html"),
+            url="https://www.theatlantic.com/technology/archive/2026/04/why-ai-operations-became-governance/123456/",
+        )
+
+        self.assertIn("AI operations has become the place where governance claims are tested", content.text)
+        self.assertIn("review queues, rollback drills, and ownership boundaries", content.text)
+        self.assertNotIn("Listen to the article", content.text)
+        self.assertNotIn("Read more from The Atlantic", content.text)
+        self.assertNotIn("Sign up for The Atlantic Daily", content.text)
+
+    def test_prefers_foreignpolicy_longform_body_and_drops_subscription_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("foreignpolicy-longform.html"),
+            url="https://foreignpolicy.com/2026/04/09/ai-operations-governance-analysis/",
+        )
+
+        self.assertIn("AI strategy is increasingly judged by how systems are supervised after launch", content.text)
+        self.assertIn("approval paths, incident review, and controlled rollback", content.text)
+        self.assertNotIn("Subscribe to Foreign Policy", content.text)
+        self.assertNotIn("Read More", content.text)
+        self.assertNotIn("Listen to the conversation", content.text)
+
+    def test_prefers_newstatesman_longform_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("newstatesman-longform.html"),
+            url="https://www.newstatesman.com/technology/2026/04/how-ai-operations-became-a-political-economy-question",
+        )
+
+        self.assertIn("Longform analysis of AI now spends more time on operating discipline than on model spectacle", content.text)
+        self.assertIn("fallback planning, escalation rules, and post-incident accountability", content.text)
+        self.assertNotIn("Listen to this piece", content.text)
+        self.assertNotIn("Continue reading with a subscription", content.text)
+        self.assertNotIn("Recommended", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

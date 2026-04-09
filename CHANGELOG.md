@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.11] - 2026-04-09
+
+### Added
+
+- Longform analysis and essay extraction fixtures for `theatlantic.com`, `foreignpolicy.com`, and `newstatesman.com`
+
+### Changed
+
+- Package version is now `1.2.11`
+- International extraction coverage now includes analysis-, essay-, and longform-feature-style newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, and interview/transcript layouts
+
+### Fixed
+
+- Reduced audio prompts, recirculation modules, and subscription or newsletter noise on longform publisher pages
+- Locked another class of essay-heavy newsroom layouts into deterministic fixture coverage so longform cleanup regressions are caught in CI
+
 ## [1.2.10] - 2026-04-09
 
 ### Added
