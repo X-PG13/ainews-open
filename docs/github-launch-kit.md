@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.8`
+`v1.2.9`
 
 ### Suggested Title
 
-`AI News Open v1.2.8 · Explainer and Guide Extraction Coverage`
+`AI News Open v1.2.9 · Roundup and What-to-Know Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.8
+## AI News Open v1.2.9
 
-AI News Open `v1.2.8` hardens extraction quality for explainer, FAQ, and guide-style newsroom layouts across more international publishers.
+AI News Open `v1.2.9` hardens extraction quality for roundup, list, and what-to-know newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.8` hardens extraction quality for explainer, FAQ, and guide-s
 
 ### Highlights in this release
 
-- New deterministic explainer/guide extraction fixtures for `CNN`, `The New York Times`, and `The Washington Post`
-- Better cleanup for audio/listen prompts, gift offers, related-coverage blocks, and newsletter modules on service-journalism-heavy publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, and explainer/guide layouts
+- New deterministic roundup / what-to-know extraction fixtures for `Vox`, `TIME`, and `NBC News`
+- Better cleanup for newsletter cards, read-next recirculation, video prompts, and related-coverage blocks on list-heavy publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, and roundup/what-to-know layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

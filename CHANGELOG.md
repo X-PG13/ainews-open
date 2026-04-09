@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.9] - 2026-04-09
+
+### Added
+
+- Roundup and what-to-know extraction fixtures for `vox.com`, `time.com`, and `nbcnews.com`
+
+### Changed
+
+- Package version is now `1.2.9`
+- International extraction coverage now includes roundup-, list-, and what-to-know-style newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, and explainer/guide layouts
+
+### Fixed
+
+- Reduced newsletter cards, read-next recirculation, video prompts, and related-coverage noise on roundup-style publisher pages
+- Locked another class of list-heavy newsroom layouts into deterministic fixture coverage so roundup cleanup regressions are caught in CI
+
 ## [1.2.8] - 2026-04-09
 
 ### Added
