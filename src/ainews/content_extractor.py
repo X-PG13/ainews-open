@@ -218,6 +218,21 @@ HOST_SELECTORS = {
         ".article-content",
         ".single-post-content",
     ),
+    "bloomberg.com": (
+        ".body-copy-v2",
+        ".article-body",
+        ".paywall-content",
+    ),
+    "wsj.com": (
+        ".wsj-snippet-body",
+        ".article-content",
+        ".paywall",
+    ),
+    "economist.com": (
+        ".article__body-text",
+        ".layout-article-body",
+        ".article-text",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -427,6 +442,27 @@ HOST_DROP_SELECTORS = {
         ".premium-cta",
         ".article-share",
     ),
+    "bloomberg.com": (
+        ".terminal-promo",
+        ".signup-banner",
+        ".read-next",
+        ".up-next",
+        ".inline-newsletter",
+    ),
+    "wsj.com": (
+        ".snippet-promotion",
+        ".login-prompt",
+        ".related-coverage",
+        ".audio-player",
+        ".article-share",
+    ),
+    "economist.com": (
+        ".subscription-prompt",
+        ".podcast-promo",
+        ".related-reading",
+        ".newsletter-signup",
+        ".article-share",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -585,6 +621,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Recommended Reading$"),
         re.compile(r"^Subscribe to the newsletter$"),
     ),
+    "bloomberg.com": (
+        re.compile(r"^Before it's here, it's on the Bloomberg Terminal\.$"),
+        re.compile(r"^Read next$"),
+        re.compile(r"^Sign up for the New Economy Daily$"),
+    ),
+    "wsj.com": (
+        re.compile(r"^Listen to article$"),
+        re.compile(r"^Continue reading your article with a WSJ subscription$"),
+        re.compile(r"^Recommended Videos$"),
+    ),
+    "economist.com": (
+        re.compile(r"^Subscribers only$"),
+        re.compile(r"^Listen to this episode$"),
+        re.compile(r"^Read more from this section$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -737,6 +788,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"single-post-content"}},
+    ),
+    "bloomberg.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"body-copy-v2"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"paywall-content"}},
+    ),
+    "wsj.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"wsj-snippet-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"paywall"}},
+    ),
+    "economist.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__body-text"}},
+        {"tags": {"div", "section"}, "class_tokens": {"layout-article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-text"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

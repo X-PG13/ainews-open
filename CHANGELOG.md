@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.7] - 2026-04-09
+
+### Added
+
+- Paywall-heavy extraction fixtures for `bloomberg.com`, `wsj.com`, and `economist.com`
+
+### Changed
+
+- Package version is now `1.2.7`
+- International extraction coverage now includes paywall- and subscriber-prompt-heavy newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, and opinion/column layouts
+
+### Fixed
+
+- Reduced subscription prompts, audio/listen modules, and recirculation noise on paywall-heavy publisher pages
+- Locked another class of premium-news publisher layouts into deterministic fixture coverage so paywall cleanup regressions are caught in CI
+
 ## [1.2.6] - 2026-04-09
 
 ### Added
