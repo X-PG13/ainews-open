@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.2] - 2026-04-09
+
+### Added
+
+- New fixture-driven extraction coverage for `technologyreview.com` and `axios.com`, extending the international media regression set with additional newsletter-heavy article layouts
+
+### Changed
+
+- Package version is now `1.2.2`
+- `make check` now runs the full local engineering gate: `lint`, `coverage`, `build`, and `smoke`
+
+### Fixed
+
+- Improved source-specific cleanup for Axios article pages so newsletter prompts, share tools, and recirculation blocks are excluded from extracted body text
+- Reduced regression risk on MIT Technology Review and Axios layouts by locking both shapes into deterministic fixture coverage
+
 ## [1.2.1] - 2026-04-09
 
 ### Added

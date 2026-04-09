@@ -148,6 +148,11 @@ HOST_SELECTORS = {
         ".article-body__content",
         ".article-body",
     ),
+    "axios.com": (
+        ".gtm-story-text",
+        ".story-body",
+        ".article-body",
+    ),
     "substack.com": (
         ".body.markup",
         ".available-content",
@@ -252,6 +257,13 @@ HOST_DROP_SELECTORS = {
         ".most-popular",
         ".paywall-inline",
     ),
+    "axios.com": (
+        ".newsletter-card",
+        ".story-share-tools",
+        ".related-story-list",
+        ".sidebar-list",
+        ".story-footer",
+    ),
     "substack.com": (
         ".subscription-widget-wrap",
         ".subscribe-widget",
@@ -329,6 +341,11 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Stay connected with MIT Technology Review.*$"),
         re.compile(r"^More from MIT Technology Review$"),
     ),
+    "axios.com": (
+        re.compile(r"^Sign up for Axios AI\+$"),
+        re.compile(r"^By signing up, you agree to receive.*$"),
+        re.compile(r"^More from Axios$"),
+    ),
     "substack.com": (
         re.compile(r"^Thanks for reading.*$"),
         re.compile(r"^Subscribe (?:now|for free).*$"),
@@ -405,6 +422,11 @@ FALLBACK_HOST_RULES = {
     "technologyreview.com": (
         {"tags": {"div", "section"}, "class_tokens": {"content--body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "axios.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"gtm-story-text"}},
+        {"tags": {"div", "section"}, "class_tokens": {"story-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "substack.com": (
