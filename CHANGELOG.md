@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.17] - 2026-04-09
+
+### Added
+
+- Migration guide, deprecation notice, and upgrade guide extraction fixtures for `docs.langchain.com`, `developer.atlassian.com`, and `supabase.com`
+
+### Changed
+
+- Package version is now `1.2.17`
+- International extraction coverage now includes migration-guide, deprecation-notice, and upgrade-guide layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, and API-reference/changelog layouts
+
+### Fixed
+
+- Reduced migration menus, deprecation banners, upgrade CTAs, and related-doc recirculation noise on developer-doc and change-management pages
+- Locked another class of migration and deprecation layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.16] - 2026-04-09
 
 ### Added
