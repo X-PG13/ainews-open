@@ -728,6 +728,56 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Feedback", content.text)
         self.assertNotIn("Training available", content.text)
 
+    def test_prefers_cohere_api_reference_body_and_drops_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("cohere-api-reference.html"),
+            url="https://docs.cohere.com/reference/ai-operations-recovery-playbook",
+        )
+
+        self.assertIn(
+            "API reference pages are only useful when operators can map endpoints to real recovery behavior",
+            content.text,
+        )
+        self.assertIn("retry limits, escalation paths, and safe fallback defaults", content.text)
+        self.assertNotIn("API reference menu", content.text)
+        self.assertNotIn("Related endpoints", content.text)
+        self.assertNotIn("Need help with integration?", content.text)
+
+    def test_prefers_nvidia_reference_body_and_drops_checklist_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("nvidia-reference-guide.html"),
+            url="https://developer.nvidia.com/blog/ai-operations-reference-guide",
+        )
+
+        self.assertIn(
+            "Reference guides for AI infrastructure now double as operating manuals for teams under load",
+            content.text,
+        )
+        self.assertIn("rollback thresholds, observable failure modes", content.text)
+        self.assertIn("who owns", content.text)
+        self.assertNotIn("Performance checklist", content.text)
+        self.assertNotIn("Related NVIDIA guides", content.text)
+        self.assertNotIn("Watch the walkthrough", content.text)
+
+    def test_prefers_vercel_changelog_body_and_drops_update_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("vercel-changelog-update.html"),
+            url="https://vercel.com/changelog/ai-operations-reliability-updates",
+        )
+
+        self.assertIn(
+            "Product updates are more credible when changelog entries explain what changed in operations",
+            content.text,
+        )
+        self.assertIn("deployment sequencing, incident ownership", content.text)
+        self.assertIn("how teams should verify", content.text)
+        self.assertNotIn("Read the changelog", content.text)
+        self.assertNotIn("Related updates", content.text)
+        self.assertNotIn("Watch the launch clip", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

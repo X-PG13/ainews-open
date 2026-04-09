@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.16] - 2026-04-09
+
+### Added
+
+- API reference, developer guide, and changelog-style extraction fixtures for `docs.cohere.com`, `developer.nvidia.com`, and `vercel.com`
+
+### Changed
+
+- Package version is now `1.2.16`
+- International extraction coverage now includes API-reference, developer-guide, and changelog-update layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, and vendor documentation layouts
+
+### Fixed
+
+- Reduced navigation menus, endpoint sidebars, checklist modules, and changelog recirculation noise on documentation- and update-heavy vendor pages
+- Locked another class of API reference and product-update layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.15] - 2026-04-09
 
 ### Added
