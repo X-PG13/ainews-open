@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.10] - 2026-04-09
+
+### Added
+
+- Interview, transcript, and Q&A extraction fixtures for `fastcompany.com`, `businessinsider.com`, and `spectrum.ieee.org`
+
+### Changed
+
+- Package version is now `1.2.10`
+- International extraction coverage now includes interview-, transcript-, and Q&A-style newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, and roundup/what-to-know layouts
+
+### Fixed
+
+- Reduced inline audio prompts, author/promo modules, and read-next noise on interview-style publisher pages
+- Locked another class of speaker-label-heavy newsroom layouts into deterministic fixture coverage so transcript cleanup regressions are caught in CI
+
 ## [1.2.9] - 2026-04-09
 
 ### Added
