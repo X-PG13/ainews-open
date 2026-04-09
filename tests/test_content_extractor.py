@@ -195,6 +195,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("More from Axios", content.text)
         self.assertNotIn("Share this story", content.text)
 
+    def test_prefers_apnews_story_body_and_drops_wire_footer_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("apnews-article.html"),
+            url="https://apnews.com/article/ai-buyers-moving-past-pilot-theater-1234567890",
+        )
+
+        self.assertIn("enterprise AI teams are pushing vendors to prove they can run production systems", content.text)
+        self.assertIn("rollback controls, evaluation logs, and human escalation paths", content.text)
+        self.assertNotIn("Read more", content.text)
+        self.assertNotIn("More stories", content.text)
+        self.assertNotIn("The Associated Press is an independent global news organization", content.text)
+
+    def test_prefers_cnbc_article_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("cnbc-article.html"),
+            url="https://www.cnbc.com/2026/04/09/ai-operating-discipline-becomes-board-topic.html",
+        )
+
+        self.assertIn("AI operating discipline is becoming a board-level topic", content.text)
+        self.assertIn("measure reliability, control rollback windows, and explain model-driven failures", content.text)
+        self.assertNotIn("Subscribe to CNBC PRO", content.text)
+        self.assertNotIn("Related Tags", content.text)
+        self.assertNotIn("Watch: Why AI spending is accelerating again", content.text)
+
+    def test_prefers_ft_article_body_and_drops_recommended_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("ft-article.html"),
+            url="https://www.ft.com/content/ai-governance-pressure-2026-04-09",
+        )
+
+        self.assertIn("enterprise buyers now evaluate AI vendors on governance and recoverability", content.text)
+        self.assertIn("document fallback paths, human approvals, and incident playbooks", content.text)
+        self.assertNotIn("Sign up to the FT Edit newsletter", content.text)
+        self.assertNotIn("Recommended", content.text)
+        self.assertNotIn("Read next", content.text)
+
     def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
