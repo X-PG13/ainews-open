@@ -873,6 +873,53 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related versioned pages", content.text)
         self.assertNotIn("Edit on GitHub", content.text)
 
+    def test_prefers_llamaindex_compatibility_matrix_body_and_drops_matrix_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("llamaindex-compatibility-matrix.html"),
+            url="https://docs.llamaindex.ai/en/stable/getting_started/compatibility/ai-operations-matrix",
+        )
+
+        self.assertIn("Compatibility matrices are useful when they tell operators which model providers", content.text)
+        self.assertIn("fallback behavior changes", content.text)
+        self.assertIn("upgrade combinations remain safe", content.text)
+        self.assertIn("rollback limits should", content.text)
+        self.assertIn("influence release planning", content.text)
+        self.assertNotIn("Compatibility matrix", content.text)
+        self.assertNotIn("Matrix navigation", content.text)
+        self.assertNotIn("Related LlamaIndex docs", content.text)
+
+    def test_prefers_together_support_policy_body_and_drops_support_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-support-policy.html"),
+            url="https://docs.together.ai/docs/support-policy/ai-inference-ops",
+        )
+
+        self.assertIn("Support policies are useful when they spell out what service levels apply", content.text)
+        self.assertIn("which model versions receive security fixes", content.text)
+        self.assertIn("migrations before support", content.text)
+        self.assertIn("windows close", content.text)
+        self.assertIn("rollback expectations", content.text)
+        self.assertNotIn("Support policy", content.text)
+        self.assertNotIn("Related Together docs", content.text)
+        self.assertNotIn("Need more help?", content.text)
+
+    def test_prefers_fireworks_release_channel_note_body_and_drops_channel_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("fireworks-release-channel-note.html"),
+            url="https://docs.fireworks.ai/guides/release-channels/enterprise-ai-ops",
+        )
+
+        self.assertIn("Release-channel notes matter when they explain which preview and stable tracks", content.text)
+        self.assertIn("rollout timing affects benchmark parity", content.text)
+        self.assertIn("rollback triggers, incident ownership", content.text)
+        self.assertIn("stable channel changes", content.text)
+        self.assertNotIn("Release channels", content.text)
+        self.assertNotIn("Related Fireworks guides", content.text)
+        self.assertNotIn("Edit this page", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.18`
+`v1.2.19`
 
 ### Suggested Title
 
-`AI News Open v1.2.18 · Deprecation FAQ and Versioned Docs Extraction Coverage`
+`AI News Open v1.2.19 · Support Policy and Compatibility Matrix Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.18
+## AI News Open v1.2.19
 
-AI News Open `v1.2.18` hardens extraction quality for deprecation FAQs, migration checklists, and versioned-doc notice layouts across more international publishers.
+AI News Open `v1.2.19` hardens extraction quality for support-policy, compatibility-matrix, and release-channel-note layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.18` hardens extraction quality for deprecation FAQs, migratio
 
 ### Highlights in this release
 
-- New deterministic documentation-style fixtures for `OpenAI Platform Docs`, `Pinecone Docs`, and `vLLM Docs`
-- Better cleanup for deprecation sidebars, checklist navigation, version banners, and related-doc recirculation on AI developer-doc pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, and versioned-doc-notice layouts
+- New deterministic documentation-style fixtures for `LlamaIndex Docs`, `Together Docs`, and `Fireworks Docs`
+- Better cleanup for compatibility sidebars, support banners, release-channel navigation, and related-doc recirculation on AI developer-doc pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, and release-channel-note layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
