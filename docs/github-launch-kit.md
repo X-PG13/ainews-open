@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.21`
+`v1.2.22`
 
 ### Suggested Title
 
-`AI News Open v1.2.21 · Security Bulletin and Trust Advisory Extraction Coverage`
+`AI News Open v1.2.22 · Pricing and Service Tier Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.21
+## AI News Open v1.2.22
 
-AI News Open `v1.2.21` hardens extraction quality for security-bulletin, trust-center-advisory, and compliance-update layouts across more international publishers.
+AI News Open `v1.2.22` hardens extraction quality for pricing-update, service-tier-notice, and SKU-change layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.21` hardens extraction quality for security-bulletin, trust-c
 
 ### Highlights in this release
 
-- New deterministic vendor-security fixtures for `OpenAI Trust`, `Anthropic Docs`, and `Google Cloud`
-- Better cleanup for severity banners, trust-center sidebars, compliance navigation, and related-advisory recirculation on vendor trust and security pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, and compliance-update layouts
+- New deterministic commercial-notice fixtures for `OpenAI`, `Anthropic`, and `Together`
+- Better cleanup for pricing sidebars, service-tier grids, plan-comparison modules, and sales CTA recirculation on product pricing and commercial notice pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, and SKU-change layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
