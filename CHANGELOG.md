@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.12] - 2026-04-09
+
+### Added
+
+- Policy memo, research note, and magazine-feature extraction fixtures for `brookings.edu`, `rand.org`, and `restofworld.org`
+
+### Changed
+
+- Package version is now `1.2.12`
+- International extraction coverage now includes policy-memo, research-note, and feature-with-pull-quote newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, and longform analysis layouts
+
+### Fixed
+
+- Reduced pull-quote bleed-through, briefing modules, audio prompts, and related-content noise on policy- and feature-heavy longform pages
+- Locked another class of fragmented longform layouts into deterministic fixture coverage so cleanup regressions are caught in CI
+
 ## [1.2.11] - 2026-04-09
 
 ### Added

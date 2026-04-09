@@ -572,6 +572,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Continue reading with a subscription", content.text)
         self.assertNotIn("Recommended", content.text)
 
+    def test_prefers_brookings_policy_memo_body_and_drops_briefing_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("brookings-policy-memo.html"),
+            url="https://www.brookings.edu/articles/2026/04/09/ai-governance-needs-operators-not-just-policies/",
+        )
+
+        self.assertIn("Policy teams are learning that AI governance only works when operators own the control points", content.text)
+        self.assertIn("approval ladders, rollback drills, and escalation playbooks", content.text)
+        self.assertNotIn("Sign up for Brookings newsletters", content.text)
+        self.assertNotIn("Related Content", content.text)
+        self.assertNotIn("Listen to this policy brief", content.text)
+
+    def test_prefers_rand_research_note_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("rand-research-note.html"),
+            url="https://www.rand.org/pubs/research_reports/2026/ai-operations-under-pressure.html",
+        )
+
+        self.assertIn("Research teams studying enterprise AI deployments now focus on how systems fail after launch", content.text)
+        self.assertIn("review queues, monitored rollback paths, and incident rehearsal", content.text)
+        self.assertNotIn("Listen to the article", content.text)
+        self.assertNotIn("Related RAND research", content.text)
+        self.assertNotIn("Get RAND insights in your inbox", content.text)
+
+    def test_prefers_restofworld_feature_body_and_drops_pullquote_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("restofworld-feature.html"),
+            url="https://restofworld.org/2026/ai-operators-are-doing-the-unseen-work-of-governance/",
+        )
+
+        self.assertIn("Magazine-style features about AI now spend more time on the invisible operating labor after launch", content.text)
+        self.assertIn("runbooks, exception handling, and who gets paged when a model starts drifting", content.text)
+        self.assertNotIn("Listen to the story", content.text)
+        self.assertNotIn("Read more from Rest of World", content.text)
+        self.assertNotIn("The system is only as trustworthy as the people rehearsing the fallback path.", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

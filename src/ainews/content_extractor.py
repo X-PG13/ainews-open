@@ -293,6 +293,21 @@ HOST_SELECTORS = {
         ".c-content-body",
         ".article-body",
     ),
+    "brookings.edu": (
+        ".post-body",
+        ".article__content",
+        ".wysiwyg",
+    ),
+    "rand.org": (
+        ".article-content",
+        ".content-body",
+        ".rich-text",
+    ),
+    "restofworld.org": (
+        ".article-body",
+        ".story-content",
+        ".content-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -607,6 +622,27 @@ HOST_DROP_SELECTORS = {
         ".recommended-links",
         ".article-footer",
     ),
+    "brookings.edu": (
+        ".newsletter-signup",
+        ".inline-promo",
+        ".book-promo",
+        ".author-bio",
+        ".related-content",
+    ),
+    "rand.org": (
+        ".newsletter-module",
+        ".audio-player",
+        ".related-resources",
+        ".author-card",
+        ".cta-banner",
+    ),
+    "restofworld.org": (
+        ".pullquote",
+        ".newsletter-callout",
+        ".related-stories",
+        ".audio-player",
+        ".author-card",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -840,6 +876,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Continue reading with a subscription$"),
         re.compile(r"^Recommended$"),
     ),
+    "brookings.edu": (
+        re.compile(r"^Sign up for Brookings newsletters$"),
+        re.compile(r"^Related Content$"),
+        re.compile(r"^Listen to this policy brief$"),
+    ),
+    "rand.org": (
+        re.compile(r"^Listen to the article$"),
+        re.compile(r"^Related RAND research$"),
+        re.compile(r"^Get RAND insights in your inbox$"),
+    ),
+    "restofworld.org": (
+        re.compile(r"^Listen to the story$"),
+        re.compile(r"^Read more from Rest of World$"),
+        re.compile(r"^Sign up for our weekly newsletter$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1067,6 +1118,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
         {"tags": {"div", "section"}, "class_tokens": {"c-content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "brookings.edu": (
+        {"tags": {"div", "section"}, "class_tokens": {"post-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"wysiwyg"}},
+    ),
+    "rand.org": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"rich-text"}},
+    ),
+    "restofworld.org": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"story-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
