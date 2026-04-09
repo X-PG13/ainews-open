@@ -1195,6 +1195,53 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Exception thresholds", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_temporary_overage_notice_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-temporary-overage-notice.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/temporary-overage-notice",
+        )
+
+        self.assertIn("Temporary overage notices matter when they explain which workloads can briefly exceed", content.text)
+        self.assertIn("temporary relief is approved", content.text)
+        self.assertIn("burn-rate alerts", content.text)
+        self.assertIn("fallback routing", content.text)
+        self.assertNotIn("Overage summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_fairness_policy_update_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-fairness-policy-update.html"),
+            url="https://docs.anthropic.com/en/docs/usage/fairness-policy-update",
+        )
+
+        self.assertIn("Fairness policy updates are useful when they explain which workload classes now share", content.text)
+        self.assertIn("queue fairness guarantees", content.text)
+        self.assertIn("scheduling", content.text)
+        self.assertIn("fallback", content.text)
+        self.assertIn("queue controls", content.text)
+        self.assertNotIn("Fairness summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_capacity_reservation_note_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-capacity-reservation-note.html"),
+            url="https://docs.together.ai/docs/inference/capacity-reservation-note",
+        )
+
+        self.assertIn("Capacity reservation notes matter when they explain which workloads can claim reserved", content.text)
+        self.assertIn("reserved", content.text)
+        self.assertIn("throughput pools", content.text)
+        self.assertIn("failover routing", content.text)
+        self.assertIn("reservation expiry signals", content.text)
+        self.assertNotIn("Reservation summary", content.text)
+        self.assertNotIn("Reservation matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
