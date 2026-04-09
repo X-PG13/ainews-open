@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.13] - 2026-04-09
+
+### Added
+
+- Whitepaper, vendor benchmark, and enterprise case-study extraction fixtures for `mckinsey.com`, `cloud.google.com`, and `databricks.com`
+
+### Changed
+
+- Package version is now `1.2.13`
+- International extraction coverage now includes whitepaper, benchmark, and case-study publisher layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, and policy-feature layouts
+
+### Fixed
+
+- Reduced methodology blurbs, download prompts, video modules, and related-resource noise on benchmark- and case-study-heavy pages
+- Locked another class of vendor and research content-marketing layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.12] - 2026-04-09
 
 ### Added
