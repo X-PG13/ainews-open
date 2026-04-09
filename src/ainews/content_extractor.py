@@ -346,6 +346,7 @@ HOST_SELECTORS = {
     ),
     "docs.anthropic.com": (
         ".security-bulletin",
+        ".concurrency-cap-update",
         ".usage-limit-notice",
         ".theme-doc-markdown",
         ".docs-content",
@@ -407,6 +408,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".burst-cap-notice",
         ".rate-limit-update",
         ".docs-body",
         ".prose",
@@ -423,6 +425,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".regional-quota-advisory",
         ".quota-policy",
         ".docs-body",
         ".content-body",
@@ -840,6 +843,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".concurrency-summary",
         ".severity-badge",
         ".limit-summary",
         ".table-of-contents",
@@ -929,6 +933,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".burst-cap-summary",
         ".rate-limit-nav",
         ".tier-summary",
         ".faq-nav",
@@ -953,6 +958,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".region-matrix",
+        ".regional-quota-summary",
         ".quota-summary",
         ".policy-sidebar",
         ".support-banner",
@@ -1283,6 +1290,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Concurrency cap update$"),
+        re.compile(r"^Concurrency summary$"),
         re.compile(r"^Security bulletin$"),
         re.compile(r"^Severity level$"),
         re.compile(r"^Usage limit notice$"),
@@ -1352,6 +1361,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Burst cap notice$"),
+        re.compile(r"^Burst cap summary$"),
         re.compile(r"^Rate limit update$"),
         re.compile(r"^Rate limit navigation$"),
         re.compile(r"^Tier summary$"),
@@ -1372,6 +1383,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Regional quota advisory$"),
+        re.compile(r"^Regional quota summary$"),
+        re.compile(r"^Region matrix$"),
         re.compile(r"^Quota policy$"),
         re.compile(r"^Quota summary$"),
         re.compile(r"^Support policy$"),
@@ -1688,6 +1702,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"concurrency-cap-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"usage-limit-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"security-bulletin"}},
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
@@ -1750,6 +1765,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"burst-cap-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"rate-limit-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
@@ -1766,6 +1782,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"regional-quota-advisory"}},
         {"tags": {"div", "section"}, "class_tokens": {"quota-policy"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},

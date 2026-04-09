@@ -1104,6 +1104,52 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related quota guides", content.text)
         self.assertNotIn("Need more help?", content.text)
 
+    def test_prefers_openai_burst_cap_notice_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-burst-cap-notice.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/burst-cap-notice",
+        )
+
+        self.assertIn("Burst cap notices matter when they explain which traffic classes can spike", content.text)
+        self.assertIn("temporary surge windows", content.text)
+        self.assertIn("queueing policy", content.text)
+        self.assertIn("retry jitter expectations, dashboard counters", content.text)
+        self.assertNotIn("Burst cap summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_concurrency_cap_update_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-concurrency-cap-update.html"),
+            url="https://docs.anthropic.com/en/docs/usage/model-concurrency-cap-update",
+        )
+
+        self.assertIn("Concurrency cap updates are useful when they explain which workload pools", content.text)
+        self.assertIn("parallel request slots", content.text)
+        self.assertIn("admission control", content.text)
+        self.assertIn("fallback", content.text)
+        self.assertIn("queue controls", content.text)
+        self.assertNotIn("Concurrency summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_regional_quota_advisory_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-regional-quota-advisory.html"),
+            url="https://docs.together.ai/docs/inference/regional-quota-advisory",
+        )
+
+        self.assertIn("Regional quota advisories matter when they explain which inference regions", content.text)
+        self.assertIn("spillover is handled", content.text)
+        self.assertIn("latency-sensitive traffic", content.text)
+        self.assertIn("region health signals, escalation triggers", content.text)
+        self.assertNotIn("Regional quota summary", content.text)
+        self.assertNotIn("Region matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
