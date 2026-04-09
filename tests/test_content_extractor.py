@@ -182,6 +182,19 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("More from MIT Technology Review", content.text)
         self.assertNotIn("Most Popular", content.text)
 
+    def test_prefers_axios_story_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("axios-article.html"),
+            url="https://www.axios.com/2026/04/09/ai-buyers-rollback-plans-before-rollouts",
+        )
+
+        self.assertIn("enterprise AI buyers increasingly ask vendors to prove rollback paths", content.text)
+        self.assertIn("deployment workflows can survive outages, policy changes, and retrieval regressions", content.text)
+        self.assertNotIn("Sign up for Axios AI+", content.text)
+        self.assertNotIn("More from Axios", content.text)
+        self.assertNotIn("Share this story", content.text)
+
     def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.1`
+`v1.2.2`
 
 ### Suggested Title
 
-`AI News Open v1.2.1 · Fixture Coverage Expansion`
+`AI News Open v1.2.2 · Extraction Coverage and Local Gate Hardening`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.1
+## AI News Open v1.2.2
 
-AI News Open `v1.2.1` hardens the fixture-driven regression layer with broader pipeline coverage across domestic, international, newsletter, and syndication source shapes.
+AI News Open `v1.2.2` hardens extraction quality across more international publisher layouts and makes the local maintainer gate match release-quality checks more closely.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.1` hardens the fixture-driven regression layer with broader p
 
 ### Highlights in this release
 
-- Multi-source feed fixtures for `Jiqizhixin`, `Ars Technica`, `Substack`, and `Yahoo`
-- A deterministic partial-error pipeline scenario that keeps timeout handling under regression coverage
-- Issue `#8` is now closed with CI-safe, network-free fixture expansion
+- New deterministic extraction fixtures for `MIT Technology Review` and `Axios`
+- Better Axios article cleanup so newsletter prompts, share tools, and recirculation blocks are filtered out of extracted body text
+- `make check` now runs `lint`, `coverage`, `build`, and `smoke` as the default local maintainer gate
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
