@@ -494,6 +494,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Sign up for our newsletters", content.text)
         self.assertNotIn("Related coverage", content.text)
 
+    def test_prefers_fastcompany_interview_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("fastcompany-interview.html"),
+            url="https://www.fastcompany.com/2026/04/09/ai-operations-interview",
+        )
+
+        self.assertIn("Interviewers increasingly ask AI operators how they handle failure after launch", content.text)
+        self.assertIn("approval ladders, rollback drills, and incident notes", content.text)
+        self.assertNotIn("Listen to the interview", content.text)
+        self.assertNotIn("Read more from Fast Company", content.text)
+        self.assertNotIn("Sign up for the newsletter", content.text)
+
+    def test_prefers_businessinsider_qa_body_and_drops_promo_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("businessinsider-qa.html"),
+            url="https://www.businessinsider.com/ai-ops-qa-why-governance-became-an-operations-problem-2026-4",
+        )
+
+        self.assertIn("Q: What changed once companies moved AI tools into regular workflows?", content.text)
+        self.assertIn("A: Teams started tracking review ownership, exception paths, and rollback triggers.", content.text)
+        self.assertNotIn("Read next", content.text)
+        self.assertNotIn("Get Business Insider intelligence in your inbox", content.text)
+        self.assertNotIn("Listen to the conversation", content.text)
+
+    def test_prefers_ieee_spectrum_transcript_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("ieee-spectrum-transcript.html"),
+            url="https://spectrum.ieee.org/ai-operations-transcript",
+        )
+
+        self.assertIn("Q: Why are companies treating AI operations as a governance problem now?", content.text)
+        self.assertIn("A: Because production systems need documented fallback plans and accountable human review.", content.text)
+        self.assertNotIn("Listen to this episode", content.text)
+        self.assertNotIn("More from IEEE Spectrum", content.text)
+        self.assertNotIn("Subscribe to our newsletters", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

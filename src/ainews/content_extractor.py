@@ -263,6 +263,21 @@ HOST_SELECTORS = {
         ".article-body__content",
         ".article-content",
     ),
+    "fastcompany.com": (
+        ".article-body",
+        ".prose",
+        ".content-body",
+    ),
+    "businessinsider.com": (
+        ".content-lock-content",
+        ".article-body",
+        ".post-content",
+    ),
+    "spectrum.ieee.org": (
+        ".article-main__content",
+        ".article-body",
+        ".content-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -535,6 +550,27 @@ HOST_DROP_SELECTORS = {
         ".article-share",
         ".what-to-know",
     ),
+    "fastcompany.com": (
+        ".newsletter-inline",
+        ".related-links",
+        ".audio-player",
+        ".author-bio",
+        ".article-footer",
+    ),
+    "businessinsider.com": (
+        ".signup-inline",
+        ".read-more-list",
+        ".audio-control",
+        ".author-card",
+        ".premium-upsell",
+    ),
+    "spectrum.ieee.org": (
+        ".podcast-player",
+        ".newsletter-signup",
+        ".related-articles",
+        ".author-card",
+        ".article-footer",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -738,6 +774,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Sign up for our newsletters$"),
         re.compile(r"^Related coverage$"),
     ),
+    "fastcompany.com": (
+        re.compile(r"^Listen to the interview$"),
+        re.compile(r"^Read more from Fast Company$"),
+        re.compile(r"^Sign up for the newsletter$"),
+    ),
+    "businessinsider.com": (
+        re.compile(r"^Read next$"),
+        re.compile(r"^Get Business Insider intelligence in your inbox$"),
+        re.compile(r"^Listen to the conversation$"),
+    ),
+    "spectrum.ieee.org": (
+        re.compile(r"^Listen to this episode$"),
+        re.compile(r"^More from IEEE Spectrum$"),
+        re.compile(r"^Subscribe to our newsletters$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -935,6 +986,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+    ),
+    "fastcompany.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "businessinsider.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"content-lock-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+    ),
+    "spectrum.ieee.org": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-main__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
