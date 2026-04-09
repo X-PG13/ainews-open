@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.8] - 2026-04-09
+
+### Added
+
+- Explainer and guide-style extraction fixtures for `cnn.com`, `nytimes.com`, and `washingtonpost.com`
+
+### Changed
+
+- Package version is now `1.2.8`
+- International extraction coverage now includes FAQ-, explainer-, and guide-style newsroom layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, and paywall-heavy layouts
+
+### Fixed
+
+- Reduced listen/audio prompts, newsletter modules, gift offers, and related-coverage noise on explainer-style publisher pages
+- Locked another class of newsroom Q&A and guide layouts into deterministic fixture coverage so explainer cleanup regressions are caught in CI
+
 ## [1.2.7] - 2026-04-09
 
 ### Added

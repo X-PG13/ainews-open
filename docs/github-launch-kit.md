@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.7`
+`v1.2.8`
 
 ### Suggested Title
 
-`AI News Open v1.2.7 · Paywall-Heavy Extraction Coverage`
+`AI News Open v1.2.8 · Explainer and Guide Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.7
+## AI News Open v1.2.8
 
-AI News Open `v1.2.7` hardens extraction quality for paywall-heavy and subscriber-prompt-heavy newsroom layouts across more international publishers.
+AI News Open `v1.2.8` hardens extraction quality for explainer, FAQ, and guide-style newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.7` hardens extraction quality for paywall-heavy and subscribe
 
 ### Highlights in this release
 
-- New deterministic paywall-heavy extraction fixtures for `Bloomberg`, `The Wall Street Journal`, and `The Economist`
-- Better cleanup for subscription prompts, audio/listen modules, and read-next recirculation blocks on premium publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, and paywall-heavy layouts
+- New deterministic explainer/guide extraction fixtures for `CNN`, `The New York Times`, and `The Washington Post`
+- Better cleanup for audio/listen prompts, gift offers, related-coverage blocks, and newsletter modules on service-journalism-heavy publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, and explainer/guide layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
