@@ -416,6 +416,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Listen to this episode", content.text)
         self.assertNotIn("Read more from this section", content.text)
 
+    def test_prefers_cnn_explainer_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("cnn-explainer.html"),
+            url="https://www.cnn.com/2026/04/09/tech/ai-explainer-operations-guide/index.html",
+        )
+
+        self.assertIn("AI oversight is becoming a repeatable operating procedure", content.text)
+        self.assertIn("review queues, rollback drills, and named escalation owners", content.text)
+        self.assertNotIn("Watch this interactive", content.text)
+        self.assertNotIn("Read more from CNN", content.text)
+        self.assertNotIn("Sign up for our newsletter", content.text)
+
+    def test_prefers_nytimes_explainer_body_and_drops_audio_and_ad_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("nytimes-explainer.html"),
+            url="https://www.nytimes.com/2026/04/09/technology/ai-explainer-why-operations-now-matter.html",
+        )
+
+        self.assertIn("AI systems now demand operating discipline after launch", content.text)
+        self.assertIn("approval chains, fallback procedures, and post-incident review", content.text)
+        self.assertNotIn("Listen to this article", content.text)
+        self.assertNotIn("More on A.I.", content.text)
+        self.assertNotIn("Advertisement", content.text)
+
+    def test_prefers_washingtonpost_guide_body_and_drops_gift_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("washingtonpost-guide.html"),
+            url="https://www.washingtonpost.com/technology/2026/04/09/ai-operations-guide/",
+        )
+
+        self.assertIn("AI deployment teams are building guidebooks instead of one-off launch plans", content.text)
+        self.assertIn("documenting failure thresholds, human review, and rollback ownership", content.text)
+        self.assertNotIn("Try 1 month for $1", content.text)
+        self.assertNotIn("Listen", content.text)
+        self.assertNotIn("Read more from The Post", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

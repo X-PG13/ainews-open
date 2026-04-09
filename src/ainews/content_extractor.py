@@ -233,6 +233,21 @@ HOST_SELECTORS = {
         ".layout-article-body",
         ".article-text",
     ),
+    "cnn.com": (
+        ".article__content",
+        ".article__main",
+        ".wysiwyg",
+    ),
+    "nytimes.com": (
+        ".StoryBodyCompanionColumn",
+        ".article-body",
+        ".css-at9mc1",
+    ),
+    "washingtonpost.com": (
+        ".article-body",
+        ".story-body",
+        ".article-body-content",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -463,6 +478,27 @@ HOST_DROP_SELECTORS = {
         ".newsletter-signup",
         ".article-share",
     ),
+    "cnn.com": (
+        ".relateds",
+        ".newsletter__container",
+        ".video-resource",
+        ".article__footer",
+        ".zone--recommendations",
+    ),
+    "nytimes.com": (
+        ".newsletter-promo",
+        ".related-coverage",
+        ".css-1bd8bfl",
+        ".css-1r7ky0e",
+        ".audio-control",
+    ),
+    "washingtonpost.com": (
+        ".gift-prompt",
+        ".newsletter-inline",
+        ".related-story-list",
+        ".audio-player",
+        ".story-footer",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -636,6 +672,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Listen to this episode$"),
         re.compile(r"^Read more from this section$"),
     ),
+    "cnn.com": (
+        re.compile(r"^Watch this interactive$"),
+        re.compile(r"^Read more from CNN$"),
+        re.compile(r"^Sign up for our newsletter$"),
+    ),
+    "nytimes.com": (
+        re.compile(r"^Listen to this article$"),
+        re.compile(r"^More on A\.I\.$"),
+        re.compile(r"^Advertisement$"),
+    ),
+    "washingtonpost.com": (
+        re.compile(r"^Listen$"),
+        re.compile(r"^Try 1 month for \$1$"),
+        re.compile(r"^Read more from The Post$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -803,6 +854,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article__body-text"}},
         {"tags": {"div", "section"}, "class_tokens": {"layout-article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-text"}},
+    ),
+    "cnn.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article__main"}},
+        {"tags": {"div", "section"}, "class_tokens": {"wysiwyg"}},
+    ),
+    "nytimes.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"storybodycompanioncolumn"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"css-at9mc1"}},
+    ),
+    "washingtonpost.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"story-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body-content"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
