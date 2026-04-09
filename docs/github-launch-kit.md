@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.5`
+`v1.2.6`
 
 ### Suggested Title
 
-`AI News Open v1.2.5 · Multimedia Extraction Coverage`
+`AI News Open v1.2.6 · Opinion and Column Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.5
+## AI News Open v1.2.6
 
-AI News Open `v1.2.5` hardens extraction quality for multimedia-heavy newsroom layouts across more international publishers.
+AI News Open `v1.2.6` hardens extraction quality for opinion, column, and author-driven newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.5` hardens extraction quality for multimedia-heavy newsroom l
 
 ### Highlights in this release
 
-- New deterministic multimedia extraction fixtures for `Engadget`, `Forbes`, and `ZDNet`
-- Better cleanup for video players, podcast modules, audio summaries, and embed/related CTA blocks on media-heavy publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, and multimedia-heavy layouts
+- New deterministic opinion/column extraction fixtures for `The New Yorker`, `Fortune`, and `Inc.`
+- Better cleanup for author bios, premium upsells, newsletter prompts, and most-popular blocks on commentary-heavy publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, and opinion layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

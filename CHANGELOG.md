@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.6] - 2026-04-09
+
+### Added
+
+- Opinion and column-style extraction fixtures for `newyorker.com`, `fortune.com`, and `inc.com`
+
+### Changed
+
+- Package version is now `1.2.6`
+- International extraction coverage now includes opinion, column, and author-driven publisher layouts in addition to standard articles, live updates, briefing pages, and multimedia-heavy pages
+
+### Fixed
+
+- Reduced author bio, premium upsell, newsletter, and most-popular noise on opinion-style publisher pages
+- Locked another class of commentary-heavy media layouts into deterministic fixture coverage so column cleanup regressions are caught in CI
+
 ## [1.2.5] - 2026-04-09
 
 ### Added

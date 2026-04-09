@@ -203,6 +203,21 @@ HOST_SELECTORS = {
         ".article-body",
         ".c-ShortcodeContent",
     ),
+    "newyorker.com": (
+        ".body__inner-container",
+        ".article__body",
+        ".content-body",
+    ),
+    "fortune.com": (
+        ".article-body",
+        ".paywall",
+        ".content-wrapper",
+    ),
+    "inc.com": (
+        ".article-body",
+        ".article-content",
+        ".single-post-content",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -391,6 +406,27 @@ HOST_DROP_SELECTORS = {
         ".relatedContent",
         ".adSlot",
     ),
+    "newyorker.com": (
+        ".contributors__bio",
+        ".newsletter-promo",
+        ".related-stories",
+        ".podcast-unit",
+        ".most-popular",
+    ),
+    "fortune.com": (
+        ".inline-newsletter",
+        ".most-popular",
+        ".premium-upsell",
+        ".related-content",
+        ".article-footer",
+    ),
+    "inc.com": (
+        ".inline-newsletter",
+        ".author-bio",
+        ".recommended-reading",
+        ".premium-cta",
+        ".article-share",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -534,6 +570,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch now$"),
         re.compile(r"^Editor's note:.*$"),
     ),
+    "newyorker.com": (
+        re.compile(r"^More from The New Yorker$"),
+        re.compile(r"^Listen to this story$"),
+        re.compile(r"^Most Popular$"),
+    ),
+    "fortune.com": (
+        re.compile(r"^Subscribe to Fortune.*$"),
+        re.compile(r"^Most Popular$"),
+        re.compile(r"^Read more from Fortune$"),
+    ),
+    "inc.com": (
+        re.compile(r"^Inc\. Premium$"),
+        re.compile(r"^Recommended Reading$"),
+        re.compile(r"^Subscribe to the newsletter$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -671,6 +722,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"storybody"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"c-shortcodecontent"}},
+    ),
+    "newyorker.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"body__inner-container"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "fortune.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"paywall"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-wrapper"}},
+    ),
+    "inc.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"single-post-content"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
