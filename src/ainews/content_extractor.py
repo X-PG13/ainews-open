@@ -188,6 +188,21 @@ HOST_SELECTORS = {
         ".article-body",
         ".paywall-layout__body",
     ),
+    "engadget.com": (
+        ".article-text",
+        ".article-body",
+        ".body-text",
+    ),
+    "forbes.com": (
+        ".article-body",
+        ".body-container",
+        ".article-content",
+    ),
+    "zdnet.com": (
+        ".storyBody",
+        ".article-body",
+        ".c-ShortcodeContent",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -355,6 +370,27 @@ HOST_DROP_SELECTORS = {
         ".signup-promo",
         ".story-meta",
     ),
+    "engadget.com": (
+        ".video-embed",
+        ".podcast-player",
+        ".newsletter-inline",
+        ".engadget-share",
+        ".read-more-links",
+    ),
+    "forbes.com": (
+        ".embed-base",
+        ".newsletter-box",
+        ".article-share-wrap",
+        ".related-articles",
+        ".vestpocket",
+    ),
+    "zdnet.com": (
+        ".c-shortcodePodcast",
+        ".c-shortcodeVideo",
+        ".newsletterSignup",
+        ".relatedContent",
+        ".adSlot",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -483,6 +519,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Read more from The Information$"),
         re.compile(r"^Already a subscriber\?$"),
     ),
+    "engadget.com": (
+        re.compile(r"^Listen to this article$"),
+        re.compile(r"^Watch:.*$"),
+        re.compile(r"^Recommended by Engadget$"),
+    ),
+    "forbes.com": (
+        re.compile(r"^Listen to article$"),
+        re.compile(r"^More From Forbes$"),
+        re.compile(r"^Watch Forbes.*$"),
+    ),
+    "zdnet.com": (
+        re.compile(r"^ZDNET Recommends$"),
+        re.compile(r"^Watch now$"),
+        re.compile(r"^Editor's note:.*$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -605,6 +656,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article__body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"paywall-layout__body"}},
+    ),
+    "engadget.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-text"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"body-text"}},
+    ),
+    "forbes.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"body-container"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+    ),
+    "zdnet.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"storybody"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"c-shortcodecontent"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

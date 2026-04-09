@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.5] - 2026-04-09
+
+### Added
+
+- Multimedia-heavy extraction fixtures for `engadget.com`, `forbes.com`, and `zdnet.com`
+
+### Changed
+
+- Package version is now `1.2.5`
+- International extraction coverage now includes video, podcast, and audio-summary-heavy publisher layouts in addition to standard articles, live updates, and briefing pages
+
+### Fixed
+
+- Reduced video player, podcast module, audio summary, and embed CTA noise on multimedia-heavy publisher pages
+- Locked another class of media layouts into deterministic fixture coverage so multimedia cleanup regressions are caught in CI
+
 ## [1.2.4] - 2026-04-09
 
 ### Added
