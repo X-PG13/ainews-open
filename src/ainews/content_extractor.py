@@ -153,6 +153,21 @@ HOST_SELECTORS = {
         ".story-body",
         ".article-body",
     ),
+    "apnews.com": (
+        ".RichTextStoryBody",
+        ".RichTextBody",
+        ".Page-content",
+    ),
+    "cnbc.com": (
+        ".ArticleBody-articleBody",
+        ".group",
+        ".ArticleBodyWrapper",
+    ),
+    "ft.com": (
+        ".article__content-body",
+        ".n-content-body",
+        ".article-body",
+    ),
     "substack.com": (
         ".body.markup",
         ".available-content",
@@ -264,6 +279,27 @@ HOST_DROP_SELECTORS = {
         ".sidebar-list",
         ".story-footer",
     ),
+    "apnews.com": (
+        ".Page-promos",
+        ".Page-footer",
+        ".RelatedTopics-list",
+        ".Carousel",
+        ".ad-placeholder",
+    ),
+    "cnbc.com": (
+        ".InlineNewsletter-inlineNewsletter",
+        ".RelatedContent-relatedContent",
+        ".SocialShare-socialShare",
+        ".ArticleBody-extra",
+        ".group[data-module='recirc']",
+    ),
+    "ft.com": (
+        ".n-content-recommended",
+        ".o-teaser-collection",
+        ".newsletter-signup",
+        ".article-footer",
+        ".related-articles",
+    ),
     "substack.com": (
         ".subscription-widget-wrap",
         ".subscribe-widget",
@@ -346,6 +382,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^By signing up, you agree to receive.*$"),
         re.compile(r"^More from Axios$"),
     ),
+    "apnews.com": (
+        re.compile(r"^The Associated Press is an independent global news organization.*$"),
+        re.compile(r"^Read more$"),
+        re.compile(r"^More stories$"),
+    ),
+    "cnbc.com": (
+        re.compile(r"^Watch:.*$"),
+        re.compile(r"^Subscribe to CNBC PRO$"),
+        re.compile(r"^Related Tags$"),
+    ),
+    "ft.com": (
+        re.compile(r"^Sign up to the FT Edit newsletter$"),
+        re.compile(r"^Recommended$"),
+        re.compile(r"^Read next$"),
+    ),
     "substack.com": (
         re.compile(r"^Thanks for reading.*$"),
         re.compile(r"^Subscribe (?:now|for free).*$"),
@@ -427,6 +478,21 @@ FALLBACK_HOST_RULES = {
     "axios.com": (
         {"tags": {"div", "section"}, "class_tokens": {"gtm-story-text"}},
         {"tags": {"div", "section"}, "class_tokens": {"story-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "apnews.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"richtextstorybody"}},
+        {"tags": {"div", "section"}, "class_tokens": {"richtextbody"}},
+        {"tags": {"div", "section"}, "class_tokens": {"page-content"}},
+    ),
+    "cnbc.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"articlebody-articlebody"}},
+        {"tags": {"div", "section"}, "class_tokens": {"group"}},
+        {"tags": {"div", "section"}, "class_tokens": {"articlebodywrapper"}},
+    ),
+    "ft.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article__content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"n-content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "substack.com": (
