@@ -408,6 +408,21 @@ HOST_SELECTORS = {
         ".content-body",
         ".article-body",
     ),
+    "status.openai.com": (
+        ".incident-updates-container",
+        ".update-body",
+        ".incident-body",
+    ),
+    "status.pinecone.io": (
+        ".postmortem-content",
+        ".incident-body",
+        ".update-body",
+    ),
+    "status.together.ai": (
+        ".incident-detail",
+        ".rca-body",
+        ".update-body",
+    ),
     "docs.vllm.ai": (
         ".md-content",
         ".content-body",
@@ -888,6 +903,27 @@ HOST_DROP_SELECTORS = {
         ".feedback-widget",
         ".sidebar-toc",
     ),
+    "status.openai.com": (
+        ".incident-sidebar",
+        ".affected-components",
+        ".status-banner",
+        ".subscribe-pane",
+        ".incident-timeline-nav",
+    ),
+    "status.pinecone.io": (
+        ".postmortem-meta",
+        ".related-incidents",
+        ".status-banner",
+        ".subscribe-pane",
+        ".component-list",
+    ),
+    "status.together.ai": (
+        ".impact-summary",
+        ".related-incidents",
+        ".status-banner",
+        ".subscribe-pane",
+        ".incident-nav",
+    ),
     "docs.vllm.ai": (
         ".version-warning",
         ".related-pages",
@@ -1243,6 +1279,24 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related Together docs$"),
         re.compile(r"^Need more help\?$"),
     ),
+    "status.openai.com": (
+        re.compile(r"^Affected components$"),
+        re.compile(r"^Subscribe to updates$"),
+        re.compile(r"^Status update banner$"),
+        re.compile(r"^Incident timeline$"),
+    ),
+    "status.pinecone.io": (
+        re.compile(r"^Postmortem metadata$"),
+        re.compile(r"^Related incidents$"),
+        re.compile(r"^Subscribe to incident updates$"),
+        re.compile(r"^Affected services$"),
+    ),
+    "status.together.ai": (
+        re.compile(r"^Impact summary$"),
+        re.compile(r"^Related incidents$"),
+        re.compile(r"^Subscribe to updates$"),
+        re.compile(r"^Incident navigation$"),
+    ),
     "docs.vllm.ai": (
         re.compile(r"^Version notice$"),
         re.compile(r"^Related versioned pages$"),
@@ -1590,6 +1644,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "status.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"incident-updates-container"}},
+        {"tags": {"div", "section"}, "class_tokens": {"update-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"incident-body"}},
+    ),
+    "status.pinecone.io": (
+        {"tags": {"div", "section"}, "class_tokens": {"postmortem-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"incident-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"update-body"}},
+    ),
+    "status.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"incident-detail"}},
+        {"tags": {"div", "section"}, "class_tokens": {"rca-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"update-body"}},
     ),
     "docs.vllm.ai": (
         {"tags": {"div", "section"}, "class_tokens": {"md-content"}},

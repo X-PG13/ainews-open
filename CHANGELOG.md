@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.20] - 2026-04-09
+
+### Added
+
+- Incident-update, postmortem, and outage-RCA extraction fixtures for `status.openai.com`, `status.pinecone.io`, and `status.together.ai`
+
+### Changed
+
+- Package version is now `1.2.20`
+- International extraction coverage now includes incident-update, postmortem, and outage-RCA layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, and release-channel-note layouts
+
+### Fixed
+
+- Reduced affected-component sidebars, status banners, incident navigation, and related-incident recirculation noise on vendor status and outage-notice pages
+- Locked another class of incident and postmortem layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.19] - 2026-04-09
 
 ### Added
