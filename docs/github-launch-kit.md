@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.19`
+`v1.2.20`
 
 ### Suggested Title
 
-`AI News Open v1.2.19 · Support Policy and Compatibility Matrix Extraction Coverage`
+`AI News Open v1.2.20 · Incident Update and Postmortem Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.19
+## AI News Open v1.2.20
 
-AI News Open `v1.2.19` hardens extraction quality for support-policy, compatibility-matrix, and release-channel-note layouts across more international publishers.
+AI News Open `v1.2.20` hardens extraction quality for incident-update, postmortem, and outage-RCA layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.19` hardens extraction quality for support-policy, compatibil
 
 ### Highlights in this release
 
-- New deterministic documentation-style fixtures for `LlamaIndex Docs`, `Together Docs`, and `Fireworks Docs`
-- Better cleanup for compatibility sidebars, support banners, release-channel navigation, and related-doc recirculation on AI developer-doc pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, and release-channel-note layouts
+- New deterministic operational-status fixtures for `OpenAI Status`, `Pinecone Status`, and `Together Status`
+- Better cleanup for affected-component sidebars, status banners, incident navigation, and related-incident recirculation on vendor status and outage pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, and outage-RCA layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

@@ -920,6 +920,52 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related Fireworks guides", content.text)
         self.assertNotIn("Edit this page", content.text)
 
+    def test_prefers_openai_status_incident_update_body_and_drops_status_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-status-incident-update.html"),
+            url="https://status.openai.com/incidents/inference-latency-event",
+        )
+
+        self.assertIn("Incident updates are useful when they explain which mitigation steps restored service", content.text)
+        self.assertIn("shifted away from the failing path", content.text)
+        self.assertIn("rollback path is still", content.text)
+        self.assertIn("active", content.text)
+        self.assertNotIn("Affected components", content.text)
+        self.assertNotIn("Status update banner", content.text)
+        self.assertNotIn("Subscribe to updates", content.text)
+
+    def test_prefers_pinecone_postmortem_body_and_drops_postmortem_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("pinecone-postmortem.html"),
+            url="https://status.pinecone.io/incidents/vector-index-write-degradation-postmortem",
+        )
+
+        self.assertIn("Postmortems are valuable when they explain the technical trigger", content.text)
+        self.assertIn("operational safeguards that", content.text)
+        self.assertIn("failed", content.text)
+        self.assertIn("rollback boundaries", content.text)
+        self.assertIn("instrumentation changes", content.text)
+        self.assertNotIn("Postmortem metadata", content.text)
+        self.assertNotIn("Related incidents", content.text)
+        self.assertNotIn("Subscribe to incident updates", content.text)
+
+    def test_prefers_together_outage_rca_body_and_drops_incident_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-outage-rca.html"),
+            url="https://status.together.ai/incidents/model-gateway-saturation-rca",
+        )
+
+        self.assertIn("Outage RCAs matter when they show how an overload propagated through the serving stack", content.text)
+        self.assertIn("emergency controls reduced customer impact", content.text)
+        self.assertIn("recovery checks teams", content.text)
+        self.assertIn("must repeat before removing temporary safeguards", content.text)
+        self.assertNotIn("Impact summary", content.text)
+        self.assertNotIn("Related incidents", content.text)
+        self.assertNotIn("Incident navigation", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
