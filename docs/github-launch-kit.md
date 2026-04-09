@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.25`
+`v1.2.26`
 
 ### Suggested Title
 
-`AI News Open v1.2.25 · Soft Limit and Exception Policy Extraction Coverage`
+`AI News Open v1.2.26 · Overage and Reservation Policy Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.25
+## AI News Open v1.2.26
 
-AI News Open `v1.2.25` hardens extraction quality for soft-limit-warning, grace-period-notice, and throughput-exception-policy layouts across more developer-doc publishers.
+AI News Open `v1.2.26` hardens extraction quality for temporary-overage-notice, fairness-policy-update, and capacity-reservation-note layouts across more developer-doc publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.25` hardens extraction quality for soft-limit-warning, grace-
 
 ### Highlights in this release
 
-- New deterministic soft-limit, grace-period, and throughput-exception fixtures for `OpenAI`, `Anthropic`, and `Together`
-- Better cleanup for soft-limit summaries, grace-period summaries, exception-threshold panels, and related-guide recirculation on developer limit and exception-policy pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, and throughput-exception-policy layouts
+- New deterministic temporary-overage, fairness-policy, and capacity-reservation fixtures for `OpenAI`, `Anthropic`, and `Together`
+- Better cleanup for overage summaries, fairness summaries, reservation summaries, reservation matrices, and related-guide recirculation on developer limit and reservation-policy pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, and capacity-reservation-note layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

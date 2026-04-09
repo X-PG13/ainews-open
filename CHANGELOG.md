@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.26] - 2026-04-10
+
+### Added
+
+- Temporary-overage-notice, fairness-policy-update, and capacity-reservation-note extraction fixtures for `platform.openai.com`, `docs.anthropic.com`, and `docs.together.ai`
+
+### Changed
+
+- Package version is now `1.2.26`
+- International extraction coverage now includes temporary-overage-notice, fairness-policy-update, and capacity-reservation-note layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, and throughput-exception-policy layouts
+
+### Fixed
+
+- Reduced overage summaries, fairness summaries, reservation summaries, reservation matrices, and related-guide recirculation noise on developer limit and reservation-policy pages
+- Locked another class of overage, fairness, and capacity-reservation layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.25] - 2026-04-09
 
 ### Added
