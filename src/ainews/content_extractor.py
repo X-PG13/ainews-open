@@ -323,6 +323,21 @@ HOST_SELECTORS = {
         ".resource-body",
         ".content-body",
     ),
+    "techpolicy.press": (
+        ".entry-content",
+        ".article-content",
+        ".post-content",
+    ),
+    "a16z.com": (
+        ".post-content",
+        ".article-content",
+        ".entry-content",
+    ),
+    "ted.com": (
+        ".talk-body",
+        ".transcript__body",
+        ".article-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -679,6 +694,27 @@ HOST_DROP_SELECTORS = {
         ".author-card",
         ".newsletter-signup",
     ),
+    "techpolicy.press": (
+        ".newsletter-signup",
+        ".event-meta",
+        ".related-posts",
+        ".audio-player",
+        ".author-bio",
+    ),
+    "a16z.com": (
+        ".signup-module",
+        ".podcast-player",
+        ".related-insights",
+        ".video-embed",
+        ".author-card",
+    ),
+    "ted.com": (
+        ".talk-sidebar",
+        ".related-talks",
+        ".cta-banner",
+        ".audio-player",
+        ".transcript-nav",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -942,6 +978,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Read related resources$"),
         re.compile(r"^Sign up for Databricks updates$"),
     ),
+    "techpolicy.press": (
+        re.compile(r"^Event recap hub$"),
+        re.compile(r"^Related posts$"),
+        re.compile(r"^Listen to the session recap$"),
+    ),
+    "a16z.com": (
+        re.compile(r"^Watch the full session$"),
+        re.compile(r"^More from a16z$"),
+        re.compile(r"^Subscribe for future updates$"),
+    ),
+    "ted.com": (
+        re.compile(r"^Transcript navigation$"),
+        re.compile(r"^More TED talks on AI$"),
+        re.compile(r"^Listen to the episode$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1199,6 +1250,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"resource-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "techpolicy.press": (
+        {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+    ),
+    "a16z.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"post-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"entry-content"}},
+    ),
+    "ted.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"talk-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"transcript__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},

@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.14] - 2026-04-09
+
+### Added
+
+- Conference recap, event takeaways, and transcript-summary extraction fixtures for `techpolicy.press`, `a16z.com`, and `ted.com`
+
+### Changed
+
+- Package version is now `1.2.14`
+- International extraction coverage now includes conference-recap, event-takeaways, and transcript-summary hybrid layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, and vendor benchmark layouts
+
+### Fixed
+
+- Reduced event metadata, session promos, transcript navigation, and related-content noise on recap-heavy publisher pages
+- Locked another class of conference and session-summary layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.13] - 2026-04-09
 
 ### Added
