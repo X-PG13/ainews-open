@@ -828,6 +828,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Related upgrade guides", content.text)
         self.assertNotIn("Start building", content.text)
 
+    def test_prefers_openai_deprecation_faq_body_and_drops_sidebar_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-deprecation-faq.html"),
+            url="https://platform.openai.com/docs/deprecations/faq/ai-operations-endpoint-retirement",
+        )
+
+        self.assertIn("Deprecation FAQs are useful when they answer what changes for operators", content.text)
+        self.assertIn("which runbooks must", content.text)
+        self.assertIn("change", content.text)
+        self.assertIn("how compatibility windows affect production traffic", content.text)
+        self.assertNotIn("Service retirement banner", content.text)
+        self.assertNotIn("Related answers", content.text)
+        self.assertNotIn("Was this helpful?", content.text)
+
+    def test_prefers_pinecone_migration_checklist_body_and_drops_checklist_nav_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("pinecone-migration-checklist.html"),
+            url="https://docs.pinecone.io/guides/migration/ai-operations-checklist",
+        )
+
+        self.assertIn("Migration checklists are most valuable when they tell teams what must be verified", content.text)
+        self.assertIn("before traffic", content.text)
+        self.assertIn("shifts", content.text)
+        self.assertIn("rollback handles stay available", content.text)
+        self.assertIn("incident checkpoints", content.text)
+        self.assertNotIn("Step navigation", content.text)
+        self.assertNotIn("Related Pinecone guides", content.text)
+        self.assertNotIn("Need more help?", content.text)
+
+    def test_prefers_vllm_version_notice_body_and_drops_version_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("vllm-version-notice.html"),
+            url="https://docs.vllm.ai/en/latest/notes/versioned/ai-operations-upgrade-notice.html",
+        )
+
+        self.assertIn("Versioned docs notices matter when they explain what changed between supported releases", content.text)
+        self.assertIn("operator expectations", content.text)
+        self.assertIn("fallback procedures and benchmark comparability", content.text)
+        self.assertNotIn("Version notice", content.text)
+        self.assertNotIn("Related versioned pages", content.text)
+        self.assertNotIn("Edit on GitHub", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
