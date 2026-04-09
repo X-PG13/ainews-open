@@ -377,6 +377,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Recommended Reading", content.text)
         self.assertNotIn("Subscribe to the newsletter", content.text)
 
+    def test_prefers_bloomberg_paywall_body_and_drops_terminal_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("bloomberg-paywall.html"),
+            url="https://www.bloomberg.com/news/articles/2026-04-09/ai-governance-shifts-into-operations",
+        )
+
+        self.assertIn("AI governance is moving out of policy decks and into operating routines", content.text)
+        self.assertIn("workflow review points, rollback ownership, and incident drills", content.text)
+        self.assertNotIn("Before it's here, it's on the Bloomberg Terminal.", content.text)
+        self.assertNotIn("Read next", content.text)
+        self.assertNotIn("Sign up for the New Economy Daily", content.text)
+
+    def test_prefers_wsj_paywall_body_and_drops_subscription_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("wsj-paywall.html"),
+            url="https://www.wsj.com/tech/ai/companies-turn-ai-oversight-into-daily-operations-12345678",
+        )
+
+        self.assertIn("Companies are treating AI oversight as a daily operating system problem", content.text)
+        self.assertIn("procurement checks, approval queues, and post-incident review", content.text)
+        self.assertNotIn("Continue reading your article with a WSJ subscription", content.text)
+        self.assertNotIn("Listen to article", content.text)
+        self.assertNotIn("Recommended Videos", content.text)
+
+    def test_prefers_economist_body_and_drops_subscriber_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("economist-paywall.html"),
+            url="https://www.economist.com/business/2026/04/09/why-ai-operations-now-look-like-risk-management",
+        )
+
+        self.assertIn("AI operations now resemble risk management more than experimental prototyping", content.text)
+        self.assertIn("deployment controls, auditable approval paths, and fallback procedures", content.text)
+        self.assertNotIn("Subscribers only", content.text)
+        self.assertNotIn("Listen to this episode", content.text)
+        self.assertNotIn("Read more from this section", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

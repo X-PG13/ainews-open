@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.6`
+`v1.2.7`
 
 ### Suggested Title
 
-`AI News Open v1.2.6 · Opinion and Column Extraction Coverage`
+`AI News Open v1.2.7 · Paywall-Heavy Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.6
+## AI News Open v1.2.7
 
-AI News Open `v1.2.6` hardens extraction quality for opinion, column, and author-driven newsroom layouts across more international publishers.
+AI News Open `v1.2.7` hardens extraction quality for paywall-heavy and subscriber-prompt-heavy newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.6` hardens extraction quality for opinion, column, and author
 
 ### Highlights in this release
 
-- New deterministic opinion/column extraction fixtures for `The New Yorker`, `Fortune`, and `Inc.`
-- Better cleanup for author bios, premium upsells, newsletter prompts, and most-popular blocks on commentary-heavy publisher pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, and opinion layouts
+- New deterministic paywall-heavy extraction fixtures for `Bloomberg`, `The Wall Street Journal`, and `The Economist`
+- Better cleanup for subscription prompts, audio/listen modules, and read-next recirculation blocks on premium publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, and paywall-heavy layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
