@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.3`
+`v1.2.4`
 
 ### Suggested Title
 
-`AI News Open v1.2.3 · Live Timeline Extraction Coverage`
+`AI News Open v1.2.4 · Briefing and Newsletter Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.3
+## AI News Open v1.2.4
 
-AI News Open `v1.2.3` hardens extraction quality for live updates and timeline-style newsroom layouts across more international publishers.
+AI News Open `v1.2.4` hardens extraction quality for briefing, digest, and subscriber-prompt-heavy newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.3` hardens extraction quality for live updates and timeline-s
 
 ### Highlights in this release
 
-- New deterministic live/timeline extraction fixtures for `AP News`, `BBC`, and `The Guardian`
-- Better cleanup for timestamp rows, live-feed labels, share widgets, and recirculation blocks on newsroom liveblog pages
-- The international extraction suite now covers standard articles, newsletters, syndication pages, and live-update layouts
+- New deterministic briefing/newsletter extraction fixtures for `Semafor`, `Morning Brew`, and `The Information`
+- Better cleanup for CTA modules, subscriber prompts, signal cards, and related-coverage blocks on digest-style newsroom pages
+- The international extraction suite now covers standard articles, newsletters, syndication pages, live updates, and briefing layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

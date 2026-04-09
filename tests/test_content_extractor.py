@@ -260,6 +260,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Recommended", content.text)
         self.assertNotIn("Read next", content.text)
 
+    def test_prefers_semafor_briefing_body_and_drops_signal_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("semafor-briefing.html"),
+            url="https://www.semafor.com/article/2026/04/09/ai-buyers-operating-like-reliability-teams",
+        )
+
+        self.assertIn("enterprise AI buyers are increasingly judging vendors on operational discipline", content.text)
+        self.assertIn("rollback controls, evaluation history, and escalation paths", content.text)
+        self.assertNotIn("Read the full signal", content.text)
+        self.assertNotIn("View in browser", content.text)
+        self.assertNotIn("More from Semafor", content.text)
+
+    def test_prefers_morningbrew_digest_body_and_drops_newsletter_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("morningbrew-digest.html"),
+            url="https://www.morningbrew.com/stories/2026/04/09/ai-deployment-discipline-becoming-mainstream",
+        )
+
+        self.assertIn("AI deployment discipline is becoming a mainstream concern", content.text)
+        self.assertIn("kill switches, audit logs, and review queues", content.text)
+        self.assertNotIn("Join millions of readers", content.text)
+        self.assertNotIn("Read more from Morning Brew", content.text)
+        self.assertNotIn("Was this forwarded to you?", content.text)
+
+    def test_prefers_theinformation_briefing_body_and_drops_subscriber_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("theinformation-briefing.html"),
+            url="https://www.theinformation.com/articles/ai-governance-and-operator-pressure",
+        )
+
+        self.assertIn("AI operators are facing more pressure to prove governance discipline", content.text)
+        self.assertIn("document human approvals, fallback procedures, and review checkpoints", content.text)
+        self.assertNotIn("Subscriber-only content", content.text)
+        self.assertNotIn("Already a subscriber?", content.text)
+        self.assertNotIn("Read more from The Information", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
