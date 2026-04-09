@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.4`
+`v1.2.5`
 
 ### Suggested Title
 
-`AI News Open v1.2.4 · Briefing and Newsletter Extraction Coverage`
+`AI News Open v1.2.5 · Multimedia Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.4
+## AI News Open v1.2.5
 
-AI News Open `v1.2.4` hardens extraction quality for briefing, digest, and subscriber-prompt-heavy newsroom layouts across more international publishers.
+AI News Open `v1.2.5` hardens extraction quality for multimedia-heavy newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.4` hardens extraction quality for briefing, digest, and subsc
 
 ### Highlights in this release
 
-- New deterministic briefing/newsletter extraction fixtures for `Semafor`, `Morning Brew`, and `The Information`
-- Better cleanup for CTA modules, subscriber prompts, signal cards, and related-coverage blocks on digest-style newsroom pages
-- The international extraction suite now covers standard articles, newsletters, syndication pages, live updates, and briefing layouts
+- New deterministic multimedia extraction fixtures for `Engadget`, `Forbes`, and `ZDNet`
+- Better cleanup for video players, podcast modules, audio summaries, and embed/related CTA blocks on media-heavy publisher pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, and multimedia-heavy layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

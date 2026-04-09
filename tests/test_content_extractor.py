@@ -299,6 +299,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Already a subscriber?", content.text)
         self.assertNotIn("Read more from The Information", content.text)
 
+    def test_prefers_engadget_article_body_and_drops_multimedia_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("engadget-article.html"),
+            url="https://www.engadget.com/ai-operators-now-care-about-rollback-readiness-090000123.html",
+        )
+
+        self.assertIn("AI operators are increasingly judged on how quickly they can unwind a problematic rollout", content.text)
+        self.assertIn("circuit breakers, audit logs, and clear human escalation", content.text)
+        self.assertNotIn("Watch: Demo of the latest AI gadget", content.text)
+        self.assertNotIn("Listen to this article", content.text)
+        self.assertNotIn("Recommended by Engadget", content.text)
+
+    def test_prefers_forbes_article_body_and_drops_embed_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("forbes-article.html"),
+            url="https://www.forbes.com/sites/2026/04/09/why-ai-governance-is-becoming-operational-work/",
+        )
+
+        self.assertIn("enterprise AI governance is becoming an operations problem", content.text)
+        self.assertIn("observability, review queues, and rollback design", content.text)
+        self.assertNotIn("Watch Forbes", content.text)
+        self.assertNotIn("Listen to article", content.text)
+        self.assertNotIn("More From Forbes", content.text)
+
+    def test_prefers_zdnet_article_body_and_drops_podcast_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("zdnet-article.html"),
+            url="https://www.zdnet.com/article/ai-platform-teams-rebuild-around-observability/",
+        )
+
+        self.assertIn("AI platform teams are rebuilding their deployment playbooks around observability", content.text)
+        self.assertIn("documenting more explicit fallback paths and audit checkpoints", content.text)
+        self.assertNotIn("Watch now", content.text)
+        self.assertNotIn("ZDNET Recommends", content.text)
+        self.assertNotIn("Editor's note:", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
