@@ -338,6 +338,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("ZDNET Recommends", content.text)
         self.assertNotIn("Editor's note:", content.text)
 
+    def test_prefers_newyorker_column_body_and_drops_author_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("newyorker-column.html"),
+            url="https://www.newyorker.com/news/columnists/why-ai-governance-became-product-work",
+        )
+
+        self.assertIn("AI governance has quietly become product work", content.text)
+        self.assertIn("review queues, approval steps, and rollback design", content.text)
+        self.assertNotIn("Listen to this story", content.text)
+        self.assertNotIn("About the author", content.text)
+        self.assertNotIn("Most Popular", content.text)
+
+    def test_prefers_fortune_column_body_and_drops_promo_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("fortune-column.html"),
+            url="https://fortune.com/2026/04/09/ai-oversight-moving-from-policy-to-operations/",
+        )
+
+        self.assertIn("AI oversight is moving from policy memos into day-to-day operations", content.text)
+        self.assertIn("observability, controlled rollback, and explicit review ownership", content.text)
+        self.assertNotIn("Subscribe to Fortune Daily", content.text)
+        self.assertNotIn("Read more from Fortune", content.text)
+        self.assertNotIn("Most Popular", content.text)
+
+    def test_prefers_inc_column_body_and_drops_premium_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("inc-column.html"),
+            url="https://www.inc.com/2026/04/09/founders-forced-to-operationalize-ai-risk.html",
+        )
+
+        self.assertIn("founders are being forced to operationalize AI risk", content.text)
+        self.assertIn("approval paths, auditability, and fallback logic", content.text)
+        self.assertNotIn("Inc. Premium", content.text)
+        self.assertNotIn("Recommended Reading", content.text)
+        self.assertNotIn("Subscribe to the newsletter", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
