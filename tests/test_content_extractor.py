@@ -455,6 +455,45 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Listen", content.text)
         self.assertNotIn("Read more from The Post", content.text)
 
+    def test_prefers_vox_roundup_body_and_drops_recirculation_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("vox-roundup.html"),
+            url="https://www.vox.com/technology/2026/04/09/ai-what-to-know-this-week",
+        )
+
+        self.assertIn("AI teams are increasingly judged on the quality of their operating routines", content.text)
+        self.assertIn("observability reviews, rollback drills, and named escalation paths", content.text)
+        self.assertNotIn("Most Popular", content.text)
+        self.assertNotIn("Sign up for the newsletter", content.text)
+        self.assertNotIn("Read More Vox coverage", content.text)
+
+    def test_prefers_time_roundup_body_and_drops_audio_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("time-roundup.html"),
+            url="https://time.com/7270012/ai-what-to-know-enterprise-operations/",
+        )
+
+        self.assertIn("AI adoption now depends less on model novelty and more on operating discipline", content.text)
+        self.assertIn("approval queues, fallback plans, and incident ownership", content.text)
+        self.assertNotIn("Listen to the story", content.text)
+        self.assertNotIn("What to read next", content.text)
+        self.assertNotIn("Subscribe to the Time newsletter", content.text)
+
+    def test_prefers_nbcnews_roundup_body_and_drops_related_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("nbcnews-roundup.html"),
+            url="https://www.nbcnews.com/tech/ai/what-to-know-about-ai-operations-rcna123456",
+        )
+
+        self.assertIn("AI operators are spending more time on supervision than on launch-day demos", content.text)
+        self.assertIn("documented guardrails, human review, and clear rollback thresholds", content.text)
+        self.assertNotIn("Watch more from NBC News", content.text)
+        self.assertNotIn("Sign up for our newsletters", content.text)
+        self.assertNotIn("Related coverage", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

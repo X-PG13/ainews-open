@@ -248,6 +248,21 @@ HOST_SELECTORS = {
         ".story-body",
         ".article-body-content",
     ),
+    "vox.com": (
+        ".duet--article--article-body-component",
+        ".c-entry-content",
+        ".article-body",
+    ),
+    "time.com": (
+        ".article-body__content",
+        ".body-wrapper",
+        ".article-content",
+    ),
+    "nbcnews.com": (
+        ".article-body",
+        ".article-body__content",
+        ".article-content",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -499,6 +514,27 @@ HOST_DROP_SELECTORS = {
         ".audio-player",
         ".story-footer",
     ),
+    "vox.com": (
+        ".duet--recirculation--related-card-list",
+        ".newsletter-signup",
+        ".duet--media--embed",
+        ".c-entry-box--compact",
+        ".duet--article--inline-newsletter",
+    ),
+    "time.com": (
+        ".newsletter-card",
+        ".related-articles",
+        ".inline-audio",
+        ".what-to-read-next",
+        ".article-footer",
+    ),
+    "nbcnews.com": (
+        ".related-content",
+        ".newsletter-inline",
+        ".video-player",
+        ".article-share",
+        ".what-to-know",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -687,6 +723,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Try 1 month for \$1$"),
         re.compile(r"^Read more from The Post$"),
     ),
+    "vox.com": (
+        re.compile(r"^Most Popular$"),
+        re.compile(r"^Sign up for the newsletter$"),
+        re.compile(r"^Read More Vox coverage$"),
+    ),
+    "time.com": (
+        re.compile(r"^Listen to the story$"),
+        re.compile(r"^What to read next$"),
+        re.compile(r"^Subscribe to the Time newsletter$"),
+    ),
+    "nbcnews.com": (
+        re.compile(r"^Watch more from NBC News$"),
+        re.compile(r"^Sign up for our newsletters$"),
+        re.compile(r"^Related coverage$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -869,6 +920,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"story-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body-content"}},
+    ),
+    "vox.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"duet--article--article-body-component"}},
+        {"tags": {"div", "section"}, "class_tokens": {"c-entry-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "time.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"body-wrapper"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
+    ),
+    "nbcnews.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body__content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-content"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
