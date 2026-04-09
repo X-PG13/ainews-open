@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.3] - 2026-04-09
+
+### Added
+
+- Live and timeline-style extraction fixtures for `apnews.com`, `bbc.com`, and `theguardian.com`
+
+### Changed
+
+- Package version is now `1.2.3`
+- International content extraction coverage now includes live update and timeline layouts in addition to standard article pages
+
+### Fixed
+
+- Reduced timestamp, live-feed label, share, and recirculation noise on liveblog-style publisher pages
+- Locked another class of noisy newsroom layouts into deterministic fixture coverage so timeline formatting regressions are caught in CI
+
 ## [1.2.2] - 2026-04-09
 
 ### Added
