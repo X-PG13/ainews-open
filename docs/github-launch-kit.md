@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.20`
+`v1.2.21`
 
 ### Suggested Title
 
-`AI News Open v1.2.20 · Incident Update and Postmortem Extraction Coverage`
+`AI News Open v1.2.21 · Security Bulletin and Trust Advisory Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.20
+## AI News Open v1.2.21
 
-AI News Open `v1.2.20` hardens extraction quality for incident-update, postmortem, and outage-RCA layouts across more international publishers.
+AI News Open `v1.2.21` hardens extraction quality for security-bulletin, trust-center-advisory, and compliance-update layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.20` hardens extraction quality for incident-update, postmorte
 
 ### Highlights in this release
 
-- New deterministic operational-status fixtures for `OpenAI Status`, `Pinecone Status`, and `Together Status`
-- Better cleanup for affected-component sidebars, status banners, incident navigation, and related-incident recirculation on vendor status and outage pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, and outage-RCA layouts
+- New deterministic vendor-security fixtures for `OpenAI Trust`, `Anthropic Docs`, and `Google Cloud`
+- Better cleanup for severity banners, trust-center sidebars, compliance navigation, and related-advisory recirculation on vendor trust and security pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, and compliance-update layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

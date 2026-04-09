@@ -314,6 +314,7 @@ HOST_SELECTORS = {
         ".wysiwyg",
     ),
     "cloud.google.com": (
+        ".compliance-update",
         ".devsite-article-body",
         ".article-body",
         ".case-study-body",
@@ -344,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".security-bulletin",
         ".theme-doc-markdown",
         ".docs-content",
         ".article-body",
@@ -397,6 +399,11 @@ HOST_SELECTORS = {
         ".docs-body",
         ".prose",
         ".article-body",
+    ),
+    "trust.openai.com": (
+        ".trust-center-advisory",
+        ".advisory-body",
+        ".content-body",
     ),
     "docs.pinecone.io": (
         ".theme-doc-markdown",
@@ -771,6 +778,8 @@ HOST_DROP_SELECTORS = {
         ".download-prompt",
     ),
     "cloud.google.com": (
+        ".compliance-sidebar",
+        ".security-bulletin-nav",
         ".devsite-page-rating",
         ".newsletter-callout",
         ".benchmark-cta",
@@ -813,9 +822,12 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".severity-badge",
         ".table-of-contents",
         ".docs-feedback",
         ".related-links",
+        ".related-bulletins",
+        ".contact-security",
         ".callout-banner",
         ".breadcrumbs",
     ),
@@ -888,6 +900,13 @@ HOST_DROP_SELECTORS = {
         ".related-answers",
         ".feedback-widget",
         ".docs-sidebar",
+    ),
+    "trust.openai.com": (
+        ".trust-sidebar",
+        ".severity-banner",
+        ".related-advisories",
+        ".subscribe-panel",
+        ".breadcrumbs",
     ),
     "docs.pinecone.io": (
         ".table-of-contents",
@@ -1185,8 +1204,11 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Download the full report$"),
     ),
     "cloud.google.com": (
+        re.compile(r"^Compliance update$"),
+        re.compile(r"^Security bulletin menu$"),
         re.compile(r"^Benchmark methodology$"),
         re.compile(r"^Related products$"),
+        re.compile(r"^Related cloud controls$"),
         re.compile(r"^Listen to this benchmark note$"),
     ),
     "databricks.com": (
@@ -1215,8 +1237,12 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Security bulletin$"),
+        re.compile(r"^Severity level$"),
         re.compile(r"^Troubleshooting menu$"),
         re.compile(r"^Related topics$"),
+        re.compile(r"^Related bulletins$"),
+        re.compile(r"^Contact security$"),
         re.compile(r"^Need more help\?$"),
     ),
     "learn.microsoft.com": (
@@ -1268,6 +1294,12 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Deprecation FAQ$"),
         re.compile(r"^Related answers$"),
         re.compile(r"^Was this helpful\?$"),
+    ),
+    "trust.openai.com": (
+        re.compile(r"^Trust center advisory$"),
+        re.compile(r"^Related advisories$"),
+        re.compile(r"^Subscribe for trust updates$"),
+        re.compile(r"^Severity: .*"),
     ),
     "docs.pinecone.io": (
         re.compile(r"^Migration checklist$"),
@@ -1551,6 +1583,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"wysiwyg"}},
     ),
     "cloud.google.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"compliance-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"devsite-article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"case-study-body"}},
@@ -1581,6 +1614,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"security-bulletin"}},
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
@@ -1634,6 +1668,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "trust.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"trust-center-advisory"}},
+        {"tags": {"div", "section"}, "class_tokens": {"advisory-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
     ),
     "docs.pinecone.io": (
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},

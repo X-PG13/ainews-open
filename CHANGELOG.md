@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.21] - 2026-04-09
+
+### Added
+
+- Security-bulletin, trust-center-advisory, and compliance-update extraction fixtures for `trust.openai.com`, `docs.anthropic.com`, and `cloud.google.com`
+
+### Changed
+
+- Package version is now `1.2.21`
+- International extraction coverage now includes security-bulletin, trust-center-advisory, and compliance-update layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, and outage-RCA layouts
+
+### Fixed
+
+- Reduced severity banners, trust-center sidebars, compliance navigation, and related-advisory recirculation noise on security and trust vendor pages
+- Locked another class of security and compliance layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.20] - 2026-04-09
 
 ### Added
