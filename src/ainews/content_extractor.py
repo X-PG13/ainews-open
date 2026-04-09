@@ -353,6 +353,21 @@ HOST_SELECTORS = {
         ".article-body",
         ".main-content",
     ),
+    "docs.cohere.com": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".reference-body",
+    ),
+    "developer.nvidia.com": (
+        ".article-body",
+        ".doc-content",
+        ".content-body",
+    ),
+    "vercel.com": (
+        ".prose",
+        ".content-body",
+        ".article-body",
+    ),
     "theguardian.com": (
         ".liveblog__body",
         ".content__article-body",
@@ -751,6 +766,27 @@ HOST_DROP_SELECTORS = {
         ".related-content",
         ".metadata-panel",
     ),
+    "docs.cohere.com": (
+        ".table-of-contents",
+        ".feedback-widget",
+        ".related-links",
+        ".changelog-banner",
+        ".breadcrumbs",
+    ),
+    "developer.nvidia.com": (
+        ".sidebar-nav",
+        ".related-resources",
+        ".video-module",
+        ".cta-banner",
+        ".toc",
+    ),
+    "vercel.com": (
+        ".related-updates",
+        ".newsletter-callout",
+        ".timeline-nav",
+        ".video-embed",
+        ".author-card",
+    ),
     "theguardian.com": (
         ".submeta",
         ".email-sign-up",
@@ -1044,6 +1080,21 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Feedback$"),
         re.compile(r"^Training available$"),
     ),
+    "docs.cohere.com": (
+        re.compile(r"^API reference menu$"),
+        re.compile(r"^Related endpoints$"),
+        re.compile(r"^Need help with integration\?$"),
+    ),
+    "developer.nvidia.com": (
+        re.compile(r"^Performance checklist$"),
+        re.compile(r"^Related NVIDIA guides$"),
+        re.compile(r"^Watch the walkthrough$"),
+    ),
+    "vercel.com": (
+        re.compile(r"^Read the changelog$"),
+        re.compile(r"^Related updates$"),
+        re.compile(r"^Watch the launch clip$"),
+    ),
     "theguardian.com": (
         re.compile(r"^Live feed$"),
         re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
@@ -1331,6 +1382,21 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"main-content"}},
+    ),
+    "docs.cohere.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"reference-body"}},
+    ),
+    "developer.nvidia.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+    ),
+    "vercel.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"prose"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "theguardian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
