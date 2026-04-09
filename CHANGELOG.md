@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.19] - 2026-04-09
+
+### Added
+
+- Support-policy, compatibility-matrix, and release-channel-note extraction fixtures for `docs.llamaindex.ai`, `docs.together.ai`, and `docs.fireworks.ai`
+
+### Changed
+
+- Package version is now `1.2.19`
+- International extraction coverage now includes support-policy, compatibility-matrix, and release-channel-note layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, and versioned-doc-notice layouts
+
+### Fixed
+
+- Reduced compatibility sidebars, support-policy banners, release-channel navigation, and related-doc recirculation noise on AI developer-documentation pages
+- Locked another class of support-policy and compatibility layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.18] - 2026-04-09
 
 ### Added

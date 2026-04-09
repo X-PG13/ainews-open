@@ -358,6 +358,11 @@ HOST_SELECTORS = {
         ".docs-content",
         ".reference-body",
     ),
+    "docs.fireworks.ai": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".release-channel-note",
+    ),
     "developer.nvidia.com": (
         ".article-body",
         ".doc-content",
@@ -372,6 +377,11 @@ HOST_SELECTORS = {
         ".theme-doc-markdown",
         ".docs-content",
         ".migration-guide",
+    ),
+    "docs.llamaindex.ai": (
+        ".theme-doc-markdown",
+        ".docs-content",
+        ".compatibility-matrix",
     ),
     "developer.atlassian.com": (
         ".doc-content",
@@ -392,6 +402,11 @@ HOST_SELECTORS = {
         ".theme-doc-markdown",
         ".docs-content",
         ".migration-checklist",
+    ),
+    "docs.together.ai": (
+        ".docs-body",
+        ".content-body",
+        ".article-body",
     ),
     "docs.vllm.ai": (
         ".md-content",
@@ -803,6 +818,13 @@ HOST_DROP_SELECTORS = {
         ".changelog-banner",
         ".breadcrumbs",
     ),
+    "docs.fireworks.ai": (
+        ".channel-nav",
+        ".version-banner",
+        ".related-guides",
+        ".edit-page-link",
+        ".breadcrumbs",
+    ),
     "developer.nvidia.com": (
         ".sidebar-nav",
         ".related-resources",
@@ -823,6 +845,13 @@ HOST_DROP_SELECTORS = {
         ".related-links",
         ".feedback-widget",
         ".theme-doc-breadcrumbs",
+    ),
+    "docs.llamaindex.ai": (
+        ".table-of-contents",
+        ".matrix-nav",
+        ".related-guides",
+        ".feedback-widget",
+        ".breadcrumbs",
     ),
     "developer.atlassian.com": (
         ".left-nav",
@@ -851,6 +880,13 @@ HOST_DROP_SELECTORS = {
         ".related-guides",
         ".feedback-widget",
         ".breadcrumbs",
+    ),
+    "docs.together.ai": (
+        ".policy-sidebar",
+        ".support-banner",
+        ".related-articles",
+        ".feedback-widget",
+        ".sidebar-toc",
     ),
     "docs.vllm.ai": (
         ".version-warning",
@@ -1157,6 +1193,11 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Related endpoints$"),
         re.compile(r"^Need help with integration\?$"),
     ),
+    "docs.fireworks.ai": (
+        re.compile(r"^Release channels$"),
+        re.compile(r"^Related Fireworks guides$"),
+        re.compile(r"^Edit this page$"),
+    ),
     "developer.nvidia.com": (
         re.compile(r"^Performance checklist$"),
         re.compile(r"^Related NVIDIA guides$"),
@@ -1170,6 +1211,11 @@ HOST_NOISE_LINE_PATTERNS = {
     "docs.langchain.com": (
         re.compile(r"^Migration guide menu$"),
         re.compile(r"^Related migration steps$"),
+        re.compile(r"^Was this page helpful\?$"),
+    ),
+    "docs.llamaindex.ai": (
+        re.compile(r"^Compatibility matrix$"),
+        re.compile(r"^Related LlamaIndex docs$"),
         re.compile(r"^Was this page helpful\?$"),
     ),
     "developer.atlassian.com": (
@@ -1190,6 +1236,11 @@ HOST_NOISE_LINE_PATTERNS = {
     "docs.pinecone.io": (
         re.compile(r"^Migration checklist$"),
         re.compile(r"^Related Pinecone guides$"),
+        re.compile(r"^Need more help\?$"),
+    ),
+    "docs.together.ai": (
+        re.compile(r"^Support policy$"),
+        re.compile(r"^Related Together docs$"),
         re.compile(r"^Need more help\?$"),
     ),
     "docs.vllm.ai": (
@@ -1490,6 +1541,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"reference-body"}},
     ),
+    "docs.fireworks.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"release-channel-note"}},
+    ),
     "developer.nvidia.com": (
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
@@ -1504,6 +1560,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"migration-guide"}},
+    ),
+    "docs.llamaindex.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
+        {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
+        {"tags": {"div", "section"}, "class_tokens": {"compatibility-matrix"}},
     ),
     "developer.atlassian.com": (
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
@@ -1524,6 +1585,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
+    ),
+    "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
     ),
     "docs.vllm.ai": (
         {"tags": {"div", "section"}, "class_tokens": {"md-content"}},
