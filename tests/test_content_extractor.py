@@ -208,6 +208,32 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("More stories", content.text)
         self.assertNotIn("The Associated Press is an independent global news organization", content.text)
 
+    def test_prefers_apnews_live_updates_and_drops_timestamp_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("apnews-live-updates.html"),
+            url="https://apnews.com/live/ai-regulation-operations-updates-2026-04-09",
+        )
+
+        self.assertIn("operators rolling out generative AI systems are being pressed", content.text)
+        self.assertIn("incident playbooks, audit logs, and fallback controls", content.text)
+        self.assertNotIn("9:41 a.m. EDT", content.text)
+        self.assertNotIn("Read more", content.text)
+        self.assertNotIn("More stories", content.text)
+
+    def test_prefers_bbc_live_body_and_drops_live_meta_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("bbc-live.html"),
+            url="https://www.bbc.com/news/live/technology-12345678",
+        )
+
+        self.assertIn("executives are asking AI teams to explain how live systems will be supervised", content.text)
+        self.assertIn("document approval paths, alerting rules, and fallback procedures", content.text)
+        self.assertNotIn("Live Reporting", content.text)
+        self.assertNotIn("Posted at 10:42", content.text)
+        self.assertNotIn("Top stories", content.text)
+
     def test_prefers_cnbc_article_body_and_drops_newsletter_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
@@ -233,6 +259,19 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Sign up to the FT Edit newsletter", content.text)
         self.assertNotIn("Recommended", content.text)
         self.assertNotIn("Read next", content.text)
+
+    def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("theguardian-liveblog.html"),
+            url="https://www.theguardian.com/technology/live/2026/apr/09/ai-operations-live",
+        )
+
+        self.assertIn("enterprise AI programs are now judged on operational resilience", content.text)
+        self.assertIn("rollback paths, human approvals, and incident review discipline", content.text)
+        self.assertNotIn("Live feed", content.text)
+        self.assertNotIn("11.05 AM BST", content.text)
+        self.assertNotIn("Most viewed", content.text)
 
     def test_prefers_venturebeat_article_content_and_drops_related_story_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)

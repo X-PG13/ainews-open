@@ -158,6 +158,11 @@ HOST_SELECTORS = {
         ".RichTextBody",
         ".Page-content",
     ),
+    "bbc.com": (
+        ".qa-story-body",
+        ".lx-stream-post-body",
+        ".ssrcss-11r1m41-RichTextComponentWrapper",
+    ),
     "cnbc.com": (
         ".ArticleBody-articleBody",
         ".group",
@@ -167,6 +172,11 @@ HOST_SELECTORS = {
         ".article__content-body",
         ".n-content-body",
         ".article-body",
+    ),
+    "theguardian.com": (
+        ".liveblog__body",
+        ".content__article-body",
+        ".article-body-commercial-selector",
     ),
     "substack.com": (
         ".body.markup",
@@ -285,6 +295,15 @@ HOST_DROP_SELECTORS = {
         ".RelatedTopics-list",
         ".Carousel",
         ".ad-placeholder",
+        ".Timestamp",
+        ".UpdateTime",
+    ),
+    "bbc.com": (
+        ".lx-stream-post__meta",
+        ".lx-stream-post__header",
+        ".lx-stream-post__footer",
+        ".lx-share-tools",
+        ".bbc-article-tags",
     ),
     "cnbc.com": (
         ".InlineNewsletter-inlineNewsletter",
@@ -299,6 +318,15 @@ HOST_DROP_SELECTORS = {
         ".newsletter-signup",
         ".article-footer",
         ".related-articles",
+    ),
+    "theguardian.com": (
+        ".submeta",
+        ".email-sign-up",
+        ".related-content",
+        ".liveblog-block__meta",
+        ".sharecount",
+        ".most-viewed-container",
+        ".liveblog__key-events",
     ),
     "substack.com": (
         ".subscription-widget-wrap",
@@ -386,6 +414,13 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^The Associated Press is an independent global news organization.*$"),
         re.compile(r"^Read more$"),
         re.compile(r"^More stories$"),
+        re.compile(r"^\d{1,2}:\d{2}\s*(?:a\.m\.|p\.m\.)\s*[A-Z]{2,4}$"),
+    ),
+    "bbc.com": (
+        re.compile(r"^Live Reporting$"),
+        re.compile(r"^Posted at \d{1,2}:\d{2}$"),
+        re.compile(r"^\d{1,2}:\d{2}$"),
+        re.compile(r"^Top stories$"),
     ),
     "cnbc.com": (
         re.compile(r"^Watch:.*$"),
@@ -396,6 +431,11 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Sign up to the FT Edit newsletter$"),
         re.compile(r"^Recommended$"),
         re.compile(r"^Read next$"),
+    ),
+    "theguardian.com": (
+        re.compile(r"^Live feed$"),
+        re.compile(r"^\d{1,2}\.\d{2}\s*(?:AM|PM)\s*[A-Z]{2,4}$"),
+        re.compile(r"^Most viewed$"),
     ),
     "substack.com": (
         re.compile(r"^Thanks for reading.*$"),
@@ -485,6 +525,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"richtextbody"}},
         {"tags": {"div", "section"}, "class_tokens": {"page-content"}},
     ),
+    "bbc.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"qa-story-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"lx-stream-post-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"ssrcss-11r1m41-richtextcomponentwrapper"}},
+    ),
     "cnbc.com": (
         {"tags": {"div", "section"}, "class_tokens": {"articlebody-articlebody"}},
         {"tags": {"div", "section"}, "class_tokens": {"group"}},
@@ -494,6 +539,11 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"article__content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"n-content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
+    ),
+    "theguardian.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"liveblog__body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"content__article-body"}},
+        {"tags": {"div", "section"}, "class_tokens": {"article-body-commercial-selector"}},
     ),
     "substack.com": (
         {"tags": {"div", "section"}, "class_tokens": {"body", "markup"}},

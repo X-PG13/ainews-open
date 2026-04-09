@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.2`
+`v1.2.3`
 
 ### Suggested Title
 
-`AI News Open v1.2.2 · Extraction Coverage and Local Gate Hardening`
+`AI News Open v1.2.3 · Live Timeline Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.2
+## AI News Open v1.2.3
 
-AI News Open `v1.2.2` hardens extraction quality across more international publisher layouts and makes the local maintainer gate match release-quality checks more closely.
+AI News Open `v1.2.3` hardens extraction quality for live updates and timeline-style newsroom layouts across more international publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.2` hardens extraction quality across more international publi
 
 ### Highlights in this release
 
-- New deterministic extraction fixtures for `MIT Technology Review` and `Axios`
-- Better Axios article cleanup so newsletter prompts, share tools, and recirculation blocks are filtered out of extracted body text
-- `make check` now runs `lint`, `coverage`, `build`, and `smoke` as the default local maintainer gate
+- New deterministic live/timeline extraction fixtures for `AP News`, `BBC`, and `The Guardian`
+- Better cleanup for timestamp rows, live-feed labels, share widgets, and recirculation blocks on newsroom liveblog pages
+- The international extraction suite now covers standard articles, newsletters, syndication pages, and live-update layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
