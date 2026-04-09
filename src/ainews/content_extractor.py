@@ -346,6 +346,7 @@ HOST_SELECTORS = {
     ),
     "docs.anthropic.com": (
         ".security-bulletin",
+        ".usage-limit-notice",
         ".theme-doc-markdown",
         ".docs-content",
         ".article-body",
@@ -406,6 +407,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".rate-limit-update",
         ".docs-body",
         ".prose",
         ".article-body",
@@ -421,6 +423,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".quota-policy",
         ".docs-body",
         ".content-body",
         ".article-body",
@@ -838,10 +841,12 @@ HOST_DROP_SELECTORS = {
     ),
     "docs.anthropic.com": (
         ".severity-badge",
+        ".limit-summary",
         ".table-of-contents",
         ".docs-feedback",
         ".related-links",
         ".related-bulletins",
+        ".related-limit-guides",
         ".contact-security",
         ".callout-banner",
         ".breadcrumbs",
@@ -924,9 +929,12 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".rate-limit-nav",
+        ".tier-summary",
         ".faq-nav",
         ".deprecation-callout",
         ".related-answers",
+        ".related-limit-guides",
         ".feedback-widget",
         ".docs-sidebar",
     ),
@@ -945,9 +953,11 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".quota-summary",
         ".policy-sidebar",
         ".support-banner",
         ".related-articles",
+        ".related-quota-guides",
         ".feedback-widget",
         ".sidebar-toc",
     ),
@@ -1275,9 +1285,12 @@ HOST_NOISE_LINE_PATTERNS = {
     "docs.anthropic.com": (
         re.compile(r"^Security bulletin$"),
         re.compile(r"^Severity level$"),
+        re.compile(r"^Usage limit notice$"),
+        re.compile(r"^Limit summary$"),
         re.compile(r"^Troubleshooting menu$"),
         re.compile(r"^Related topics$"),
         re.compile(r"^Related bulletins$"),
+        re.compile(r"^Related limit guides$"),
         re.compile(r"^Contact security$"),
         re.compile(r"^Need more help\?$"),
     ),
@@ -1339,8 +1352,12 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Rate limit update$"),
+        re.compile(r"^Rate limit navigation$"),
+        re.compile(r"^Tier summary$"),
         re.compile(r"^Deprecation FAQ$"),
         re.compile(r"^Related answers$"),
+        re.compile(r"^Related limit guides$"),
         re.compile(r"^Was this helpful\?$"),
     ),
     "trust.openai.com": (
@@ -1355,8 +1372,11 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Quota policy$"),
+        re.compile(r"^Quota summary$"),
         re.compile(r"^Support policy$"),
         re.compile(r"^Related Together docs$"),
+        re.compile(r"^Related quota guides$"),
         re.compile(r"^Need more help\?$"),
     ),
     "status.openai.com": (
@@ -1668,6 +1688,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"usage-limit-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"security-bulletin"}},
         {"tags": {"div", "section"}, "class_tokens": {"theme-doc-markdown"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-content"}},
@@ -1729,6 +1750,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"rate-limit-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},
@@ -1744,6 +1766,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"quota-policy"}},
         {"tags": {"div", "section"}, "class_tokens": {"docs-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"content-body"}},
         {"tags": {"div", "section"}, "class_tokens": {"article-body"}},

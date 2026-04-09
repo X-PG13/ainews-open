@@ -1057,6 +1057,53 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Plan comparison", content.text)
         self.assertNotIn("Related product updates", content.text)
 
+    def test_prefers_openai_rate_limit_update_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-rate-limit-update.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/enterprise-update",
+        )
+
+        self.assertIn("Rate limit updates are useful when they explain which traffic classes are changing", content.text)
+        self.assertIn("burst and", content.text)
+        self.assertIn("sustained limits will be enforced", content.text)
+        self.assertIn("fallback queues, retry guidance", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Tier summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_usage_limit_notice_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-usage-limit-notice.html"),
+            url="https://docs.anthropic.com/en/docs/usage/enterprise-limit-notice",
+        )
+
+        self.assertIn("Usage limit notices are useful when they explain which workload classes are capped", content.text)
+        self.assertIn("temporary", content.text)
+        self.assertIn("exceptions are handled", content.text)
+        self.assertIn("change in client behavior", content.text)
+        self.assertIn("fallback controls", content.text)
+        self.assertNotIn("Limit summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_quota_policy_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-quota-policy.html"),
+            url="https://docs.together.ai/docs/inference/quota-policy",
+        )
+
+        self.assertIn("Quota policies matter when they explain which credits and throughput pools are shared", content.text)
+        self.assertIn("how rollover", content.text)
+        self.assertIn("is handled", content.text)
+        self.assertIn("exception handling, dashboard fields", content.text)
+        self.assertIn("new quota rules stabilize", content.text)
+        self.assertNotIn("Quota summary", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+        self.assertNotIn("Need more help?", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

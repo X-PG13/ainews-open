@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.22`
+`v1.2.23`
 
 ### Suggested Title
 
-`AI News Open v1.2.22 · Pricing and Service Tier Extraction Coverage`
+`AI News Open v1.2.23 · Rate Limit and Quota Policy Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.22
+## AI News Open v1.2.23
 
-AI News Open `v1.2.22` hardens extraction quality for pricing-update, service-tier-notice, and SKU-change layouts across more international publishers.
+AI News Open `v1.2.23` hardens extraction quality for usage-limit-notice, rate-limit-update, and quota-policy layouts across more developer-doc publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.22` hardens extraction quality for pricing-update, service-ti
 
 ### Highlights in this release
 
-- New deterministic commercial-notice fixtures for `OpenAI`, `Anthropic`, and `Together`
-- Better cleanup for pricing sidebars, service-tier grids, plan-comparison modules, and sales CTA recirculation on product pricing and commercial notice pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, and SKU-change layouts
+- New deterministic quota and usage-policy fixtures for `OpenAI`, `Anthropic`, and `Together`
+- Better cleanup for rate-limit navigation, tier summaries, limit summaries, quota summaries, and related-guide recirculation on usage-policy and quota pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, and quota-policy layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start

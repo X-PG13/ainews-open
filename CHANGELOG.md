@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.23] - 2026-04-09
+
+### Added
+
+- Usage-limit-notice, rate-limit-update, and quota-policy extraction fixtures for `docs.anthropic.com`, `platform.openai.com`, and `docs.together.ai`
+
+### Changed
+
+- Package version is now `1.2.23`
+- International extraction coverage now includes usage-limit-notice, rate-limit-update, and quota-policy layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, and SKU-change layouts
+
+### Fixed
+
+- Reduced rate-limit sidebars, tier summaries, limit summaries, quota summaries, and related-guide recirculation noise on developer quota and usage-policy pages
+- Locked another class of quota-policy and rate-limit layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.22] - 2026-04-09
 
 ### Added
