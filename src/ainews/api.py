@@ -98,6 +98,7 @@ class RefreshPublicationsRequest(BaseModel):
 class ArticleCurationRequest(BaseModel):
     is_hidden: Optional[bool] = None
     is_pinned: Optional[bool] = None
+    is_suppressed: Optional[bool] = None
     must_include: Optional[bool] = None
     editorial_note: Optional[str] = Field(default=None, max_length=500)
 
@@ -378,6 +379,7 @@ def create_app() -> FastAPI:
             article_id,
             is_hidden=payload.is_hidden,
             is_pinned=payload.is_pinned,
+            is_suppressed=payload.is_suppressed,
             must_include=payload.must_include,
             editorial_note=payload.editorial_note,
         )
@@ -831,6 +833,30 @@ def create_app() -> FastAPI:
                 limit=payload.limit,
                 use_llm=payload.use_llm,
                 persist=payload.persist,
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/digests/preview")
+    def admin_preview_digest(
+        payload: DigestRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_preview_digest")
+        try:
+            return _sanitize_service_payload(service.build_digest(
+                region=payload.region,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                use_llm=payload.use_llm,
+                persist=False,
             ))
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)

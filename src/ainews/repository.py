@@ -42,6 +42,7 @@ ARTICLE_EXTRA_COLUMNS = {
     "llm_updated_at": "TEXT NOT NULL DEFAULT ''",
     "is_hidden": "INTEGER NOT NULL DEFAULT 0",
     "is_pinned": "INTEGER NOT NULL DEFAULT 0",
+    "is_suppressed": "INTEGER NOT NULL DEFAULT 0",
     "must_include": "INTEGER NOT NULL DEFAULT 0",
     "editorial_note": "TEXT NOT NULL DEFAULT ''"
 }
@@ -50,7 +51,7 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 11
+CURRENT_SCHEMA_VERSION = 12
 
 ARTICLE_SELECT_COLUMNS = """
     articles.id,
@@ -87,6 +88,7 @@ ARTICLE_SELECT_COLUMNS = """
     articles.llm_updated_at,
     articles.is_hidden,
     articles.is_pinned,
+    articles.is_suppressed,
     articles.must_include,
     articles.editorial_note,
     articles.duplicate_group,
@@ -190,6 +192,7 @@ class ArticleRepository:
                     llm_updated_at TEXT NOT NULL DEFAULT '',
                     is_hidden INTEGER NOT NULL DEFAULT 0,
                     is_pinned INTEGER NOT NULL DEFAULT 0,
+                    is_suppressed INTEGER NOT NULL DEFAULT 0,
                     must_include INTEGER NOT NULL DEFAULT 0,
                     editorial_note TEXT NOT NULL DEFAULT ''
                 );
@@ -522,6 +525,7 @@ class ArticleRepository:
         payload = dict(row)
         payload["is_hidden"] = bool(payload.get("is_hidden"))
         payload["is_pinned"] = bool(payload.get("is_pinned"))
+        payload["is_suppressed"] = bool(payload.get("is_suppressed"))
         payload["must_include"] = bool(payload.get("must_include"))
         payload["extraction_attempts"] = int(payload.get("extraction_attempts") or 0)
         payload["extraction_last_http_status"] = int(payload.get("extraction_last_http_status") or 0)
@@ -2310,6 +2314,7 @@ class ArticleRepository:
                         llm_updated_at = ?,
                         is_hidden = ?,
                         is_pinned = ?,
+                        is_suppressed = ?,
                         must_include = ?,
                         editorial_note = ?,
                         normalized_title = ?,
@@ -2344,6 +2349,7 @@ class ArticleRepository:
                         merged_payload["llm_updated_at"],
                         merged_payload["is_hidden"],
                         merged_payload["is_pinned"],
+                        merged_payload["is_suppressed"],
                         merged_payload["must_include"],
                         merged_payload["editorial_note"],
                         merged_payload["normalized_title"],
@@ -2502,6 +2508,9 @@ class ArticleRepository:
             else 0,
             "is_pinned": 1
             if bool(target.get("is_pinned")) or bool(source.get("is_pinned"))
+            else 0,
+            "is_suppressed": 1
+            if bool(target.get("is_suppressed")) or bool(source.get("is_suppressed"))
             else 0,
             "must_include": 1
             if bool(target.get("must_include")) or bool(source.get("must_include"))
@@ -2702,6 +2711,7 @@ class ArticleRepository:
         *,
         is_hidden: Optional[bool] = None,
         is_pinned: Optional[bool] = None,
+        is_suppressed: Optional[bool] = None,
         must_include: Optional[bool] = None,
         editorial_note: Optional[str] = None,
     ) -> Optional[dict]:
@@ -2715,6 +2725,10 @@ class ArticleRepository:
         if is_pinned is not None:
             updates.append("is_pinned = ?")
             params.append(1 if is_pinned else 0)
+
+        if is_suppressed is not None:
+            updates.append("is_suppressed = ?")
+            params.append(1 if is_suppressed else 0)
 
         if must_include is not None:
             updates.append("must_include = ?")
@@ -3112,6 +3126,7 @@ class ArticleRepository:
                     SUM(CASE WHEN is_hidden = 0 THEN 1 ELSE 0 END) AS visible_articles,
                     SUM(CASE WHEN is_hidden = 1 THEN 1 ELSE 0 END) AS hidden_articles,
                     SUM(CASE WHEN is_pinned = 1 THEN 1 ELSE 0 END) AS pinned_articles,
+                    SUM(CASE WHEN is_suppressed = 1 THEN 1 ELSE 0 END) AS suppressed_articles,
                     SUM(CASE WHEN must_include = 1 THEN 1 ELSE 0 END) AS must_include_articles,
                     SUM(CASE WHEN duplicate_of IS NULL THEN 1 ELSE 0 END) AS unique_articles,
                     SUM(CASE WHEN duplicate_of IS NOT NULL THEN 1 ELSE 0 END) AS duplicate_articles,
@@ -3241,6 +3256,7 @@ class ArticleRepository:
             "visible_articles": int(totals_row["visible_articles"] or 0),
             "hidden_articles": int(totals_row["hidden_articles"] or 0),
             "pinned_articles": int(totals_row["pinned_articles"] or 0),
+            "suppressed_articles": int(totals_row["suppressed_articles"] or 0),
             "must_include_articles": int(totals_row["must_include_articles"] or 0),
             "unique_articles": int(totals_row["unique_articles"] or 0),
             "duplicate_articles": int(totals_row["duplicate_articles"] or 0),

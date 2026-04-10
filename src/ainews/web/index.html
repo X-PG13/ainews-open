@@ -138,6 +138,7 @@
             <button id="ingestButton" class="button primary">抓取新闻</button>
             <button id="extractButton" class="button ghost">抓正文</button>
             <button id="enrichButton" class="button secondary">翻译国际新闻</button>
+            <button id="digestPreviewButton" class="button ghost">选稿预览</button>
             <button id="digestButton" class="button primary">生成中文日报</button>
             <button id="pipelineButton" class="button secondary">跑完整流水线</button>
             <button id="publishButton" class="button ghost">发布日报</button>
@@ -174,10 +175,21 @@
         </article>
 
         <div class="side-stack">
-          <article class="panel">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Archive</p>
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h2>编辑预览</h2>
+            </div>
+          </div>
+          <p class="muted">展示本轮日报候选、入选原因，以及被 `suppress`、重复簇或条数上限排除的文章。</p>
+          <div id="digestPreviewView" class="publication-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Archive</p>
                 <h2>历史日报</h2>
               </div>
             </div>
