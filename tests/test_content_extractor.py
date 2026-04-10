@@ -1841,6 +1841,60 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Audit restoration matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_recovery_override_matrix_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-recovery-override-matrix.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/recovery-override-matrix",
+        )
+
+        self.assertIn(
+            "Recovery override matrices matter when operators need a precise map",
+            content.text,
+        )
+        self.assertIn("grace thresholds", content.text)
+        self.assertIn("fallback regions", content.text)
+        self.assertIn("shared throughput stability", content.text)
+        self.assertNotIn("Recovery override summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_continuity_exception_checklist_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-continuity-exception-checklist.html"),
+            url="https://docs.anthropic.com/en/docs/usage/continuity-exception-checklist",
+        )
+
+        self.assertIn(
+            "Continuity exception checklists matter when operators need a deterministic sequence",
+            content.text,
+        )
+        self.assertIn("review checkpoints", content.text)
+        self.assertIn("queue health evidence", content.text)
+        self.assertIn("fairness controls", content.text)
+        self.assertNotIn("Continuity exception summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_audit_replay_faq_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-audit-replay-faq.html"),
+            url="https://docs.together.ai/docs/inference/audit-replay-faq",
+        )
+
+        self.assertIn(
+            "Audit replay FAQs matter when operators need direct answers",
+            content.text,
+        )
+        self.assertIn("exception triggers", content.text)
+        self.assertIn("dashboard checks", content.text)
+        self.assertIn("regional recovery playbooks", content.text)
+        self.assertNotIn("Audit replay summary", content.text)
+        self.assertNotIn("Audit replay matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_skips_google_news_aggregate_fixture(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
 
