@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".rollback-exception-note",
         ".escalation-rollback-checklist",
         ".priority-escalation-guide",
         ".security-bulletin",
@@ -413,6 +414,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".burst-credit-recovery-faq",
         ".burst-credit-recovery-note",
         ".burst-credit-faq",
         ".burst-credit-notice",
@@ -435,6 +437,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".eligibility-edge-case-advisory",
         ".rollover-eligibility-guide",
         ".rollover-exception-policy",
         ".reservation-rollover-policy",
@@ -951,6 +954,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".burst-credit-recovery-faq-summary",
         ".burst-credit-recovery-summary",
         ".burst-credit-faq-summary",
         ".burst-credit-summary",
@@ -981,6 +985,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".eligibility-edge-case-summary",
+        ".eligibility-edge-case-matrix",
         ".rollover-eligibility-summary",
         ".rollover-eligibility-matrix",
         ".rollover-exception-summary",
@@ -1323,6 +1329,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Rollback exception note$"),
+        re.compile(r"^Rollback exception summary$"),
         re.compile(r"^Escalation rollback checklist$"),
         re.compile(r"^Rollback checklist summary$"),
         re.compile(r"^Priority escalation guide$"),
@@ -1404,6 +1412,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Burst credit recovery FAQ$"),
+        re.compile(r"^Burst credit recovery FAQ summary$"),
         re.compile(r"^Burst credit recovery note$"),
         re.compile(r"^Burst credit recovery summary$"),
         re.compile(r"^Burst credit FAQ$"),
@@ -1436,6 +1446,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Eligibility edge-case advisory$"),
+        re.compile(r"^Eligibility edge-case summary$"),
+        re.compile(r"^Eligibility edge-case matrix$"),
         re.compile(r"^Rollover eligibility guide$"),
         re.compile(r"^Rollover eligibility summary$"),
         re.compile(r"^Rollover eligibility matrix$"),
@@ -1770,6 +1783,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"rollback-exception-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"escalation-rollback-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"priority-escalation-guide"}},
         {"tags": {"div", "section"}, "class_tokens": {"queue-priority-update"}},
@@ -1838,6 +1852,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-notice"}},
@@ -1860,6 +1875,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"eligibility-edge-case-advisory"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-eligibility-guide"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-exception-policy"}},
         {"tags": {"div", "section"}, "class_tokens": {"reservation-rollover-policy"}},

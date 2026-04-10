@@ -1378,6 +1378,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Rollover eligibility matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_burst_credit_recovery_faq_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-burst-credit-recovery-faq.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/burst-credit-recovery-faq",
+        )
+
+        self.assertIn("Burst credit recovery FAQs matter when operators need direct answers", content.text)
+        self.assertIn("replenishment timing", content.text)
+        self.assertIn("recovery pacing", content.text)
+        self.assertIn("baseline throughput envelope", content.text)
+        self.assertNotIn("Burst credit recovery FAQ summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_rollback_exception_note_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-rollback-exception-note.html"),
+            url="https://docs.anthropic.com/en/docs/usage/rollback-exception-note",
+        )
+
+        self.assertIn("Rollback exception notes matter when operators need to document why a temporary priority path", content.text)
+        self.assertIn("exception triggers", content.text)
+        self.assertIn("review checkpoints", content.text)
+        self.assertIn("fallback queues", content.text)
+        self.assertNotIn("Rollback exception summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_eligibility_edge_case_advisory_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-eligibility-edge-case-advisory.html"),
+            url="https://docs.together.ai/docs/inference/eligibility-edge-case-advisory",
+        )
+
+        self.assertIn("Eligibility edge-case advisories matter when they explain which reservation pools lose rollover eligibility", content.text)
+        self.assertIn("exception thresholds", content.text)
+        self.assertIn("drops out of the normal eligibility path", content.text)
+        self.assertIn("queue protection", content.text)
+        self.assertNotIn("Eligibility edge-case summary", content.text)
+        self.assertNotIn("Eligibility edge-case matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
