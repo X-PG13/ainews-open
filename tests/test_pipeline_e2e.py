@@ -319,6 +319,92 @@ class PipelineE2ETestCase(unittest.TestCase):
             self.assertEqual(result["publish"]["published"], 1)
             self.assertEqual({article["source_id"] for article in articles}, {source.id for source in sources})
 
+    def test_pipeline_groups_cross_source_duplicates_before_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = self._make_settings(temp_dir)
+
+            sources = [
+                SourceDefinition(
+                    id="openai-news",
+                    name="OpenAI News",
+                    url="https://example.com/feed/openai-enterprise-direct.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="company",
+                ),
+                SourceDefinition(
+                    id="yahoo-ai",
+                    name="Yahoo AI",
+                    url="https://example.com/feed/yahoo-openai-enterprise.xml",
+                    region="international",
+                    language="en",
+                    country="US",
+                    topic="news",
+                ),
+            ]
+            repository = ArticleRepository(settings.database_path)
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=FixtureRegistry(sources),
+                llm_client=StubLLMClient(),
+                content_extractor=ArticleContentExtractor(
+                    timeout=10,
+                    user_agent="test-agent",
+                    text_limit=5000,
+                ),
+            )
+
+            feed_map = {
+                sources[0].url: (
+                    FIXTURE_ROOT / "feed" / "openai-enterprise-direct.xml"
+                ).read_text(encoding="utf-8"),
+                sources[1].url: (
+                    FIXTURE_ROOT / "feed" / "yahoo-openai-enterprise.xml"
+                ).read_text(encoding="utf-8"),
+            }
+            article_html = (
+                FIXTURE_ROOT / "extraction" / "openai-article.html"
+            ).read_text(encoding="utf-8")
+
+            def fake_service_fetch(url, **kwargs):
+                if url in feed_map:
+                    return feed_map[url]
+                raise AssertionError(f"unexpected service fetch url: {url}")
+
+            def fake_extractor_fetch(url, **kwargs):
+                if url in {
+                    "https://openai.com/index/enterprise-governance",
+                    "https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                }:
+                    return article_html
+                raise AssertionError(f"unexpected extractor fetch url: {url}")
+
+            with patch("ainews.service.fetch_text", side_effect=fake_service_fetch), patch(
+                "ainews.content_extractor.fetch_text", side_effect=fake_extractor_fetch
+            ):
+                result = service.run_pipeline(
+                    region="all",
+                    since_hours=72,
+                    limit=10,
+                    use_llm=True,
+                    persist=True,
+                    export=False,
+                    publish=False,
+                )
+
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["ingest"]["inserted_total"], 2)
+            self.assertEqual(result["ingest"]["grouped_total"], 1)
+            self.assertEqual(result["digest"]["selection_summary"]["duplicates_suppressed"], 1)
+            self.assertEqual(len(result["digest"]["selection_preview"]), 1)
+            primary = next(row for row in rows if row["is_duplicate_primary"])
+            duplicate = next(row for row in rows if not row["is_duplicate_primary"])
+            self.assertEqual(primary["source_id"], "openai-news")
+            self.assertEqual(duplicate["duplicate_of"], primary["id"])
+
     def test_pipeline_reports_partial_error_for_multi_source_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = self._make_settings(temp_dir)

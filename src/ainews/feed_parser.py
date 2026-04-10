@@ -7,8 +7,11 @@ from typing import List, Optional
 from .models import ArticleRecord, SourceDefinition
 from .utils import (
     canonicalize_url,
+    make_content_fingerprint,
     make_content_hash,
     make_dedup_key,
+    make_resolved_target,
+    normalize_title,
     parse_datetime,
     strip_html,
     utc_now,
@@ -65,6 +68,9 @@ def _build_article(source: SourceDefinition, item: ET.Element) -> Optional[Artic
         topic=source.topic,
         content_hash=make_content_hash(title, summary),
         dedup_key=make_dedup_key(title),
+        normalized_title=normalize_title(title),
+        resolved_target=make_resolved_target(link, canonical_url),
+        content_fingerprint=make_content_fingerprint(title, summary),
         raw_payload={
             "title": title,
             "link": link,
@@ -93,6 +99,7 @@ def replace_article_url(
         article,
         url=resolved_url,
         canonical_url=canonicalize_url(canonical_url or resolved_url),
+        resolved_target=make_resolved_target(resolved_url, canonical_url or resolved_url),
         raw_payload=payload,
     )
 

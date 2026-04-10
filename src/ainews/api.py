@@ -98,6 +98,7 @@ class RefreshPublicationsRequest(BaseModel):
 class ArticleCurationRequest(BaseModel):
     is_hidden: Optional[bool] = None
     is_pinned: Optional[bool] = None
+    must_include: Optional[bool] = None
     editorial_note: Optional[str] = Field(default=None, max_length=500)
 
 
@@ -377,6 +378,7 @@ def create_app() -> FastAPI:
             article_id,
             is_hidden=payload.is_hidden,
             is_pinned=payload.is_pinned,
+            must_include=payload.must_include,
             editorial_note=payload.editorial_note,
         )
         if article is None:
@@ -464,6 +466,8 @@ def create_app() -> FastAPI:
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
+        duplicate_group: Optional[str] = Query(default=None),
+        primary_only: bool = Query(default=False),
         extraction_status: Optional[str] = Query(default=None),
         extraction_error_category: Optional[str] = Query(default=None),
         due_only: bool = Query(default=False),
@@ -477,6 +481,8 @@ def create_app() -> FastAPI:
                     region=region,
                     language=language,
                     source_id=source_id,
+                    duplicate_group=duplicate_group,
+                    primary_only=primary_only,
                     since_hours=since_hours,
                     extraction_status=extraction_status,
                     extraction_error_category=extraction_error_category,
@@ -589,6 +595,8 @@ def create_app() -> FastAPI:
         region: str = Query(default="all"),
         language: Optional[str] = Query(default=None),
         source_id: Optional[str] = Query(default=None),
+        duplicate_group: Optional[str] = Query(default=None),
+        primary_only: bool = Query(default=False),
         extraction_status: Optional[str] = Query(default=None),
         extraction_error_category: Optional[str] = Query(default=None),
         due_only: bool = Query(default=False),
@@ -604,6 +612,8 @@ def create_app() -> FastAPI:
                     region=region,
                     language=language,
                     source_id=source_id,
+                    duplicate_group=duplicate_group,
+                    primary_only=primary_only,
                     since_hours=since_hours,
                     extraction_status=extraction_status,
                     extraction_error_category=extraction_error_category,
@@ -971,6 +981,27 @@ def create_app() -> FastAPI:
         _begin_route_action(request, "admin_curate_article")
         try:
             return _sanitize_service_payload(curate_article_payload(article_id, payload))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/articles/{article_id}/duplicate-primary")
+    def admin_set_duplicate_primary(
+        article_id: int,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_set_duplicate_primary")
+        try:
+            article = service.set_duplicate_primary(article_id)
+            if article is None:
+                raise LookupError("article not found")
+            return _sanitize_service_payload({"article": article})
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)
         except LookupError:

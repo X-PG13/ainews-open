@@ -54,6 +54,128 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertFalse(repository.insert_if_new(duplicate))
             self.assertEqual(repository.count_articles(), 1)
 
+    def test_repository_groups_cross_source_variants_into_duplicate_cluster(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+
+            direct = ArticleRecord(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                title="OpenAI launches enterprise governance controls",
+                url="https://openai.com/index/enterprise-governance",
+                canonical_url="https://openai.com/index/enterprise-governance",
+                summary="A direct release post about enterprise governance controls.",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "A direct release post about enterprise governance controls.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+            syndicated = ArticleRecord(
+                source_id="yahoo-ai",
+                source_name="Yahoo AI",
+                title="OpenAI launches enterprise governance controls",
+                url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                canonical_url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                summary="Yahoo syndication coverage with a slightly different summary and framing.",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "Yahoo syndication coverage with a slightly different summary and framing.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+
+            self.assertTrue(repository.insert_if_new(direct))
+            self.assertTrue(repository.insert_if_new(syndicated))
+
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            self.assertEqual(len(rows), 2)
+            primary = next(row for row in rows if row["is_duplicate_primary"])
+            duplicate = next(row for row in rows if not row["is_duplicate_primary"])
+            self.assertEqual(primary["source_id"], "openai-news")
+            self.assertEqual(primary["duplicate_count"], 2)
+            self.assertEqual(duplicate["duplicate_of"], primary["id"])
+            self.assertEqual(duplicate["duplicate_group"], primary["duplicate_group"])
+            self.assertEqual(duplicate["duplicate_reason"], "normalized_title_dedup_key")
+
+    def test_repository_can_promote_duplicate_primary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now()
+
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="openai-news",
+                    source_name="OpenAI News",
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://openai.com/index/enterprise-governance",
+                    canonical_url="https://openai.com/index/enterprise-governance",
+                    summary="A direct release post about enterprise governance controls.",
+                    published_at=published,
+                    discovered_at=published,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "A direct release post about enterprise governance controls.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="yahoo-ai",
+                    source_name="Yahoo AI",
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                    canonical_url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                    summary="Yahoo syndication coverage with a slightly different summary and framing.",
+                    published_at=published,
+                    discovered_at=published,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "Yahoo syndication coverage with a slightly different summary and framing.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            yahoo = next(row for row in rows if row["source_id"] == "yahoo-ai")
+            promoted = repository.set_duplicate_primary(int(yahoo["id"]))
+            self.assertIsNotNone(promoted)
+            self.assertTrue(promoted["is_duplicate_primary"])
+
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            primary = next(row for row in rows if row["is_duplicate_primary"])
+            duplicate = next(row for row in rows if not row["is_duplicate_primary"])
+            self.assertEqual(primary["source_id"], "yahoo-ai")
+            self.assertEqual(duplicate["duplicate_of"], primary["id"])
+            self.assertEqual(duplicate["duplicate_reason"], "operator_selected_primary")
+
     def test_repository_updates_curation_and_stores_digest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")
