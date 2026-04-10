@@ -1333,6 +1333,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Rollover exception matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_burst_credit_recovery_note_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-burst-credit-recovery-note.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/burst-credit-recovery-note",
+        )
+
+        self.assertIn("Burst credit recovery notes matter when they explain how tenants return", content.text)
+        self.assertIn("replenishment timing", content.text)
+        self.assertIn("cooldown checkpoints", content.text)
+        self.assertIn("retry backoff", content.text)
+        self.assertNotIn("Burst credit recovery summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_escalation_rollback_checklist_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-escalation-rollback-checklist.html"),
+            url="https://docs.anthropic.com/en/docs/usage/escalation-rollback-checklist",
+        )
+
+        self.assertIn("Escalation rollback checklists matter when operators need a deterministic sequence", content.text)
+        self.assertIn("verification gates", content.text)
+        self.assertIn("queue health checks", content.text)
+        self.assertIn("fairness targets", content.text)
+        self.assertNotIn("Rollback checklist summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_rollover_eligibility_guide_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-rollover-eligibility-guide.html"),
+            url="https://docs.together.ai/docs/inference/rollover-eligibility-guide",
+        )
+
+        self.assertIn("Rollover eligibility guides matter when they explain which reservation pools can carry", content.text)
+        self.assertIn("regional failover exceptions", content.text)
+        self.assertIn("reservation remains eligible", content.text)
+        self.assertIn("reservation guarantees", content.text)
+        self.assertNotIn("Rollover eligibility summary", content.text)
+        self.assertNotIn("Rollover eligibility matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
