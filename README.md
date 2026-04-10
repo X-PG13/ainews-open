@@ -112,7 +112,7 @@ The current version includes:
 - Article body extraction, source-specific cleanup, and local storage
 - LLM-powered translation and summary enrichment for international stories
 - Chinese daily digest generation and digest history
-- Editorial controls for `pin`, `must_include`, duplicate-primary selection, and digest selection preview
+- Editorial controls for `pin`, `must_include`, `suppress`, duplicate-primary selection, and digest selection preview with explicit inclusion/exclusion reasons
 - A publication layer for Telegram, Feishu, a static site, and WeChat draft publishing
 - Feishu card messages and automatic WeChat cover upload
 - Publication history management and WeChat publish-status refresh

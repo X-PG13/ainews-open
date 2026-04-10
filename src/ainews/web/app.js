@@ -12,6 +12,7 @@ const refs = {
   ingestButton: document.getElementById("ingestButton"),
   extractButton: document.getElementById("extractButton"),
   enrichButton: document.getElementById("enrichButton"),
+  digestPreviewButton: document.getElementById("digestPreviewButton"),
   digestButton: document.getElementById("digestButton"),
   pipelineButton: document.getElementById("pipelineButton"),
   publishButton: document.getElementById("publishButton"),
@@ -21,6 +22,7 @@ const refs = {
   refreshSourcesButton: document.getElementById("refreshSourcesButton"),
   resetSourceCooldownsButton: document.getElementById("resetSourceCooldownsButton"),
   digestView: document.getElementById("digestView"),
+  digestPreviewView: document.getElementById("digestPreviewView"),
   digestArchive: document.getElementById("digestArchive"),
   articlesList: document.getElementById("articlesList"),
   regionSelect: document.getElementById("regionSelect"),
@@ -91,6 +93,7 @@ function renderStats(stats) {
   const cards = [
     ["文章总数", stats.total_articles || 0],
     ["可见文章", stats.visible_articles || 0],
+    ["已 suppress", stats.suppressed_articles || 0],
     ["已抓正文", stats.extracted_articles || 0],
     ["已翻译国际稿", stats.enriched_articles || 0],
     ["来源冷却", stats.active_source_cooldowns || 0],
@@ -495,6 +498,7 @@ function renderDigest(payload) {
   const digest = digestPayload?.digest || digestPayload?.payload;
   if (!digest) {
     refs.digestView.innerHTML = '<p class="muted">还没有生成日报。</p>';
+    refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
     return;
   }
   state.currentDigest = digest;
@@ -535,6 +539,62 @@ function renderDigest(payload) {
     ${sections}
     ${selectionPreview ? `<section><h3>入选解释</h3><ul>${selectionPreview}</ul></section>` : ""}
     ${digest.closing ? `<p class="article-brief">${escapeHtml(digest.closing)}</p>` : ""}
+  `;
+  renderDigestPreview(digestPayload);
+}
+
+function decisionLabel(decision) {
+  switch (decision) {
+    case "selected":
+      return "入选";
+    case "suppressed":
+      return "suppress";
+    case "duplicate_secondary":
+      return "重复副本";
+    case "ranked_out":
+      return "条数外";
+    default:
+      return decision || "unknown";
+  }
+}
+
+function decisionStatusClass(decision) {
+  if (decision === "selected") return "status-good";
+  if (decision === "ranked_out" || decision === "duplicate_secondary") return "status-pending";
+  return "status-warn";
+}
+
+function renderDigestPreview(payload) {
+  const decisions = payload?.selection_decisions || [];
+  const summary = payload?.selection_summary || null;
+  if (!decisions.length) {
+    refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
+    return;
+  }
+  const summaryLine = summary
+    ? `<p class="article-brief">候选 ${escapeHtml(String(summary.candidate_articles || 0))} · 入选 ${escapeHtml(String(summary.selected_count || 0))} · suppress ${escapeHtml(String(summary.editorially_suppressed || 0))} · 重复副本 ${escapeHtml(String(summary.duplicates_suppressed || 0))} · 条数外 ${escapeHtml(String(summary.ranked_out || 0))}</p>`
+    : "";
+  refs.digestPreviewView.innerHTML = `
+    ${summaryLine}
+    ${decisions
+      .map(
+        (item) => `
+          <article class="archive-item">
+            <div class="chip-row compact">
+              <span class="chip ${decisionStatusClass(item.decision)}">${escapeHtml(decisionLabel(item.decision))}</span>
+              <span class="chip">${escapeHtml(item.source_name || "")}</span>
+              <span class="chip">score ${escapeHtml(String(item.rank_score || 0))}</span>
+              ${item.must_include ? '<span class="chip">must_include</span>' : ""}
+              ${item.is_pinned ? '<span class="chip">pinned</span>' : ""}
+              ${item.is_suppressed ? '<span class="chip">suppressed</span>' : ""}
+            </div>
+            <strong>${escapeHtml(item.title || "")}</strong>
+            <p class="muted">${escapeHtml(item.published_at || "")}</p>
+            <p class="article-brief">${escapeHtml((item.selection_reasons || []).join(", "))}</p>
+          </article>
+        `
+      )
+      .join("")}
   `;
 }
 
@@ -637,6 +697,7 @@ function articleChips(article) {
   ];
   if (article.is_pinned) chips.push("pinned");
   if (article.must_include) chips.push("must_include");
+  if (article.is_suppressed) chips.push("suppressed");
   if (article.is_hidden) chips.push("hidden");
   if ((article.duplicate_count || 1) > 1) {
     chips.push(article.is_duplicate_primary ? `primary x${article.duplicate_count}` : `duplicate -> #${article.duplicate_primary_id}`);
@@ -653,7 +714,7 @@ function renderArticles(articles) {
     ? articles
         .map(
           (article) => `
-          <article class="article-card" data-article-id="${article.id}" data-is-pinned="${article.is_pinned}" data-is-hidden="${article.is_hidden}">
+          <article class="article-card" data-article-id="${article.id}" data-is-pinned="${article.is_pinned}" data-is-hidden="${article.is_hidden}" data-is-suppressed="${article.is_suppressed}">
             <header>
               <div>
                 <h3>${escapeHtml(article.display_title_zh || article.title)}</h3>
@@ -690,6 +751,7 @@ function renderArticles(articles) {
             <div class="article-actions">
               <button class="button ghost" data-action="toggle-pin">${article.is_pinned ? "取消置顶" : "置顶"}</button>
               <button class="button ghost" data-action="toggle-must-include">${article.must_include ? "取消必选" : "设为必选"}</button>
+              <button class="button ghost" data-action="toggle-suppress">${article.is_suppressed ? "取消 suppress" : "suppress"}</button>
               <button class="button ghost" data-action="toggle-hide">${article.is_hidden ? "取消隐藏" : "隐藏"}</button>
               ${
                 (article.duplicate_count || 1) > 1 && !article.is_duplicate_primary
@@ -1125,6 +1187,23 @@ async function runDigest() {
   await refreshAll();
 }
 
+async function previewDigest() {
+  const filters = getFilters();
+  const payload = await fetchJson("/admin/digests/preview", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      region: filters.region,
+      since_hours: filters.since_hours,
+      limit: filters.limit,
+      use_llm: true,
+      persist: false,
+    }),
+  });
+  logJob("digest preview", payload);
+  renderDigest(payload);
+}
+
 async function runPipeline() {
   const filters = getFilters();
   const payload = await fetchJson("/admin/pipeline", {
@@ -1182,6 +1261,7 @@ async function updateArticle(articleId, patch) {
   logJob("curation", payload);
   await loadArticles();
   await loadStats();
+  await previewDigest().catch((error) => logJob("digest preview failed", { error: error.message }));
 }
 
 async function setDuplicatePrimary(articleId) {
@@ -1192,6 +1272,7 @@ async function setDuplicatePrimary(articleId) {
   logJob("duplicate primary", payload);
   await loadArticles();
   await loadDigests();
+  await previewDigest().catch((error) => logJob("digest preview failed", { error: error.message }));
 }
 
 refs.saveTokenButton.addEventListener("click", () => {
@@ -1210,6 +1291,7 @@ refs.resetSourceCooldownsButton.addEventListener("click", () =>
 refs.ingestButton.addEventListener("click", () => runIngest().catch((error) => logJob("ingest failed", { error: error.message })));
 refs.extractButton.addEventListener("click", () => runExtract().catch((error) => logJob("extract failed", { error: error.message })));
 refs.enrichButton.addEventListener("click", () => runEnrich().catch((error) => logJob("enrich failed", { error: error.message })));
+refs.digestPreviewButton.addEventListener("click", () => previewDigest().catch((error) => logJob("digest preview failed", { error: error.message })));
 refs.digestButton.addEventListener("click", () => runDigest().catch((error) => logJob("digest failed", { error: error.message })));
 refs.pipelineButton.addEventListener("click", () => runPipeline().catch((error) => logJob("pipeline failed", { error: error.message })));
 refs.publishButton.addEventListener("click", () => runPublish().catch((error) => logJob("publish failed", { error: error.message })));
@@ -1257,6 +1339,7 @@ refs.articlesList.addEventListener("click", async (event) => {
   const note = card.querySelector('[data-role="note"]').value;
   const isPinned = card.dataset.isPinned === "true";
   const isHidden = card.dataset.isHidden === "true";
+  const isSuppressed = card.dataset.isSuppressed === "true";
   const article = state.currentArticles.find((item) => Number(item.id) === articleId);
 
   try {
@@ -1265,6 +1348,8 @@ refs.articlesList.addEventListener("click", async (event) => {
       await updateArticle(articleId, { is_pinned: shouldPin });
     } else if (action === "toggle-must-include") {
       await updateArticle(articleId, { must_include: !(article?.must_include) });
+    } else if (action === "toggle-suppress") {
+      await updateArticle(articleId, { is_suppressed: !isSuppressed });
     } else if (action === "toggle-hide") {
       const shouldHide = !isHidden;
       await updateArticle(articleId, { is_hidden: shouldHide });

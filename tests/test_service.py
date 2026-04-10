@@ -420,6 +420,92 @@ class ServiceFilterTestCase(unittest.TestCase):
             preview_titles = [item["title"] for item in digest["selection_preview"]]
             self.assertIn("Anthropic documents new rollback controls", preview_titles[0])
 
+    def test_digest_selection_tracks_editorial_suppression_and_preview_decisions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://openai.com/index/enterprise-governance",
+                    canonical_url="https://openai.com/index/enterprise-governance",
+                    summary="Direct release coverage.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "Direct release coverage.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="anthropic-news",
+                    source_name="Anthropic News",
+                    title="Anthropic documents new rollback controls",
+                    url="https://anthropic.com/news/rollback-controls",
+                    canonical_url="https://anthropic.com/news/rollback-controls",
+                    summary="Another strong enterprise AI story.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "Anthropic documents new rollback controls",
+                        "Another strong enterprise AI story.",
+                    ),
+                    dedup_key=make_dedup_key("Anthropic documents new rollback controls"),
+                    raw_payload={},
+                )
+            )
+            anthropic = next(
+                row
+                for row in repository.list_articles(limit=10, include_hidden=True)
+                if row["source_id"] == "anthropic-news"
+            )
+            repository.update_article_curation(int(anthropic["id"]), is_suppressed=True)
+
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+            )
+
+            digest = service.build_digest(region="all", since_hours=24, limit=10, use_llm=False)
+
+            self.assertEqual(digest["selection_summary"]["editorially_suppressed"], 1)
+            self.assertEqual(digest["selection_summary"]["selected_count"], 1)
+            decisions = {item["decision"] for item in digest["selection_decisions"]}
+            self.assertIn("selected", decisions)
+            self.assertIn("suppressed", decisions)
+            suppressed = next(
+                item for item in digest["selection_decisions"] if item["decision"] == "suppressed"
+            )
+            self.assertIn("suppressed", suppressed["selection_reasons"])
+
     def test_enrich_and_digest_with_llm_client(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(

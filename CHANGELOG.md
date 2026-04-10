@@ -2,6 +2,23 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.45] - 2026-04-10
+
+### Added
+
+- Digest editor controls now include `suppress` and digest preview routes so operators can inspect `selected`, `suppressed`, `duplicate_secondary`, and `ranked_out` decisions before publishing
+
+### Changed
+
+- Package version is now `1.2.45`
+- Cross-source digest selection now exposes `selection_decisions`, `selection_summary`, and duplicate-cluster primary switching through the admin preview flow
+- The admin dashboard now surfaces suppressed articles and a dedicated editorial preview panel for digest candidate review
+
+### Fixed
+
+- Ensured digest preview payloads persist `selection_decisions` all the way through the API response, stored payload fallback, and dashboard rendering path
+- Prevented editor-suppressed articles from re-entering enrichment work and digest candidate lists unless operators explicitly clear the suppression flag
+
 ## [1.2.44] - 2026-04-10
 
 ### Added

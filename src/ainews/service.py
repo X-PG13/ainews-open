@@ -1156,6 +1156,7 @@ class NewsService:
         *,
         is_hidden: Optional[bool] = None,
         is_pinned: Optional[bool] = None,
+        is_suppressed: Optional[bool] = None,
         must_include: Optional[bool] = None,
         editorial_note: Optional[str] = None,
     ) -> Optional[dict]:
@@ -1163,6 +1164,7 @@ class NewsService:
             article_id,
             is_hidden=is_hidden,
             is_pinned=is_pinned,
+            is_suppressed=is_suppressed,
             must_include=must_include,
             editorial_note=editorial_note,
         )
@@ -1772,6 +1774,7 @@ class NewsService:
             "counts_by_region": dict(Counter(article["region"] for article in presented_articles)),
             "articles": presented_articles,
             "selection_preview": selection["selection_preview"],
+            "selection_decisions": selection["selection_decisions"],
             "selection_summary": selection["summary"],
             "digest": digest.to_dict(),
             "body_markdown": body_markdown,
@@ -1838,6 +1841,7 @@ class NewsService:
         return (
             not str(article.get("language", "")).startswith("zh")
             and not article.get("is_hidden")
+            and not article.get("is_suppressed")
             and (
                 article.get("llm_status") != "ready"
                 or not clean_text(str(article.get("llm_title_zh", "")))
@@ -1976,6 +1980,7 @@ class NewsService:
         payload["is_translated"] = bool(llm_title_zh and llm_summary_zh)
         payload["content_available"] = bool(clean_text(str(article.get("extracted_text", ""))))
         payload["must_include"] = bool(article.get("must_include"))
+        payload["is_suppressed"] = bool(article.get("is_suppressed"))
         payload["duplicate_group"] = clean_text(str(article.get("duplicate_group", "")))
         payload["duplicate_of"] = article.get("duplicate_of")
         payload["duplicate_count"] = int(article.get("duplicate_count") or 1)
@@ -1992,14 +1997,34 @@ class NewsService:
     def _build_digest_selection(self, articles: List[dict]) -> Dict[str, object]:
         ranked: List[dict] = []
         duplicates_suppressed = 0
+        editorially_suppressed = 0
+        ranked_out = 0
+        prefiltered_decisions: List[dict] = []
         for article in articles:
             if not article.get("is_duplicate_primary", article.get("duplicate_of") is None):
                 duplicates_suppressed += 1
+                prefiltered_decisions.append(
+                    self._selection_decision_payload(
+                        article,
+                        decision="duplicate_secondary",
+                        reasons=["duplicate_secondary"],
+                    )
+                )
                 continue
             score, reasons = self._digest_rank(article)
             enriched = dict(article)
             enriched["rank_score"] = score
             enriched["selection_reasons"] = reasons
+            if article.get("is_suppressed"):
+                editorially_suppressed += 1
+                prefiltered_decisions.append(
+                    self._selection_decision_payload(
+                        enriched,
+                        decision="suppressed",
+                        reasons=["suppressed", *reasons],
+                    )
+                )
+                continue
             ranked.append(enriched)
 
         ranked.sort(
@@ -2020,35 +2045,69 @@ class NewsService:
             if len(selected) >= self.settings.llm_digest_max_articles and not (
                 item.get("must_include") or item.get("is_pinned")
             ):
+                ranked_out += 1
                 continue
             seen_ids.add(article_id)
             selected.append(item)
 
         selection_preview = [
-            {
-                "article_id": item["id"],
-                "title": item["display_title_zh"],
-                "source_name": item["source_name"],
-                "published_at": item["published_at"],
-                "rank_score": item["rank_score"],
-                "selection_reasons": item["selection_reasons"],
-                "duplicate_count": item["duplicate_count"],
-                "is_pinned": item["is_pinned"],
-                "must_include": item["must_include"],
-            }
+            self._selection_decision_payload(
+                item,
+                decision="selected",
+                reasons=list(item.get("selection_reasons", [])),
+            )
             for item in selected
+        ]
+        selected_ids = {int(item["article_id"]) for item in selection_preview}
+        ranked_out_preview = [
+            self._selection_decision_payload(
+                item,
+                decision="ranked_out",
+                reasons=["ranked_out", *list(item.get("selection_reasons", []))],
+            )
+            for item in ranked
+            if int(item.get("id") or 0) not in selected_ids
+        ]
+        selection_decisions = [
+            *selection_preview,
+            *prefiltered_decisions,
+            *ranked_out_preview,
         ]
         return {
             "selected_articles": selected,
             "selection_preview": selection_preview,
+            "selection_decisions": selection_decisions,
             "summary": {
                 "candidate_articles": len(articles),
                 "unique_candidates": len(ranked),
                 "selected_count": len(selected),
                 "duplicates_suppressed": duplicates_suppressed,
+                "editorially_suppressed": editorially_suppressed,
+                "ranked_out": ranked_out,
                 "pinned_selected": sum(1 for item in selected if item.get("is_pinned")),
                 "must_include_selected": sum(1 for item in selected if item.get("must_include")),
             },
+        }
+
+    @staticmethod
+    def _selection_decision_payload(
+        article: dict,
+        *,
+        decision: str,
+        reasons: List[str],
+    ) -> dict:
+        return {
+            "article_id": article["id"],
+            "title": article["display_title_zh"],
+            "source_name": article["source_name"],
+            "published_at": article["published_at"],
+            "rank_score": float(article.get("rank_score") or 0.0),
+            "selection_reasons": reasons,
+            "decision": decision,
+            "duplicate_count": int(article.get("duplicate_count") or 1),
+            "is_pinned": bool(article.get("is_pinned")),
+            "must_include": bool(article.get("must_include")),
+            "is_suppressed": bool(article.get("is_suppressed")),
         }
 
     @staticmethod
@@ -2739,11 +2798,14 @@ class NewsService:
             "counts_by_region": dict(Counter(article["region"] for article in presented_articles)),
             "articles": presented_articles,
             "selection_preview": [],
+            "selection_decisions": [],
             "selection_summary": {
                 "candidate_articles": len(presented_articles),
                 "unique_candidates": len(presented_articles),
                 "selected_count": 0,
                 "duplicates_suppressed": 0,
+                "editorially_suppressed": 0,
+                "ranked_out": 0,
                 "pinned_selected": 0,
                 "must_include_selected": 0,
             },

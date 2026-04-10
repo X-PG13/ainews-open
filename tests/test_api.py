@@ -224,6 +224,34 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["article"]["must_include"])
 
+    def test_admin_article_curation_can_set_suppressed(self) -> None:
+        self._seed_article()
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        article_id = repository.list_articles(limit=10, include_hidden=True)[0]["id"]
+
+        response = self.client.patch(
+            f"/admin/articles/{article_id}",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"is_suppressed": True},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["article"]["is_suppressed"])
+
+    def test_admin_digest_preview_returns_selection_decisions(self) -> None:
+        self._seed_article()
+
+        response = self.client.post(
+            "/admin/digests/preview",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"region": "all", "since_hours": 72, "limit": 10, "use_llm": False},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("selection_preview", payload)
+        self.assertIn("selection_decisions", payload)
+
     def test_admin_can_promote_duplicate_primary(self) -> None:
         repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
         published = utc_now()

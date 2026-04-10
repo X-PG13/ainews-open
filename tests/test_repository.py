@@ -203,10 +203,13 @@ class RepositoryTestCase(unittest.TestCase):
             curated = repository.update_article_curation(
                 int(stored["id"]),
                 is_pinned=True,
+                is_suppressed=True,
                 editorial_note="keep on top",
             )
             self.assertTrue(curated["is_pinned"])
+            self.assertTrue(curated["is_suppressed"])
             self.assertEqual(curated["editorial_note"], "keep on top")
+            self.assertEqual(repository.get_stats()["suppressed_articles"], 1)
 
             digest = repository.save_digest(
                 region="all",
