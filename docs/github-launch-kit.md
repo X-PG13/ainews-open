@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.34`
+`v1.2.35`
 
 ### Suggested Title
 
-`AI News Open v1.2.34 · Exception Eligibility and Audit FAQ Coverage`
+`AI News Open v1.2.35 · Eligibility Rollover and Audit Waiver Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.34
+## AI News Open v1.2.35
 
-AI News Open `v1.2.34` hardens extraction quality for exception-eligibility-matrix, handoff-escalation-checklist, and audit-exception-faq layouts across more developer-doc publishers.
+AI News Open `v1.2.35` hardens extraction quality for eligibility-rollover-matrix, approval-continuity-faq, and audit-waiver-checklist layouts across more developer-doc publishers.
 
 ### What it does
 
@@ -40,8 +40,8 @@ AI News Open `v1.2.34` hardens extraction quality for exception-eligibility-matr
 
 ### Highlights in this release
 
-- New deterministic exception-eligibility-matrix, handoff-escalation-checklist, and audit-exception-faq fixtures for `OpenAI`, `Anthropic`, and `Together`
-- Better cleanup for exception eligibility summaries, handoff escalation summaries, audit exception summaries, audit exception matrices, and related-guide recirculation on developer policy pages
+- New deterministic eligibility-rollover-matrix, approval-continuity-faq, and audit-waiver-checklist fixtures for `OpenAI`, `Anthropic`, and `Together`
+- Better cleanup for eligibility rollover summaries, approval continuity summaries, audit waiver summaries, audit waiver matrices, and related-guide recirculation on developer policy pages
 - The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, capacity-reservation-note layouts, burst-credit-notice layouts, queue-priority-update layouts, reservation-rollover-policy layouts, burst-credit-faq layouts, priority-escalation-guide layouts, rollover-exception-policy layouts, burst-credit-recovery-note layouts, escalation-rollback-checklist layouts, rollover-eligibility-guide layouts, burst-credit-recovery-faq layouts, rollback-exception-note layouts, eligibility-edge-case-advisory layouts, recovery-grace-period-note layouts, rollback-approval-matrix layouts, and eligibility-exception-faq layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
