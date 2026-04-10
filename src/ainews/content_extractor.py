@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".rollback-approval-matrix",
         ".rollback-exception-note",
         ".escalation-rollback-checklist",
         ".priority-escalation-guide",
@@ -414,6 +415,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".recovery-grace-period-note",
         ".burst-credit-recovery-faq",
         ".burst-credit-recovery-note",
         ".burst-credit-faq",
@@ -437,6 +439,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".eligibility-exception-faq",
         ".eligibility-edge-case-advisory",
         ".rollover-eligibility-guide",
         ".rollover-exception-policy",
@@ -954,6 +957,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".recovery-grace-summary",
         ".burst-credit-recovery-faq-summary",
         ".burst-credit-recovery-summary",
         ".burst-credit-faq-summary",
@@ -985,6 +989,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".eligibility-exception-summary",
+        ".eligibility-exception-matrix",
         ".eligibility-edge-case-summary",
         ".eligibility-edge-case-matrix",
         ".rollover-eligibility-summary",
@@ -1329,6 +1335,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Rollback approval matrix$"),
+        re.compile(r"^Approval matrix summary$"),
         re.compile(r"^Rollback exception note$"),
         re.compile(r"^Rollback exception summary$"),
         re.compile(r"^Escalation rollback checklist$"),
@@ -1412,6 +1420,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Recovery grace-period note$"),
+        re.compile(r"^Recovery grace summary$"),
         re.compile(r"^Burst credit recovery FAQ$"),
         re.compile(r"^Burst credit recovery FAQ summary$"),
         re.compile(r"^Burst credit recovery note$"),
@@ -1446,6 +1456,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Eligibility exception FAQ$"),
+        re.compile(r"^Eligibility exception summary$"),
+        re.compile(r"^Eligibility exception matrix$"),
         re.compile(r"^Eligibility edge-case advisory$"),
         re.compile(r"^Eligibility edge-case summary$"),
         re.compile(r"^Eligibility edge-case matrix$"),
@@ -1783,6 +1796,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"rollback-approval-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollback-exception-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"escalation-rollback-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"priority-escalation-guide"}},
@@ -1852,6 +1866,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"recovery-grace-period-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-faq"}},
@@ -1875,6 +1890,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"eligibility-exception-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"eligibility-edge-case-advisory"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-eligibility-guide"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-exception-policy"}},

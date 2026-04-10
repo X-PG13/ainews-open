@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.31] - 2026-04-10
+
+### Added
+
+- Recovery-grace-period-note, rollback-approval-matrix, and eligibility-exception-faq extraction fixtures for `platform.openai.com`, `docs.anthropic.com`, and `docs.together.ai`
+
+### Changed
+
+- Package version is now `1.2.31`
+- International extraction coverage now includes recovery-grace-period-note, rollback-approval-matrix, and eligibility-exception-faq layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, capacity-reservation-note layouts, burst-credit-notice layouts, queue-priority-update layouts, reservation-rollover-policy layouts, burst-credit-faq layouts, priority-escalation-guide layouts, rollover-exception-policy layouts, burst-credit-recovery-note layouts, escalation-rollback-checklist layouts, rollover-eligibility-guide layouts, burst-credit-recovery-faq layouts, rollback-exception-note layouts, and eligibility-edge-case-advisory layouts
+
+### Fixed
+
+- Reduced recovery grace summaries, rollback approval matrix summaries, eligibility exception summaries, eligibility exception matrices, and related-guide recirculation noise on developer policy pages
+- Locked another class of recovery-grace, rollback-approval, and eligibility-exception layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.30] - 2026-04-10
 
 ### Added
