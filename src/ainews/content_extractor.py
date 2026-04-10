@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".continuity-waiver-faq",
         ".continuity-handoff-checklist",
         ".approval-continuity-faq",
         ".handoff-escalation-checklist",
@@ -420,6 +421,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".recovery-exception-matrix",
         ".rollover-waiver-matrix",
         ".eligibility-rollover-matrix",
         ".exception-eligibility-matrix",
@@ -449,6 +451,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".audit-restoration-checklist",
         ".audit-recovery-faq",
         ".audit-waiver-checklist",
         ".audit-exception-faq",
@@ -879,6 +882,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".continuity-waiver-summary",
         ".continuity-handoff-summary",
         ".approval-continuity-summary",
         ".handoff-escalation-summary",
@@ -977,6 +981,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".recovery-exception-summary",
         ".rollover-waiver-summary",
         ".eligibility-rollover-summary",
         ".exception-eligibility-summary",
@@ -1014,6 +1019,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".audit-restoration-summary",
+        ".audit-restoration-matrix",
         ".audit-recovery-summary",
         ".audit-recovery-matrix",
         ".audit-waiver-summary",
@@ -1370,6 +1377,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Continuity waiver FAQ$"),
+        re.compile(r"^Continuity waiver summary$"),
         re.compile(r"^Continuity handoff checklist$"),
         re.compile(r"^Continuity handoff summary$"),
         re.compile(r"^Approval continuity FAQ$"),
@@ -1465,6 +1474,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Recovery exception matrix$"),
+        re.compile(r"^Recovery exception summary$"),
         re.compile(r"^Rollover waiver matrix$"),
         re.compile(r"^Rollover waiver summary$"),
         re.compile(r"^Eligibility rollover matrix$"),
@@ -1511,6 +1522,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Audit restoration checklist$"),
+        re.compile(r"^Audit restoration summary$"),
+        re.compile(r"^Audit restoration matrix$"),
         re.compile(r"^Audit recovery FAQ$"),
         re.compile(r"^Audit recovery summary$"),
         re.compile(r"^Audit recovery matrix$"),
@@ -1866,6 +1880,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"continuity-waiver-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-handoff-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"approval-continuity-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"handoff-escalation-checklist"}},
@@ -1941,6 +1956,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"recovery-exception-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-waiver-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"eligibility-rollover-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"exception-eligibility-matrix"}},
@@ -1970,6 +1986,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"audit-restoration-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-recovery-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-waiver-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-exception-faq"}},
