@@ -1423,6 +1423,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Eligibility edge-case matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_recovery_grace_period_note_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-recovery-grace-period-note.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/recovery-grace-period-note",
+        )
+
+        self.assertIn("Recovery grace-period notes matter when operators need to understand how long", content.text)
+        self.assertIn("grace thresholds", content.text)
+        self.assertIn("normal pacing can resume", content.text)
+        self.assertIn("exception queues", content.text)
+        self.assertNotIn("Recovery grace summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_rollback_approval_matrix_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-rollback-approval-matrix.html"),
+            url="https://docs.anthropic.com/en/docs/usage/rollback-approval-matrix",
+        )
+
+        self.assertIn("Rollback approval matrices matter when operators need a clear map", content.text)
+        self.assertIn("approval owners", content.text)
+        self.assertIn("evidence requirements", content.text)
+        self.assertIn("fallback queues", content.text)
+        self.assertNotIn("Approval matrix summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_eligibility_exception_faq_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-eligibility-exception-faq.html"),
+            url="https://docs.together.ai/docs/inference/eligibility-exception-faq",
+        )
+
+        self.assertIn("Eligibility exception FAQs matter when operators need direct answers", content.text)
+        self.assertIn("exception triggers", content.text)
+        self.assertIn("remains eligible outside the normal policy path", content.text)
+        self.assertIn("regional recovery playbooks", content.text)
+        self.assertNotIn("Eligibility exception summary", content.text)
+        self.assertNotIn("Eligibility exception matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
