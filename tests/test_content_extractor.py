@@ -1603,6 +1603,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Audit exception matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_eligibility_rollover_matrix_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-eligibility-rollover-matrix.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/eligibility-rollover-matrix",
+        )
+
+        self.assertIn("Eligibility rollover matrices matter when operators need a compact map", content.text)
+        self.assertIn("grace thresholds", content.text)
+        self.assertIn("fallback regions", content.text)
+        self.assertIn("shared throughput stability", content.text)
+        self.assertNotIn("Eligibility rollover summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_approval_continuity_faq_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-approval-continuity-faq.html"),
+            url="https://docs.anthropic.com/en/docs/usage/approval-continuity-faq",
+        )
+
+        self.assertIn("Approval continuity FAQs matter when operators need direct answers", content.text)
+        self.assertIn("review checkpoints", content.text)
+        self.assertIn("queue health evidence", content.text)
+        self.assertIn("fairness controls", content.text)
+        self.assertNotIn("Approval continuity summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_audit_waiver_checklist_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-audit-waiver-checklist.html"),
+            url="https://docs.together.ai/docs/inference/audit-waiver-checklist",
+        )
+
+        self.assertIn("Audit waiver checklists matter when operators need a deterministic sequence", content.text)
+        self.assertIn("exception triggers", content.text)
+        self.assertIn("dashboard checks", content.text)
+        self.assertIn("regional recovery playbooks", content.text)
+        self.assertNotIn("Audit waiver summary", content.text)
+        self.assertNotIn("Audit waiver matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(
