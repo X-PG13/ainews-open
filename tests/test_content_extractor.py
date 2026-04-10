@@ -1242,6 +1242,52 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Reservation matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_burst_credit_notice_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-burst-credit-notice.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/burst-credit-notice",
+        )
+
+        self.assertIn("Burst credit notices matter when they explain which workloads can spend temporary credit", content.text)
+        self.assertIn("credits are replenished", content.text)
+        self.assertIn("pacing policy", content.text)
+        self.assertIn("burn-rate dashboards", content.text)
+        self.assertNotIn("Burst credit summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_queue_priority_update_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-queue-priority-update.html"),
+            url="https://docs.anthropic.com/en/docs/usage/queue-priority-update",
+        )
+
+        self.assertIn("Queue priority updates are useful when they explain which workload classes now receive", content.text)
+        self.assertIn("elevated scheduling precedence", content.text)
+        self.assertIn("queuing policy", content.text)
+        self.assertIn("fallback", content.text)
+        self.assertIn("queue controls", content.text)
+        self.assertNotIn("Priority summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_reservation_rollover_policy_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-reservation-rollover-policy.html"),
+            url="https://docs.together.ai/docs/inference/reservation-rollover-policy",
+        )
+
+        self.assertIn("Reservation rollover policies matter when they explain which reserved capacity can carry", content.text)
+        self.assertIn("rollover interacts with regional failover", content.text)
+        self.assertIn("rollover expiry signals", content.text)
+        self.assertIn("rollover reservations remain active", content.text)
+        self.assertNotIn("Rollover summary", content.text)
+        self.assertNotIn("Rollover matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

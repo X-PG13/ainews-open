@@ -346,6 +346,7 @@ HOST_SELECTORS = {
     ),
     "docs.anthropic.com": (
         ".security-bulletin",
+        ".queue-priority-update",
         ".fairness-policy-update",
         ".grace-period-notice",
         ".concurrency-cap-update",
@@ -410,6 +411,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".burst-credit-notice",
         ".temporary-overage-notice",
         ".soft-limit-warning",
         ".burst-cap-notice",
@@ -429,6 +431,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".reservation-rollover-policy",
         ".capacity-reservation-note",
         ".throughput-exception-policy",
         ".regional-quota-advisory",
@@ -849,6 +852,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".priority-summary",
         ".fairness-summary",
         ".grace-period-summary",
         ".concurrency-summary",
@@ -941,6 +945,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".burst-credit-summary",
         ".overage-summary",
         ".soft-limit-summary",
         ".burst-cap-summary",
@@ -968,6 +973,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".rollover-summary",
+        ".rollover-matrix",
         ".reservation-summary",
         ".reservation-matrix",
         ".exception-thresholds",
@@ -1304,6 +1311,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Queue priority update$"),
+        re.compile(r"^Priority summary$"),
         re.compile(r"^Fairness policy update$"),
         re.compile(r"^Fairness summary$"),
         re.compile(r"^Grace period notice$"),
@@ -1379,6 +1388,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Burst credit notice$"),
+        re.compile(r"^Burst credit summary$"),
         re.compile(r"^Temporary overage notice$"),
         re.compile(r"^Overage summary$"),
         re.compile(r"^Soft limit warning$"),
@@ -1405,6 +1416,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Reservation rollover policy$"),
+        re.compile(r"^Rollover summary$"),
+        re.compile(r"^Rollover matrix$"),
         re.compile(r"^Capacity reservation note$"),
         re.compile(r"^Reservation summary$"),
         re.compile(r"^Reservation matrix$"),
@@ -1730,6 +1744,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"queue-priority-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"fairness-policy-update"}},
         {"tags": {"div", "section"}, "class_tokens": {"grace-period-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"concurrency-cap-update"}},
@@ -1795,6 +1810,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"burst-credit-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"temporary-overage-notice"}},
         {"tags": {"div", "section"}, "class_tokens": {"soft-limit-warning"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-cap-notice"}},
@@ -1814,6 +1830,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"reservation-rollover-policy"}},
         {"tags": {"div", "section"}, "class_tokens": {"capacity-reservation-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"throughput-exception-policy"}},
         {"tags": {"div", "section"}, "class_tokens": {"regional-quota-advisory"}},
