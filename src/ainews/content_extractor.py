@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".approval-escalation-note",
         ".rollback-approval-matrix",
         ".rollback-exception-note",
         ".escalation-rollback-checklist",
@@ -415,6 +416,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".grace-window-faq",
         ".recovery-grace-period-note",
         ".burst-credit-recovery-faq",
         ".burst-credit-recovery-note",
@@ -439,6 +441,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".exception-rollover-checklist",
         ".eligibility-exception-faq",
         ".eligibility-edge-case-advisory",
         ".rollover-eligibility-guide",
@@ -864,6 +867,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".approval-escalation-summary",
         ".priority-summary",
         ".fairness-summary",
         ".grace-period-summary",
@@ -957,6 +961,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".grace-window-summary",
         ".recovery-grace-summary",
         ".burst-credit-recovery-faq-summary",
         ".burst-credit-recovery-summary",
@@ -989,6 +994,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".exception-rollover-summary",
+        ".exception-rollover-matrix",
         ".eligibility-exception-summary",
         ".eligibility-exception-matrix",
         ".eligibility-edge-case-summary",
@@ -1335,6 +1342,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Approval escalation note$"),
+        re.compile(r"^Approval escalation summary$"),
         re.compile(r"^Rollback approval matrix$"),
         re.compile(r"^Approval matrix summary$"),
         re.compile(r"^Rollback exception note$"),
@@ -1420,6 +1429,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Grace window FAQ$"),
+        re.compile(r"^Grace window summary$"),
         re.compile(r"^Recovery grace-period note$"),
         re.compile(r"^Recovery grace summary$"),
         re.compile(r"^Burst credit recovery FAQ$"),
@@ -1456,6 +1467,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Exception rollover checklist$"),
+        re.compile(r"^Exception rollover summary$"),
+        re.compile(r"^Exception rollover matrix$"),
         re.compile(r"^Eligibility exception FAQ$"),
         re.compile(r"^Eligibility exception summary$"),
         re.compile(r"^Eligibility exception matrix$"),
@@ -1796,6 +1810,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"approval-escalation-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollback-approval-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollback-exception-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"escalation-rollback-checklist"}},
@@ -1866,6 +1881,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"grace-window-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"recovery-grace-period-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"burst-credit-recovery-note"}},
@@ -1890,6 +1906,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"exception-rollover-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"eligibility-exception-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"eligibility-edge-case-advisory"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-eligibility-guide"}},
