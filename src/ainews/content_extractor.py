@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".continuity-revalidation-waiver-checklist",
         ".continuity-revalidation-waiver-faq",
         ".continuity-revalidation-exception-matrix",
         ".continuity-revalidation-checklist",
@@ -427,6 +428,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".override-approval-replay-note",
         ".override-approval-incident-note",
         ".override-approval-faq",
         ".override-approval-matrix",
@@ -463,6 +465,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".audit-replay-waiver-escalation-faq",
         ".audit-replay-waiver-exception-matrix",
         ".audit-replay-waiver-checklist",
         ".audit-replay-waiver-faq",
@@ -900,6 +903,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".continuity-revalidation-waiver-checklist-summary",
         ".continuity-revalidation-waiver-summary",
         ".continuity-revalidation-exception-summary",
         ".continuity-revalidation-checklist-summary",
@@ -1005,6 +1009,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".override-approval-replay-summary",
         ".override-approval-incident-summary",
         ".override-approval-faq-summary",
         ".override-approval-summary",
@@ -1049,6 +1054,7 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".audit-replay-waiver-escalation-summary",
         ".audit-replay-waiver-exception-summary",
         ".audit-replay-waiver-checklist-summary",
         ".audit-replay-waiver-summary",
@@ -1414,6 +1420,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Continuity revalidation waiver checklist$"),
+        re.compile(r"^Continuity revalidation waiver checklist summary$"),
         re.compile(r"^Continuity revalidation waiver FAQ$"),
         re.compile(r"^Continuity revalidation waiver summary$"),
         re.compile(r"^Continuity revalidation exception matrix$"),
@@ -1523,6 +1531,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Override approval replay note$"),
+        re.compile(r"^Override approval replay summary$"),
         re.compile(r"^Override approval incident note$"),
         re.compile(r"^Override approval incident summary$"),
         re.compile(r"^Override approval FAQ$"),
@@ -1583,6 +1593,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Audit replay waiver escalation FAQ$"),
+        re.compile(r"^Audit replay waiver escalation summary$"),
         re.compile(r"^Audit replay waiver exception matrix$"),
         re.compile(r"^Audit replay waiver exception summary$"),
         re.compile(r"^Audit replay waiver checklist$"),
@@ -1954,6 +1966,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-waiver-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-waiver-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-exception-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-checklist"}},
@@ -2036,6 +2049,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"override-approval-replay-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"override-approval-incident-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"override-approval-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"override-approval-matrix"}},
@@ -2072,6 +2086,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"audit-replay-waiver-escalation-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-replay-waiver-exception-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-replay-waiver-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-replay-waiver-faq"}},

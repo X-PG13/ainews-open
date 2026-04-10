@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.44] - 2026-04-10
+
+### Added
+
+- Override-approval-replay-note, continuity-revalidation-waiver-checklist, and audit-replay-waiver-escalation-faq extraction fixtures for `platform.openai.com`, `docs.anthropic.com`, and `docs.together.ai`
+
+### Changed
+
+- Package version is now `1.2.44`
+- International extraction coverage now includes override-approval-replay-note, continuity-revalidation-waiver-checklist, and audit-replay-waiver-escalation-faq layouts in addition to standard articles, live updates, briefing pages, multimedia-heavy pages, opinion/column layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy-feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, capacity-reservation-note layouts, burst-credit-notice layouts, queue-priority-update layouts, reservation-rollover-policy layouts, burst-credit-faq layouts, priority-escalation-guide layouts, rollover-exception-policy layouts, burst-credit-recovery-note layouts, escalation-rollback-checklist layouts, rollover-eligibility-guide layouts, burst-credit-recovery-faq layouts, rollback-exception-note layouts, eligibility-edge-case-advisory layouts, recovery-grace-period-note layouts, rollback-approval-matrix layouts, eligibility-exception-faq layouts, grace-window-faq layouts, approval-escalation-note layouts, exception-rollover-checklist layouts, grace-window-exception-matrix layouts, approval-handoff-faq layouts, rollover-audit-checklist layouts, exception-eligibility-matrix layouts, handoff-escalation-checklist layouts, audit-exception-faq layouts, eligibility-rollover-matrix layouts, approval-continuity-faq layouts, audit-waiver-checklist layouts, rollover-waiver-matrix layouts, continuity-handoff-checklist layouts, audit-recovery-faq layouts, recovery-exception-matrix layouts, continuity-waiver-faq layouts, audit-restoration-checklist layouts, recovery-override-matrix layouts, continuity-exception-checklist layouts, audit-replay-faq layouts, recovery-override-faq layouts, continuity-revalidation-matrix layouts, audit-replay-checklist layouts, override-escalation-checklist layouts, continuity-revalidation-faq layouts, audit-replay-exception-matrix layouts, override-approval-matrix layouts, continuity-revalidation-checklist layouts, audit-replay-waiver-faq layouts, override-approval-faq layouts, continuity-revalidation-exception-matrix layouts, audit-replay-waiver-checklist layouts, override-approval-incident-note layouts, continuity-revalidation-waiver-faq layouts, and audit-replay-waiver-exception-matrix layouts
+
+### Fixed
+
+- Reduced override approval replay summaries, continuity revalidation waiver checklist summaries, audit replay waiver escalation summaries, audit replay matrices, and related-guide recirculation noise on developer policy pages
+- Locked another class of override-approval-replay-note, continuity-revalidation-waiver-checklist, and audit-replay-waiver-escalation-faq layouts into deterministic fixture coverage so extraction regressions are caught in CI
+
 ## [1.2.43] - 2026-04-10
 
 ### Added
