@@ -1288,6 +1288,51 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Rollover matrix", content.text)
         self.assertNotIn("Related quota guides", content.text)
 
+    def test_prefers_openai_burst_credit_faq_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("openai-burst-credit-faq.html"),
+            url="https://platform.openai.com/docs/guides/rate-limits/burst-credit-faq",
+        )
+
+        self.assertIn("Burst credit FAQs matter when operators need one place", content.text)
+        self.assertIn("credits refill", content.text)
+        self.assertIn("burst windows decay", content.text)
+        self.assertIn("fallback regions", content.text)
+        self.assertNotIn("Burst credit FAQ summary", content.text)
+        self.assertNotIn("Rate limit navigation", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+
+    def test_prefers_anthropic_priority_escalation_guide_body_and_drops_limit_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("anthropic-priority-escalation-guide.html"),
+            url="https://docs.anthropic.com/en/docs/usage/priority-escalation-guide",
+        )
+
+        self.assertIn("Priority escalation guides matter when they explain which workload classes", content.text)
+        self.assertIn("higher scheduling precedence", content.text)
+        self.assertIn("approval checkpoints", content.text)
+        self.assertIn("rollback conditions", content.text)
+        self.assertNotIn("Priority escalation summary", content.text)
+        self.assertNotIn("Related limit guides", content.text)
+        self.assertNotIn("Contact security", content.text)
+
+    def test_prefers_together_rollover_exception_policy_body_and_drops_quota_noise(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        content = extractor.extract_from_html(
+            _fixture("together-rollover-exception-policy.html"),
+            url="https://docs.together.ai/docs/inference/rollover-exception-policy",
+        )
+
+        self.assertIn("Rollover exception policies matter when they explain which reserved capacity can stay active", content.text)
+        self.assertIn("regional failover", content.text)
+        self.assertIn("exception expiry signals", content.text)
+        self.assertIn("reservation guarantees", content.text)
+        self.assertNotIn("Rollover exception summary", content.text)
+        self.assertNotIn("Rollover exception matrix", content.text)
+        self.assertNotIn("Related quota guides", content.text)
+
     def test_prefers_theguardian_liveblog_and_drops_live_feed_noise(self) -> None:
         extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
         content = extractor.extract_from_html(

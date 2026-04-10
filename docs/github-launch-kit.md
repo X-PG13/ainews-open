@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.27`
+`v1.2.28`
 
 ### Suggested Title
 
-`AI News Open v1.2.27 · Burst Credit and Queue Priority Extraction Coverage`
+`AI News Open v1.2.28 · Burst Credit FAQ and Rollover Exception Extraction Coverage`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.27
+## AI News Open v1.2.28
 
-AI News Open `v1.2.27` hardens extraction quality for burst-credit-notice, queue-priority-update, and reservation-rollover-policy layouts across more developer-doc publishers.
+AI News Open `v1.2.28` hardens extraction quality for burst-credit-faq, priority-escalation-guide, and rollover-exception-policy layouts across more developer-doc publishers.
 
 ### What it does
 
@@ -40,9 +40,9 @@ AI News Open `v1.2.27` hardens extraction quality for burst-credit-notice, queue
 
 ### Highlights in this release
 
-- New deterministic burst-credit, queue-priority, and reservation-rollover fixtures for `OpenAI`, `Anthropic`, and `Together`
-- Better cleanup for burst-credit summaries, priority summaries, rollover summaries, rollover matrices, and related-guide recirculation on developer limit and reservation-rollover pages
-- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, capacity-reservation-note layouts, burst-credit-notice layouts, queue-priority-update layouts, and reservation-rollover-policy layouts
+- New deterministic burst-credit-faq, priority-escalation-guide, and rollover-exception-policy fixtures for `OpenAI`, `Anthropic`, and `Together`
+- Better cleanup for burst-credit FAQ summaries, priority escalation summaries, rollover exception summaries, rollover exception matrices, and related-guide recirculation on developer policy pages
+- The international extraction suite now covers standard articles, live updates, briefing pages, multimedia-heavy pages, opinion layouts, paywall-heavy layouts, explainer/guide layouts, roundup/what-to-know layouts, interview/transcript layouts, longform analysis layouts, policy/research feature layouts, vendor benchmark layouts, conference recap layouts, vendor documentation layouts, API-reference/changelog layouts, migration/deprecation layouts, versioned-doc-notice layouts, support-policy layouts, compatibility-matrix layouts, release-channel-note layouts, incident-update layouts, postmortem layouts, outage-RCA layouts, security-bulletin layouts, trust-center-advisory layouts, compliance-update layouts, pricing-update layouts, service-tier-notice layouts, SKU-change layouts, usage-limit-notice layouts, rate-limit-update layouts, quota-policy layouts, burst-cap-notice layouts, concurrency-cap-update layouts, regional-quota-advisory layouts, soft-limit-warning layouts, grace-period-notice layouts, throughput-exception-policy layouts, temporary-overage-notice layouts, fairness-policy-update layouts, capacity-reservation-note layouts, burst-credit-notice layouts, queue-priority-update layouts, reservation-rollover-policy layouts, burst-credit-faq layouts, priority-escalation-guide layouts, and rollover-exception-policy layouts
 - Published-artifact smoke validation still runs automatically after release publication
 
 ### Quick start
