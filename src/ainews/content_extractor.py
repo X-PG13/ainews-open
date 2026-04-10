@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".continuity-revalidation-faq",
         ".continuity-revalidation-matrix",
         ".continuity-exception-checklist",
         ".continuity-waiver-faq",
@@ -423,6 +424,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".override-escalation-checklist",
         ".recovery-override-faq",
         ".recovery-override-matrix",
         ".recovery-exception-matrix",
@@ -455,6 +457,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".audit-replay-exception-matrix",
         ".audit-replay-checklist",
         ".audit-replay-faq",
         ".audit-restoration-checklist",
@@ -888,6 +891,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".continuity-revalidation-faq-summary",
         ".continuity-revalidation-summary",
         ".continuity-exception-summary",
         ".continuity-waiver-summary",
@@ -989,6 +993,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".override-escalation-summary",
         ".recovery-override-faq-summary",
         ".recovery-override-summary",
         ".recovery-exception-summary",
@@ -1029,6 +1034,7 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".audit-replay-exception-summary",
         ".audit-replay-checklist-summary",
         ".audit-replay-summary",
         ".audit-replay-matrix",
@@ -1390,6 +1396,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Continuity revalidation FAQ$"),
+        re.compile(r"^Continuity revalidation FAQ summary$"),
         re.compile(r"^Continuity revalidation matrix$"),
         re.compile(r"^Continuity revalidation summary$"),
         re.compile(r"^Continuity exception checklist$"),
@@ -1491,6 +1499,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Override escalation checklist$"),
+        re.compile(r"^Override escalation summary$"),
         re.compile(r"^Recovery override FAQ$"),
         re.compile(r"^Recovery override FAQ summary$"),
         re.compile(r"^Recovery override matrix$"),
@@ -1543,6 +1553,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Audit replay exception matrix$"),
+        re.compile(r"^Audit replay exception summary$"),
         re.compile(r"^Audit replay checklist$"),
         re.compile(r"^Audit replay checklist summary$"),
         re.compile(r"^Audit replay FAQ$"),
@@ -1906,6 +1918,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-revalidation-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-exception-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"continuity-waiver-faq"}},
@@ -1984,6 +1997,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"override-escalation-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"recovery-override-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"recovery-override-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"recovery-exception-matrix"}},
@@ -2016,6 +2030,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"audit-replay-exception-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-replay-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-replay-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"audit-restoration-checklist"}},
