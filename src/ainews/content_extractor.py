@@ -345,6 +345,7 @@ HOST_SELECTORS = {
         ".doc-content",
     ),
     "docs.anthropic.com": (
+        ".handoff-escalation-checklist",
         ".approval-handoff-faq",
         ".approval-escalation-note",
         ".rollback-approval-matrix",
@@ -417,6 +418,7 @@ HOST_SELECTORS = {
         ".prose",
     ),
     "platform.openai.com": (
+        ".exception-eligibility-matrix",
         ".grace-window-exception-matrix",
         ".grace-window-faq",
         ".recovery-grace-period-note",
@@ -443,6 +445,7 @@ HOST_SELECTORS = {
         ".migration-checklist",
     ),
     "docs.together.ai": (
+        ".audit-exception-faq",
         ".rollover-audit-checklist",
         ".exception-rollover-checklist",
         ".eligibility-exception-faq",
@@ -870,6 +873,7 @@ HOST_DROP_SELECTORS = {
         ".sidebar-nav",
     ),
     "docs.anthropic.com": (
+        ".handoff-escalation-summary",
         ".approval-handoff-summary",
         ".approval-escalation-summary",
         ".priority-summary",
@@ -965,6 +969,7 @@ HOST_DROP_SELECTORS = {
         ".page-nav",
     ),
     "platform.openai.com": (
+        ".exception-eligibility-summary",
         ".grace-window-exception-summary",
         ".grace-window-summary",
         ".recovery-grace-summary",
@@ -999,6 +1004,8 @@ HOST_DROP_SELECTORS = {
         ".breadcrumbs",
     ),
     "docs.together.ai": (
+        ".audit-exception-summary",
+        ".audit-exception-matrix",
         ".rollover-audit-summary",
         ".rollover-audit-matrix",
         ".exception-rollover-summary",
@@ -1349,6 +1356,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Watch the walkthrough$"),
     ),
     "docs.anthropic.com": (
+        re.compile(r"^Handoff escalation checklist$"),
+        re.compile(r"^Handoff escalation summary$"),
         re.compile(r"^Approval handoff FAQ$"),
         re.compile(r"^Approval handoff summary$"),
         re.compile(r"^Approval escalation note$"),
@@ -1438,6 +1447,8 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Contact sales$"),
     ),
     "platform.openai.com": (
+        re.compile(r"^Exception eligibility matrix$"),
+        re.compile(r"^Exception eligibility summary$"),
         re.compile(r"^Grace window exception matrix$"),
         re.compile(r"^Grace window exception summary$"),
         re.compile(r"^Grace window FAQ$"),
@@ -1478,6 +1489,9 @@ HOST_NOISE_LINE_PATTERNS = {
         re.compile(r"^Need more help\?$"),
     ),
     "docs.together.ai": (
+        re.compile(r"^Audit exception FAQ$"),
+        re.compile(r"^Audit exception summary$"),
+        re.compile(r"^Audit exception matrix$"),
         re.compile(r"^Rollover audit checklist$"),
         re.compile(r"^Rollover audit summary$"),
         re.compile(r"^Rollover audit matrix$"),
@@ -1824,6 +1838,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"doc-content"}},
     ),
     "docs.anthropic.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"handoff-escalation-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"approval-handoff-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"approval-escalation-note"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollback-approval-matrix"}},
@@ -1896,6 +1911,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"prose"}},
     ),
     "platform.openai.com": (
+        {"tags": {"div", "section"}, "class_tokens": {"exception-eligibility-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"grace-window-exception-matrix"}},
         {"tags": {"div", "section"}, "class_tokens": {"grace-window-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"recovery-grace-period-note"}},
@@ -1922,6 +1938,7 @@ FALLBACK_HOST_RULES = {
         {"tags": {"div", "section"}, "class_tokens": {"migration-checklist"}},
     ),
     "docs.together.ai": (
+        {"tags": {"div", "section"}, "class_tokens": {"audit-exception-faq"}},
         {"tags": {"div", "section"}, "class_tokens": {"rollover-audit-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"exception-rollover-checklist"}},
         {"tags": {"div", "section"}, "class_tokens": {"eligibility-exception-faq"}},
