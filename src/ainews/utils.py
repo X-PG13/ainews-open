@@ -68,6 +68,19 @@ def make_content_hash(title: str, summary: str) -> str:
     return build_hash([normalize_title(title), strip_html(summary)])
 
 
+def make_content_fingerprint(title: str, summary: str = "", body: str = "") -> str:
+    text = strip_html(body or summary)[:1000]
+    return build_hash([normalize_title(title), text])
+
+
+def make_resolved_target(url: str, canonical_url: str = "") -> str:
+    return canonicalize_url(canonical_url or url)
+
+
+def url_host(url: str) -> str:
+    return urlparse(clean_text(url)).netloc.lower()
+
+
 def parse_datetime(value: Optional[str]) -> datetime:
     if not value:
         return utc_now()

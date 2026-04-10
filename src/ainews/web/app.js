@@ -1,6 +1,7 @@
 const state = {
   token: localStorage.getItem("ainews_admin_token") || "",
   currentDigest: null,
+  currentArticles: [],
   selectedDigestId: null,
 };
 
@@ -486,7 +487,12 @@ function renderSources(sources) {
 }
 
 function renderDigest(payload) {
-  const digest = payload?.digest || payload?.payload;
+  const digestPayload = payload?.digest
+    ? payload
+    : payload?.payload?.digest
+      ? payload.payload
+      : payload;
+  const digest = digestPayload?.digest || digestPayload?.payload;
   if (!digest) {
     refs.digestView.innerHTML = '<p class="muted">还没有生成日报。</p>';
     return;
@@ -505,12 +511,29 @@ function renderDigest(payload) {
       `
     )
     .join("");
+  const selectionPreview = (digestPayload?.selection_preview || [])
+    .map(
+      (item) => `
+        <li>
+          <strong>${escapeHtml(item.title || "")}</strong>
+          <span class="muted"> · ${escapeHtml(item.source_name || "")} · score ${escapeHtml(String(item.rank_score || 0))}</span>
+          <div class="article-brief">${escapeHtml((item.selection_reasons || []).join(", "))}</div>
+        </li>
+      `
+    )
+    .join("");
   refs.digestView.innerHTML = `
-    <p class="eyebrow">Mode: ${escapeHtml(payload.generation_mode || "stored")}</p>
+    <p class="eyebrow">Mode: ${escapeHtml(digestPayload?.generation_mode || payload?.generation_mode || "stored")}</p>
     <h2>${escapeHtml(digest.title || "AI 新闻日报")}</h2>
     <p class="article-summary">${escapeHtml(digest.overview || "")}</p>
+    ${
+      digestPayload?.selection_summary
+        ? `<p class="article-brief">候选 ${escapeHtml(String(digestPayload.selection_summary.candidate_articles || 0))} · 去重后 ${escapeHtml(String(digestPayload.selection_summary.unique_candidates || 0))} · 已压掉重复 ${escapeHtml(String(digestPayload.selection_summary.duplicates_suppressed || 0))}</p>`
+        : ""
+    }
     ${highlights ? `<section><h3>今日要点</h3><ul>${highlights}</ul></section>` : ""}
     ${sections}
+    ${selectionPreview ? `<section><h3>入选解释</h3><ul>${selectionPreview}</ul></section>` : ""}
     ${digest.closing ? `<p class="article-brief">${escapeHtml(digest.closing)}</p>` : ""}
   `;
 }
@@ -613,7 +636,11 @@ function articleChips(article) {
     article.llm_status || "pending",
   ];
   if (article.is_pinned) chips.push("pinned");
+  if (article.must_include) chips.push("must_include");
   if (article.is_hidden) chips.push("hidden");
+  if ((article.duplicate_count || 1) > 1) {
+    chips.push(article.is_duplicate_primary ? `primary x${article.duplicate_count}` : `duplicate -> #${article.duplicate_primary_id}`);
+  }
   return chips
     .filter(Boolean)
     .map((chip) => `<span class="chip">${escapeHtml(String(chip))}</span>`)
@@ -621,6 +648,7 @@ function articleChips(article) {
 }
 
 function renderArticles(articles) {
+  state.currentArticles = articles;
   refs.articlesList.innerHTML = articles.length
     ? articles
         .map(
@@ -643,6 +671,15 @@ function renderArticles(articles) {
                 ? `<p class="article-brief"><strong>为什么重要：</strong>${escapeHtml(article.display_brief_zh)}</p>`
                 : ""
             }
+            ${
+              (article.duplicate_count || 1) > 1
+                ? `<p class="article-brief"><strong>重复簇：</strong>${escapeHtml(article.duplicate_group || "unknown")} · ${
+                    article.is_duplicate_primary
+                      ? "当前主记录"
+                      : `主记录 #${escapeHtml(String(article.duplicate_primary_id || ""))} · ${escapeHtml(article.duplicate_primary_title || "")}`
+                  }</p>`
+                : ""
+            }
             <p class="article-brief">
               <a class="article-link" href="${escapeAttribute(article.url)}" target="_blank" rel="noreferrer">查看原文</a>
             </p>
@@ -652,7 +689,13 @@ function renderArticles(articles) {
             </label>
             <div class="article-actions">
               <button class="button ghost" data-action="toggle-pin">${article.is_pinned ? "取消置顶" : "置顶"}</button>
+              <button class="button ghost" data-action="toggle-must-include">${article.must_include ? "取消必选" : "设为必选"}</button>
               <button class="button ghost" data-action="toggle-hide">${article.is_hidden ? "取消隐藏" : "隐藏"}</button>
+              ${
+                (article.duplicate_count || 1) > 1 && !article.is_duplicate_primary
+                  ? `<button class="button ghost" data-action="set-duplicate-primary">设为主记录</button>`
+                  : ""
+              }
               <button class="button secondary" data-action="save-note">保存备注</button>
             </div>
           </article>
@@ -1141,6 +1184,16 @@ async function updateArticle(articleId, patch) {
   await loadStats();
 }
 
+async function setDuplicatePrimary(articleId) {
+  const payload = await fetchJson(`/admin/articles/${articleId}/duplicate-primary`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+  logJob("duplicate primary", payload);
+  await loadArticles();
+  await loadDigests();
+}
+
 refs.saveTokenButton.addEventListener("click", () => {
   state.token = refs.adminToken.value.trim();
   localStorage.setItem("ainews_admin_token", state.token);
@@ -1204,14 +1257,19 @@ refs.articlesList.addEventListener("click", async (event) => {
   const note = card.querySelector('[data-role="note"]').value;
   const isPinned = card.dataset.isPinned === "true";
   const isHidden = card.dataset.isHidden === "true";
+  const article = state.currentArticles.find((item) => Number(item.id) === articleId);
 
   try {
     if (action === "toggle-pin") {
       const shouldPin = !isPinned;
       await updateArticle(articleId, { is_pinned: shouldPin });
+    } else if (action === "toggle-must-include") {
+      await updateArticle(articleId, { must_include: !(article?.must_include) });
     } else if (action === "toggle-hide") {
       const shouldHide = !isHidden;
       await updateArticle(articleId, { is_hidden: shouldHide });
+    } else if (action === "set-duplicate-primary") {
+      await setDuplicatePrimary(articleId);
     } else if (action === "save-note") {
       await updateArticle(articleId, { editorial_note: note });
     }

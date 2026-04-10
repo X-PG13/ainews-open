@@ -7,9 +7,23 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from .models import ArticleEnrichment, ArticleRecord, DailyDigest
-from .utils import canonicalize_url, clean_text, utc_now
+from .utils import (
+    canonicalize_url,
+    clean_text,
+    make_content_fingerprint,
+    make_resolved_target,
+    normalize_title,
+    url_host,
+    utc_now,
+)
 
 ARTICLE_EXTRA_COLUMNS = {
+    "normalized_title": "TEXT NOT NULL DEFAULT ''",
+    "resolved_target": "TEXT NOT NULL DEFAULT ''",
+    "content_fingerprint": "TEXT NOT NULL DEFAULT ''",
+    "duplicate_group": "TEXT NOT NULL DEFAULT ''",
+    "duplicate_of": "INTEGER",
+    "duplicate_reason": "TEXT NOT NULL DEFAULT ''",
     "extracted_text": "TEXT NOT NULL DEFAULT ''",
     "extraction_status": "TEXT NOT NULL DEFAULT 'pending'",
     "extraction_error": "TEXT NOT NULL DEFAULT ''",
@@ -28,6 +42,7 @@ ARTICLE_EXTRA_COLUMNS = {
     "llm_updated_at": "TEXT NOT NULL DEFAULT ''",
     "is_hidden": "INTEGER NOT NULL DEFAULT 0",
     "is_pinned": "INTEGER NOT NULL DEFAULT 0",
+    "must_include": "INTEGER NOT NULL DEFAULT 0",
     "editorial_note": "TEXT NOT NULL DEFAULT ''"
 }
 
@@ -35,7 +50,75 @@ PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
 }
 
-CURRENT_SCHEMA_VERSION = 10
+CURRENT_SCHEMA_VERSION = 11
+
+ARTICLE_SELECT_COLUMNS = """
+    articles.id,
+    articles.source_id,
+    articles.source_name,
+    articles.title,
+    articles.url,
+    articles.canonical_url,
+    articles.summary,
+    articles.published_at,
+    articles.discovered_at,
+    articles.language,
+    articles.region,
+    articles.country,
+    articles.topic,
+    articles.normalized_title,
+    articles.resolved_target,
+    articles.content_fingerprint,
+    articles.extracted_text,
+    articles.extraction_status,
+    articles.extraction_error,
+    articles.extraction_updated_at,
+    articles.extraction_attempts,
+    articles.extraction_last_http_status,
+    articles.extraction_next_retry_at,
+    articles.extraction_error_category,
+    articles.llm_title_zh,
+    articles.llm_summary_zh,
+    articles.llm_brief_zh,
+    articles.llm_status,
+    articles.llm_provider,
+    articles.llm_model,
+    articles.llm_error,
+    articles.llm_updated_at,
+    articles.is_hidden,
+    articles.is_pinned,
+    articles.must_include,
+    articles.editorial_note,
+    articles.duplicate_group,
+    articles.duplicate_of,
+    articles.duplicate_reason,
+    COALESCE(group_stats.total_in_group, 1) AS duplicate_count,
+    CASE WHEN articles.duplicate_of IS NULL THEN 1 ELSE 0 END AS is_duplicate_primary,
+    COALESCE(primary_article.id, articles.id) AS duplicate_primary_id,
+    COALESCE(primary_article.title, articles.title) AS duplicate_primary_title,
+    COALESCE(primary_article.source_name, articles.source_name) AS duplicate_primary_source_name
+"""
+
+ARTICLE_SELECT_JOINS = """
+    LEFT JOIN (
+        SELECT duplicate_group, COUNT(*) AS total_in_group
+        FROM articles
+        WHERE duplicate_group != ''
+        GROUP BY duplicate_group
+    ) AS group_stats
+        ON group_stats.duplicate_group = articles.duplicate_group
+    LEFT JOIN articles AS primary_article
+        ON primary_article.id = COALESCE(articles.duplicate_of, articles.id)
+"""
+
+SYNDICATION_HOSTS = {
+    "news.google.com",
+    "news.googleusercontent.com",
+    "news.yahoo.com",
+    "www.yahoo.com",
+    "finance.yahoo.com",
+    "www.msn.com",
+}
 
 SOURCE_STATE_EXTRA_COLUMNS = {
     "consecutive_successes": "INTEGER NOT NULL DEFAULT 0",
@@ -82,6 +165,12 @@ class ArticleRepository:
                     topic TEXT NOT NULL,
                     content_hash TEXT NOT NULL,
                     dedup_key TEXT NOT NULL,
+                    normalized_title TEXT NOT NULL DEFAULT '',
+                    resolved_target TEXT NOT NULL DEFAULT '',
+                    content_fingerprint TEXT NOT NULL DEFAULT '',
+                    duplicate_group TEXT NOT NULL DEFAULT '',
+                    duplicate_of INTEGER,
+                    duplicate_reason TEXT NOT NULL DEFAULT '',
                     raw_payload TEXT NOT NULL,
                     extracted_text TEXT NOT NULL DEFAULT '',
                     extraction_status TEXT NOT NULL DEFAULT 'pending',
@@ -101,6 +190,7 @@ class ArticleRepository:
                     llm_updated_at TEXT NOT NULL DEFAULT '',
                     is_hidden INTEGER NOT NULL DEFAULT 0,
                     is_pinned INTEGER NOT NULL DEFAULT 0,
+                    must_include INTEGER NOT NULL DEFAULT 0,
                     editorial_note TEXT NOT NULL DEFAULT ''
                 );
 
@@ -242,8 +332,23 @@ class ArticleRepository:
                 CREATE INDEX IF NOT EXISTS idx_articles_dedup_key
                     ON articles(dedup_key);
 
+                CREATE INDEX IF NOT EXISTS idx_articles_normalized_title
+                    ON articles(normalized_title);
+
+                CREATE INDEX IF NOT EXISTS idx_articles_resolved_target
+                    ON articles(resolved_target);
+
+                CREATE INDEX IF NOT EXISTS idx_articles_content_fingerprint
+                    ON articles(content_fingerprint);
+
+                CREATE INDEX IF NOT EXISTS idx_articles_duplicate_group
+                    ON articles(duplicate_group);
+
+                CREATE INDEX IF NOT EXISTS idx_articles_duplicate_of
+                    ON articles(duplicate_of);
+
                 CREATE INDEX IF NOT EXISTS idx_articles_pinned_published_at
-                    ON articles(is_pinned, published_at);
+                    ON articles(is_pinned, must_include, published_at);
 
                 CREATE INDEX IF NOT EXISTS idx_articles_llm_status
                     ON articles(llm_status);
@@ -311,6 +416,7 @@ class ArticleRepository:
             except sqlite3.OperationalError as exc:
                 if "duplicate column name" not in str(exc).lower():
                     raise
+        self._backfill_article_metadata(connection)
 
     def _ensure_publication_migrations(self, connection: sqlite3.Connection) -> None:
         existing_columns = self._table_columns(connection, "publications")
@@ -354,13 +460,77 @@ class ArticleRepository:
             (key, value),
         )
 
+    def _backfill_article_metadata(self, connection: sqlite3.Connection) -> None:
+        rows = connection.execute(
+            """
+            SELECT
+                id,
+                title,
+                url,
+                canonical_url,
+                summary,
+                extracted_text,
+                normalized_title,
+                resolved_target,
+                content_fingerprint,
+                duplicate_group,
+                duplicate_of
+            FROM articles
+            """
+        ).fetchall()
+        for row in rows:
+            normalized_title = clean_text(str(row["normalized_title"] or "")) or normalize_title(
+                str(row["title"] or "")
+            )
+            resolved_target = clean_text(str(row["resolved_target"] or "")) or make_resolved_target(
+                str(row["url"] or ""),
+                str(row["canonical_url"] or ""),
+            )
+            content_fingerprint = clean_text(
+                str(row["content_fingerprint"] or "")
+            ) or make_content_fingerprint(
+                str(row["title"] or ""),
+                str(row["summary"] or ""),
+                str(row["extracted_text"] or ""),
+            )
+            duplicate_group = clean_text(str(row["duplicate_group"] or ""))
+            duplicate_of = row["duplicate_of"]
+            if not duplicate_group:
+                primary_id = int(duplicate_of) if duplicate_of is not None else int(row["id"])
+                duplicate_group = self._duplicate_group_id(primary_id)
+            connection.execute(
+                """
+                UPDATE articles
+                SET
+                    normalized_title = ?,
+                    resolved_target = ?,
+                    content_fingerprint = ?,
+                    duplicate_group = ?
+                WHERE id = ?
+                """,
+                (
+                    normalized_title,
+                    resolved_target,
+                    content_fingerprint,
+                    duplicate_group,
+                    int(row["id"]),
+                ),
+            )
+
     @staticmethod
     def _row_to_article_dict(row: sqlite3.Row) -> Dict[str, object]:
         payload = dict(row)
         payload["is_hidden"] = bool(payload.get("is_hidden"))
         payload["is_pinned"] = bool(payload.get("is_pinned"))
+        payload["must_include"] = bool(payload.get("must_include"))
         payload["extraction_attempts"] = int(payload.get("extraction_attempts") or 0)
         payload["extraction_last_http_status"] = int(payload.get("extraction_last_http_status") or 0)
+        payload["duplicate_count"] = int(payload.get("duplicate_count") or 1)
+        payload["duplicate_of"] = (
+            int(payload["duplicate_of"]) if payload.get("duplicate_of") is not None else None
+        )
+        payload["duplicate_primary_id"] = int(payload.get("duplicate_primary_id") or payload["id"])
+        payload["is_duplicate_primary"] = bool(payload.get("is_duplicate_primary"))
         return payload
 
     @staticmethod
@@ -404,8 +574,11 @@ class ArticleRepository:
         payload["targets"] = parsed if isinstance(parsed, list) else []
         return payload
 
-    def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
+    def insert_article(
+        self, article: ArticleRecord, dedup_window_hours: int = 72
+    ) -> Dict[str, object]:
         threshold = (utc_now() - timedelta(hours=dedup_window_hours)).isoformat()
+        prepared = self._prepare_article_record(article)
 
         with self._connect() as connection:
             existing = connection.execute(
@@ -414,21 +587,25 @@ class ArticleRepository:
                 FROM articles
                 WHERE canonical_url = ?
                    OR content_hash = ?
-                   OR (dedup_key = ? AND published_at >= ?)
                 LIMIT 1
                 """,
                 (
-                    article.canonical_url,
-                    article.content_hash,
-                    article.dedup_key,
-                    threshold,
+                    prepared.canonical_url,
+                    prepared.content_hash,
                 ),
             ).fetchone()
 
             if existing is not None:
-                return False
+                existing_id = int(existing["id"])
+                return {
+                    "status": "skipped_exact_duplicate",
+                    "inserted": False,
+                    "grouped": False,
+                    "article": self.get_article(existing_id),
+                    "existing_article_id": existing_id,
+                }
 
-            connection.execute(
+            cursor = connection.execute(
                 """
                 INSERT INTO articles (
                     source_id,
@@ -445,28 +622,246 @@ class ArticleRepository:
                     topic,
                     content_hash,
                     dedup_key,
+                    normalized_title,
+                    resolved_target,
+                    content_fingerprint,
+                    duplicate_group,
+                    duplicate_of,
+                    duplicate_reason,
                     raw_payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    article.source_id,
-                    article.source_name,
-                    article.title,
-                    article.url,
-                    article.canonical_url,
-                    article.summary,
-                    article.published_at.isoformat(),
-                    article.discovered_at.isoformat(),
-                    article.language,
-                    article.region,
-                    article.country,
-                    article.topic,
-                    article.content_hash,
-                    article.dedup_key,
-                    json.dumps(article.raw_payload, ensure_ascii=False),
+                    prepared.source_id,
+                    prepared.source_name,
+                    prepared.title,
+                    prepared.url,
+                    prepared.canonical_url,
+                    prepared.summary,
+                    prepared.published_at.isoformat(),
+                    prepared.discovered_at.isoformat(),
+                    prepared.language,
+                    prepared.region,
+                    prepared.country,
+                    prepared.topic,
+                    prepared.content_hash,
+                    prepared.dedup_key,
+                    prepared.normalized_title,
+                    prepared.resolved_target,
+                    prepared.content_fingerprint,
+                    "",
+                    None,
+                    "",
+                    json.dumps(prepared.raw_payload, ensure_ascii=False),
                 ),
             )
-        return True
+            article_id = int(cursor.lastrowid)
+            duplicate_result = self._assign_duplicate_group_for_article(
+                connection,
+                article_id=article_id,
+                published_after=threshold,
+            )
+
+        stored = self.get_article(article_id)
+        return {
+            "status": str(duplicate_result.get("status", "inserted")),
+            "inserted": True,
+            "grouped": bool(duplicate_result.get("grouped")),
+            "article": stored,
+            "primary_article_id": duplicate_result.get("primary_article_id"),
+            "duplicate_group": duplicate_result.get("duplicate_group"),
+            "duplicate_reason": duplicate_result.get("duplicate_reason", ""),
+        }
+
+    def insert_if_new(self, article: ArticleRecord, dedup_window_hours: int = 72) -> bool:
+        result = self.insert_article(article, dedup_window_hours=dedup_window_hours)
+        return bool(result.get("inserted"))
+
+    @staticmethod
+    def _duplicate_group_id(primary_id: int) -> str:
+        return f"dg:{primary_id}"
+
+    @staticmethod
+    def _prepare_article_record(article: ArticleRecord) -> ArticleRecord:
+        normalized_title = clean_text(article.normalized_title) or normalize_title(article.title)
+        resolved_target = clean_text(article.resolved_target) or make_resolved_target(
+            article.url,
+            article.canonical_url,
+        )
+        content_fingerprint = clean_text(article.content_fingerprint) or make_content_fingerprint(
+            article.title,
+            article.summary,
+            "",
+        )
+        article.normalized_title = normalized_title
+        article.resolved_target = resolved_target
+        article.content_fingerprint = content_fingerprint
+        return article
+
+    def _assign_duplicate_group_for_article(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        article_id: int,
+        published_after: str,
+    ) -> Dict[str, object]:
+        inserted_row = connection.execute(
+            "SELECT * FROM articles WHERE id = ? LIMIT 1",
+            (article_id,),
+        ).fetchone()
+        if inserted_row is None:
+            return {"status": "missing", "grouped": False}
+        inserted = dict(inserted_row)
+        candidates = connection.execute(
+            """
+            SELECT *
+            FROM articles
+            WHERE id != ?
+              AND published_at >= ?
+              AND (
+                    (resolved_target != '' AND resolved_target = ?)
+                 OR (
+                        normalized_title != ''
+                    AND normalized_title = ?
+                    AND (
+                            (content_fingerprint != '' AND content_fingerprint = ?)
+                         OR dedup_key = ?
+                    )
+                 )
+              )
+            ORDER BY published_at DESC, id DESC
+            LIMIT 25
+            """,
+            (
+                article_id,
+                published_after,
+                str(inserted.get("resolved_target") or ""),
+                str(inserted.get("normalized_title") or ""),
+                str(inserted.get("content_fingerprint") or ""),
+                str(inserted.get("dedup_key") or ""),
+            ),
+        ).fetchall()
+        if not candidates:
+            group_id = self._duplicate_group_id(article_id)
+            connection.execute(
+                """
+                UPDATE articles
+                SET duplicate_group = ?, duplicate_of = NULL, duplicate_reason = ''
+                WHERE id = ?
+                """,
+                (group_id, article_id),
+            )
+            return {
+                "status": "inserted",
+                "grouped": False,
+                "primary_article_id": article_id,
+                "duplicate_group": group_id,
+                "duplicate_reason": "",
+            }
+
+        selected, reason = self._select_duplicate_candidate(inserted, [dict(row) for row in candidates])
+        cluster_rows = [dict(row) for row in candidates if self._same_duplicate_cluster(dict(row), selected)]
+        cluster_rows.append(inserted)
+        primary_row = max(cluster_rows, key=self._article_primary_score)
+        primary_id = int(primary_row["id"])
+        group_id = clean_text(str(selected.get("duplicate_group") or "")) or self._duplicate_group_id(primary_id)
+        for row in cluster_rows:
+            row_id = int(row["id"])
+            connection.execute(
+                """
+                UPDATE articles
+                SET
+                    duplicate_group = ?,
+                    duplicate_of = ?,
+                    duplicate_reason = ?
+                WHERE id = ?
+                """,
+                (
+                    group_id,
+                    None if row_id == primary_id else primary_id,
+                    "" if row_id == primary_id else reason,
+                    row_id,
+                ),
+            )
+        return {
+            "status": "inserted_grouped",
+            "grouped": True,
+            "primary_article_id": primary_id,
+            "duplicate_group": group_id,
+            "duplicate_reason": reason,
+        }
+
+    @staticmethod
+    def _same_duplicate_cluster(row: Dict[str, object], anchor: Dict[str, object]) -> bool:
+        row_group = clean_text(str(row.get("duplicate_group") or ""))
+        anchor_group = clean_text(str(anchor.get("duplicate_group") or ""))
+        if row_group and anchor_group:
+            return row_group == anchor_group
+        row_primary = int(row.get("duplicate_of") or row.get("id") or 0)
+        anchor_primary = int(anchor.get("duplicate_of") or anchor.get("id") or 0)
+        return row_primary == anchor_primary or int(row.get("id") or 0) == anchor_primary
+
+    @staticmethod
+    def _duplicate_match_reason(left: Dict[str, object], right: Dict[str, object]) -> str:
+        if clean_text(str(left.get("resolved_target") or "")) and clean_text(
+            str(left.get("resolved_target") or "")
+        ) == clean_text(str(right.get("resolved_target") or "")):
+            return "resolved_target"
+        if clean_text(str(left.get("normalized_title") or "")) == clean_text(
+            str(right.get("normalized_title") or "")
+        ) and clean_text(str(left.get("content_fingerprint") or "")) == clean_text(
+            str(right.get("content_fingerprint") or "")
+        ):
+            return "normalized_title_content_fingerprint"
+        return "normalized_title_dedup_key"
+
+    def _select_duplicate_candidate(
+        self, inserted: Dict[str, object], candidates: List[Dict[str, object]]
+    ) -> Tuple[Dict[str, object], str]:
+        scored: List[Tuple[int, Dict[str, object], str]] = []
+        for candidate in candidates:
+            score = 0
+            if clean_text(str(inserted.get("resolved_target") or "")) and clean_text(
+                str(inserted.get("resolved_target") or "")
+            ) == clean_text(str(candidate.get("resolved_target") or "")):
+                score += 4
+            if clean_text(str(inserted.get("normalized_title") or "")) == clean_text(
+                str(candidate.get("normalized_title") or "")
+            ):
+                score += 2
+            if clean_text(str(inserted.get("content_fingerprint") or "")) and clean_text(
+                str(inserted.get("content_fingerprint") or "")
+            ) == clean_text(str(candidate.get("content_fingerprint") or "")):
+                score += 2
+            if clean_text(str(inserted.get("dedup_key") or "")) == clean_text(
+                str(candidate.get("dedup_key") or "")
+            ):
+                score += 1
+            scored.append((score, candidate, self._duplicate_match_reason(inserted, candidate)))
+        best_score, best_candidate, reason = max(
+            scored,
+            key=lambda item: (item[0], self._article_primary_score(item[1])),
+        )
+        if best_score <= 0:
+            return candidates[0], "normalized_title_dedup_key"
+        return best_candidate, reason
+
+    @staticmethod
+    def _article_primary_score(row: Dict[str, object]) -> Tuple[int, int, int, int, int, int]:
+        host = url_host(str(row.get("canonical_url") or row.get("url") or ""))
+        is_syndication = host in SYNDICATION_HOSTS
+        extracted_length = len(clean_text(str(row.get("extracted_text") or "")))
+        llm_ready = 1 if clean_text(str(row.get("llm_status") or "")) == "ready" else 0
+        note_length = len(clean_text(str(row.get("editorial_note") or "")))
+        published_at = clean_text(str(row.get("published_at") or ""))
+        return (
+            1 if bool(row.get("must_include")) else 0,
+            1 if bool(row.get("is_pinned")) else 0,
+            0 if is_syndication else 1,
+            extracted_length,
+            llm_ready + note_length,
+            0 if not published_at else int(published_at.replace("-", "").replace(":", "").replace("T", "").replace("+", "").replace("Z", "")[:14] or 0),
+        )
 
     def list_articles(
         self,
@@ -474,6 +869,9 @@ class ArticleRepository:
         region: Optional[str] = None,
         language: Optional[str] = None,
         source_id: Optional[str] = None,
+        article_ids: Optional[Iterable[int]] = None,
+        duplicate_group: Optional[str] = None,
+        primary_only: bool = False,
         since_hours: Optional[int] = None,
         extraction_status: Optional[str] = None,
         extraction_error_category: Optional[str] = None,
@@ -485,6 +883,9 @@ class ArticleRepository:
             region=region,
             language=language,
             source_id=source_id,
+            article_ids=article_ids,
+            duplicate_group=duplicate_group,
+            primary_only=primary_only,
             since_hours=since_hours,
             extraction_status=extraction_status,
             extraction_error_category=extraction_error_category,
@@ -495,41 +896,11 @@ class ArticleRepository:
 
         query = f"""
             SELECT
-                id,
-                source_id,
-                source_name,
-                title,
-                url,
-                canonical_url,
-                summary,
-                published_at,
-                discovered_at,
-                language,
-                region,
-                country,
-                topic,
-                extracted_text,
-                extraction_status,
-                extraction_error,
-                extraction_updated_at,
-                extraction_attempts,
-                extraction_last_http_status,
-                extraction_next_retry_at,
-                extraction_error_category,
-                llm_title_zh,
-                llm_summary_zh,
-                llm_brief_zh,
-                llm_status,
-                llm_provider,
-                llm_model,
-                llm_error,
-                llm_updated_at,
-                is_hidden,
-                is_pinned,
-                editorial_note
+                {ARTICLE_SELECT_COLUMNS}
             FROM articles
+            {ARTICLE_SELECT_JOINS}
             {where_sql}
-            ORDER BY is_pinned DESC, published_at DESC
+            ORDER BY articles.is_pinned DESC, articles.must_include DESC, articles.published_at DESC
             LIMIT ?
         """
 
@@ -540,42 +911,12 @@ class ArticleRepository:
     def get_article(self, article_id: int) -> Optional[dict]:
         with self._connect() as connection:
             row = connection.execute(
-                """
+                f"""
                 SELECT
-                    id,
-                    source_id,
-                    source_name,
-                    title,
-                    url,
-                    canonical_url,
-                    summary,
-                    published_at,
-                    discovered_at,
-                    language,
-                    region,
-                    country,
-                    topic,
-                    extracted_text,
-                    extraction_status,
-                    extraction_error,
-                    extraction_updated_at,
-                    extraction_attempts,
-                    extraction_last_http_status,
-                    extraction_next_retry_at,
-                    extraction_error_category,
-                    llm_title_zh,
-                    llm_summary_zh,
-                    llm_brief_zh,
-                    llm_status,
-                    llm_provider,
-                    llm_model,
-                    llm_error,
-                    llm_updated_at,
-                    is_hidden,
-                    is_pinned,
-                    editorial_note
+                    {ARTICLE_SELECT_COLUMNS}
                 FROM articles
-                WHERE id = ?
+                {ARTICLE_SELECT_JOINS}
+                WHERE articles.id = ?
                 LIMIT 1
                 """,
                 (article_id,),
@@ -591,28 +932,33 @@ class ArticleRepository:
         limit: int = 20,
         force: bool = False,
     ) -> List[dict]:
-        clauses = ["is_hidden = 0", "language NOT LIKE 'zh%'"]
+        clauses = ["articles.is_hidden = 0", "articles.language NOT LIKE 'zh%'"]
         params: List[object] = []
 
         source_list = list(source_ids or [])
         if source_list:
             placeholders = ",".join("?" for _ in source_list)
-            clauses.append(f"source_id IN ({placeholders})")
+            clauses.append(f"articles.source_id IN ({placeholders})")
             params.extend(source_list)
 
         article_list = list(article_ids or [])
         if article_list:
             placeholders = ",".join("?" for _ in article_list)
-            clauses.append(f"id IN ({placeholders})")
+            clauses.append(f"articles.id IN ({placeholders})")
             params.extend(article_list)
 
         if since_hours:
-            clauses.append("published_at >= ?")
+            clauses.append("articles.published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         if not force:
             clauses.append(
-                "(llm_status != 'ready' OR llm_title_zh = '' OR llm_summary_zh = '' OR llm_brief_zh = '')"
+                "("
+                "articles.llm_status != 'ready' "
+                "OR articles.llm_title_zh = '' "
+                "OR articles.llm_summary_zh = '' "
+                "OR articles.llm_brief_zh = ''"
+                ")"
             )
 
         params.append(limit)
@@ -622,41 +968,11 @@ class ArticleRepository:
             rows = connection.execute(
                 f"""
                 SELECT
-                    id,
-                    source_id,
-                    source_name,
-                    title,
-                    url,
-                    canonical_url,
-                    summary,
-                    published_at,
-                    discovered_at,
-                    language,
-                    region,
-                    country,
-                    topic,
-                    extracted_text,
-                    extraction_status,
-                    extraction_error,
-                    extraction_updated_at,
-                    extraction_attempts,
-                    extraction_last_http_status,
-                    extraction_next_retry_at,
-                    extraction_error_category,
-                    llm_title_zh,
-                    llm_summary_zh,
-                    llm_brief_zh,
-                    llm_status,
-                    llm_provider,
-                    llm_model,
-                    llm_error,
-                    llm_updated_at,
-                    is_hidden,
-                    is_pinned,
-                    editorial_note
+                    {ARTICLE_SELECT_COLUMNS}
                 FROM articles
+                {ARTICLE_SELECT_JOINS}
                 {where_sql}
-                ORDER BY is_pinned DESC, published_at DESC
+                ORDER BY articles.is_pinned DESC, articles.must_include DESC, articles.published_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -675,23 +991,23 @@ class ArticleRepository:
         limit: int = 20,
         force: bool = False,
     ) -> List[dict]:
-        clauses = ["is_hidden = 0"]
+        clauses = ["articles.is_hidden = 0"]
         params: List[object] = []
 
         source_list = list(source_ids or [])
         if source_list:
             placeholders = ",".join("?" for _ in source_list)
-            clauses.append(f"source_id IN ({placeholders})")
+            clauses.append(f"articles.source_id IN ({placeholders})")
             params.extend(source_list)
 
         article_list = list(article_ids or [])
         if article_list:
             placeholders = ",".join("?" for _ in article_list)
-            clauses.append(f"id IN ({placeholders})")
+            clauses.append(f"articles.id IN ({placeholders})")
             params.extend(article_list)
 
         if since_hours:
-            clauses.append("published_at >= ?")
+            clauses.append("articles.published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         clauses.append(
@@ -713,11 +1029,11 @@ class ArticleRepository:
         params.append(utc_now().isoformat())
 
         if extraction_status:
-            clauses.append("extraction_status = ?")
+            clauses.append("articles.extraction_status = ?")
             params.append(extraction_status)
 
         if extraction_error_category:
-            clauses.append("extraction_error_category = ?")
+            clauses.append("articles.extraction_error_category = ?")
             params.append(extraction_error_category)
 
         if due_only:
@@ -729,10 +1045,13 @@ class ArticleRepository:
             clauses.append(
                 """
                 (
-                    extraction_status = 'pending'
+                    articles.extraction_status = 'pending'
                     OR (
-                        extraction_status IN ('error', 'throttled', 'temporary_error')
-                        AND (extraction_next_retry_at = '' OR extraction_next_retry_at <= ?)
+                        articles.extraction_status IN ('error', 'throttled', 'temporary_error')
+                        AND (
+                            articles.extraction_next_retry_at = ''
+                            OR articles.extraction_next_retry_at <= ?
+                        )
                     )
                 )
                 """
@@ -746,41 +1065,11 @@ class ArticleRepository:
             rows = connection.execute(
                 f"""
                 SELECT
-                    id,
-                    source_id,
-                    source_name,
-                    title,
-                    url,
-                    canonical_url,
-                    summary,
-                    published_at,
-                    discovered_at,
-                    language,
-                    region,
-                    country,
-                    topic,
-                    extracted_text,
-                    extraction_status,
-                    extraction_error,
-                    extraction_updated_at,
-                    extraction_attempts,
-                    extraction_last_http_status,
-                    extraction_next_retry_at,
-                    extraction_error_category,
-                    llm_title_zh,
-                    llm_summary_zh,
-                    llm_brief_zh,
-                    llm_status,
-                    llm_provider,
-                    llm_model,
-                    llm_error,
-                    llm_updated_at,
-                    is_hidden,
-                    is_pinned,
-                    editorial_note
+                    {ARTICLE_SELECT_COLUMNS}
                 FROM articles
+                {ARTICLE_SELECT_JOINS}
                 {where_sql}
-                ORDER BY is_pinned DESC, published_at DESC
+                ORDER BY articles.is_pinned DESC, articles.must_include DESC, articles.published_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -1744,23 +2033,23 @@ class ArticleRepository:
         since_hours: Optional[int] = None,
         limit: int = 50,
     ) -> List[dict]:
-        clauses = ["(url LIKE ? OR canonical_url LIKE ?)"]
+        clauses = ["(articles.url LIKE ? OR articles.canonical_url LIKE ?)"]
         params: List[object] = ["https://news.google.com/%", "https://news.google.com/%"]
 
         source_list = list(source_ids or [])
         if source_list:
             placeholders = ",".join("?" for _ in source_list)
-            clauses.append(f"source_id IN ({placeholders})")
+            clauses.append(f"articles.source_id IN ({placeholders})")
             params.extend(source_list)
 
         article_list = list(article_ids or [])
         if article_list:
             placeholders = ",".join("?" for _ in article_list)
-            clauses.append(f"id IN ({placeholders})")
+            clauses.append(f"articles.id IN ({placeholders})")
             params.extend(article_list)
 
         if since_hours:
-            clauses.append("published_at >= ?")
+            clauses.append("articles.published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         params.append(limit)
@@ -1770,41 +2059,11 @@ class ArticleRepository:
             rows = connection.execute(
                 f"""
                 SELECT
-                    id,
-                    source_id,
-                    source_name,
-                    title,
-                    url,
-                    canonical_url,
-                    summary,
-                    published_at,
-                    discovered_at,
-                    language,
-                    region,
-                    country,
-                    topic,
-                    extracted_text,
-                    extraction_status,
-                    extraction_error,
-                    extraction_updated_at,
-                    extraction_attempts,
-                    extraction_last_http_status,
-                    extraction_next_retry_at,
-                    extraction_error_category,
-                    llm_title_zh,
-                    llm_summary_zh,
-                    llm_brief_zh,
-                    llm_status,
-                    llm_provider,
-                    llm_model,
-                    llm_error,
-                    llm_updated_at,
-                    is_hidden,
-                    is_pinned,
-                    editorial_note
+                    {ARTICLE_SELECT_COLUMNS}
                 FROM articles
+                {ARTICLE_SELECT_JOINS}
                 {where_sql}
-                ORDER BY published_at DESC
+                ORDER BY articles.published_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -1838,6 +2097,26 @@ class ArticleRepository:
                     article_id,
                 ),
             )
+            row = connection.execute(
+                "SELECT title, summary FROM articles WHERE id = ? LIMIT 1",
+                (article_id,),
+            ).fetchone()
+            if row is not None:
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET content_fingerprint = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        make_content_fingerprint(
+                            str(row["title"] or ""),
+                            str(row["summary"] or ""),
+                            extracted_text,
+                        ),
+                        article_id,
+                    ),
+                )
         return self.get_article(article_id)
 
     def mark_article_extraction_failure(
@@ -1891,12 +2170,14 @@ class ArticleRepository:
                         UPDATE articles
                         SET
                             url = ?,
-                            canonical_url = ?
+                            canonical_url = ?,
+                            resolved_target = ?
                         WHERE id = ?
                         """,
                         (
                             url,
                             canonical_url,
+                            make_resolved_target(url, canonical_url),
                             article_id,
                         ),
                     )
@@ -1904,11 +2185,14 @@ class ArticleRepository:
                     connection.execute(
                         """
                         UPDATE articles
-                        SET url = ?
+                        SET
+                            url = ?,
+                            resolved_target = ?
                         WHERE id = ?
                         """,
                         (
                             url,
+                            make_resolved_target(url),
                             article_id,
                         ),
                     )
@@ -1916,14 +2200,22 @@ class ArticleRepository:
                 connection.execute(
                     """
                     UPDATE articles
-                    SET url = ?
+                    SET
+                        url = ?,
+                        resolved_target = ?
                     WHERE id = ?
                     """,
                     (
                         url,
+                        make_resolved_target(url),
                         article_id,
                     ),
                 )
+            self._assign_duplicate_group_for_article(
+                connection,
+                article_id=article_id,
+                published_after=(utc_now() - timedelta(days=365)).isoformat(),
+            )
         return self.get_article(article_id)
 
     def resolve_article_urls(
@@ -1966,14 +2258,21 @@ class ArticleRepository:
                     UPDATE articles
                     SET
                         url = ?,
-                        canonical_url = ?
+                        canonical_url = ?,
+                        resolved_target = ?
                     WHERE id = ?
                     """,
                     (
                         normalized_url,
                         normalized_canonical,
+                        make_resolved_target(normalized_url, normalized_canonical),
                         article_id,
                     ),
+                )
+                self._assign_duplicate_group_for_article(
+                    connection,
+                    article_id=article_id,
+                    published_after=(utc_now() - timedelta(days=365)).isoformat(),
                 )
             else:
                 target_id = int(conflict_row["id"])
@@ -2011,7 +2310,14 @@ class ArticleRepository:
                         llm_updated_at = ?,
                         is_hidden = ?,
                         is_pinned = ?,
+                        must_include = ?,
                         editorial_note = ?,
+                        normalized_title = ?,
+                        resolved_target = ?,
+                        content_fingerprint = ?,
+                        duplicate_group = ?,
+                        duplicate_of = ?,
+                        duplicate_reason = ?,
                         raw_payload = ?
                     WHERE id = ?
                     """,
@@ -2038,7 +2344,14 @@ class ArticleRepository:
                         merged_payload["llm_updated_at"],
                         merged_payload["is_hidden"],
                         merged_payload["is_pinned"],
+                        merged_payload["must_include"],
                         merged_payload["editorial_note"],
+                        merged_payload["normalized_title"],
+                        merged_payload["resolved_target"],
+                        merged_payload["content_fingerprint"],
+                        merged_payload["duplicate_group"],
+                        merged_payload["duplicate_of"],
+                        merged_payload["duplicate_reason"],
                         json.dumps(merged_payload["raw_payload"], ensure_ascii=False),
                         target_id,
                     ),
@@ -2118,6 +2431,18 @@ class ArticleRepository:
         return {
             "url": resolved_url,
             "canonical_url": resolved_canonical_url,
+            "normalized_title": clean_text(str(target.get("normalized_title") or ""))
+            or clean_text(str(source.get("normalized_title") or ""))
+            or normalize_title(str(target.get("title") or source.get("title") or "")),
+            "resolved_target": make_resolved_target(resolved_url, resolved_canonical_url),
+            "content_fingerprint": make_content_fingerprint(
+                str(target.get("title") or source.get("title") or ""),
+                ArticleRepository._prefer_longer_text(
+                    str(target.get("summary") or ""),
+                    str(source.get("summary") or ""),
+                ),
+                extracted_text,
+            ),
             "summary": ArticleRepository._prefer_longer_text(
                 str(target.get("summary") or ""),
                 str(source.get("summary") or ""),
@@ -2178,10 +2503,18 @@ class ArticleRepository:
             "is_pinned": 1
             if bool(target.get("is_pinned")) or bool(source.get("is_pinned"))
             else 0,
+            "must_include": 1
+            if bool(target.get("must_include")) or bool(source.get("must_include"))
+            else 0,
             "editorial_note": ArticleRepository._merge_editorial_notes(
                 str(target.get("editorial_note") or ""),
                 str(source.get("editorial_note") or ""),
             ),
+            "duplicate_group": clean_text(str(target.get("duplicate_group") or ""))
+            or clean_text(str(source.get("duplicate_group") or "")),
+            "duplicate_of": target.get("duplicate_of"),
+            "duplicate_reason": clean_text(str(target.get("duplicate_reason") or ""))
+            or clean_text(str(source.get("duplicate_reason") or "")),
             "raw_payload": merged_raw_payload,
         }
 
@@ -2369,6 +2702,7 @@ class ArticleRepository:
         *,
         is_hidden: Optional[bool] = None,
         is_pinned: Optional[bool] = None,
+        must_include: Optional[bool] = None,
         editorial_note: Optional[str] = None,
     ) -> Optional[dict]:
         updates: List[str] = []
@@ -2381,6 +2715,10 @@ class ArticleRepository:
         if is_pinned is not None:
             updates.append("is_pinned = ?")
             params.append(1 if is_pinned else 0)
+
+        if must_include is not None:
+            updates.append("must_include = ?")
+            params.append(1 if must_include else 0)
 
         if editorial_note is not None:
             updates.append("editorial_note = ?")
@@ -2402,6 +2740,41 @@ class ArticleRepository:
             )
         return self.get_article(article_id)
 
+    def set_duplicate_primary(self, article_id: int) -> Optional[dict]:
+        article = self.get_article(article_id)
+        if article is None:
+            return None
+        group_id = clean_text(str(article.get("duplicate_group") or "")) or self._duplicate_group_id(
+            int(article["id"])
+        )
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT id FROM articles WHERE duplicate_group = ? ORDER BY id ASC",
+                (group_id,),
+            ).fetchall()
+            member_ids = [int(row["id"]) for row in rows] or [int(article["id"])]
+            for member_id in member_ids:
+                connection.execute(
+                    """
+                    UPDATE articles
+                    SET
+                        duplicate_group = ?,
+                        duplicate_of = ?,
+                        duplicate_reason = CASE
+                            WHEN id = ? THEN ''
+                            ELSE 'operator_selected_primary'
+                        END
+                    WHERE id = ?
+                    """,
+                    (
+                        group_id,
+                        None if member_id == article_id else article_id,
+                        article_id,
+                        member_id,
+                    ),
+                )
+        return self.get_article(article_id)
+
     def save_digest(
         self,
         *,
@@ -2411,9 +2784,10 @@ class ArticleRepository:
         body_markdown: str,
         article_count: int,
         source_count: int,
+        payload: Optional[dict] = None,
     ) -> dict:
         generated_at = utc_now().isoformat()
-        payload = digest.to_dict()
+        stored_payload = payload or digest.to_dict()
 
         with self._connect() as connection:
             cursor = connection.execute(
@@ -2441,7 +2815,7 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     generated_at,
-                    json.dumps(payload, ensure_ascii=False),
+                    json.dumps(stored_payload, ensure_ascii=False),
                 ),
             )
             digest_id = int(cursor.lastrowid)
@@ -2738,6 +3112,9 @@ class ArticleRepository:
                     SUM(CASE WHEN is_hidden = 0 THEN 1 ELSE 0 END) AS visible_articles,
                     SUM(CASE WHEN is_hidden = 1 THEN 1 ELSE 0 END) AS hidden_articles,
                     SUM(CASE WHEN is_pinned = 1 THEN 1 ELSE 0 END) AS pinned_articles,
+                    SUM(CASE WHEN must_include = 1 THEN 1 ELSE 0 END) AS must_include_articles,
+                    SUM(CASE WHEN duplicate_of IS NULL THEN 1 ELSE 0 END) AS unique_articles,
+                    SUM(CASE WHEN duplicate_of IS NOT NULL THEN 1 ELSE 0 END) AS duplicate_articles,
                     SUM(CASE WHEN extraction_status = 'ready' THEN 1 ELSE 0 END) AS extracted_articles,
                     SUM(CASE WHEN extraction_status = 'skipped' THEN 1 ELSE 0 END) AS skipped_extractions,
                     SUM(CASE WHEN extraction_status IN ('error', 'throttled', 'blocked', 'temporary_error', 'permanent_error') THEN 1 ELSE 0 END) AS extraction_errors,
@@ -2835,6 +3212,18 @@ class ArticleRepository:
                 """,
                 (utc_now().isoformat(),),
             ).fetchall()
+            duplicate_group_row = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM (
+                    SELECT duplicate_group
+                    FROM articles
+                    WHERE duplicate_group != ''
+                    GROUP BY duplicate_group
+                    HAVING COUNT(*) > 1
+                )
+                """
+            ).fetchone()
         publication_status_counts = {
             str(row["status"]): int(row["total"] or 0) for row in publication_status_rows
         }
@@ -2852,6 +3241,10 @@ class ArticleRepository:
             "visible_articles": int(totals_row["visible_articles"] or 0),
             "hidden_articles": int(totals_row["hidden_articles"] or 0),
             "pinned_articles": int(totals_row["pinned_articles"] or 0),
+            "must_include_articles": int(totals_row["must_include_articles"] or 0),
+            "unique_articles": int(totals_row["unique_articles"] or 0),
+            "duplicate_articles": int(totals_row["duplicate_articles"] or 0),
+            "duplicate_groups": int(duplicate_group_row["total"] or 0),
             "extracted_articles": int(totals_row["extracted_articles"] or 0),
             "skipped_extractions": int(totals_row["skipped_extractions"] or 0),
             "extraction_errors": int(totals_row["extraction_errors"] or 0),
@@ -2892,6 +3285,9 @@ class ArticleRepository:
         region: Optional[str],
         language: Optional[str],
         source_id: Optional[str],
+        article_ids: Optional[Iterable[int]],
+        duplicate_group: Optional[str],
+        primary_only: bool,
         since_hours: Optional[int],
         extraction_status: Optional[str],
         extraction_error_category: Optional[str],
@@ -2902,30 +3298,43 @@ class ArticleRepository:
         params: List[object] = []
 
         if not include_hidden:
-            clauses.append("is_hidden = 0")
+            clauses.append("articles.is_hidden = 0")
 
         if region and region != "all":
-            clauses.append("region = ?")
+            clauses.append("articles.region = ?")
             params.append(region)
 
         if language:
-            clauses.append("language = ?")
+            clauses.append("articles.language = ?")
             params.append(language)
 
         if source_id:
-            clauses.append("source_id = ?")
+            clauses.append("articles.source_id = ?")
             params.append(source_id)
 
+        article_id_list = [int(item) for item in (article_ids or [])]
+        if article_id_list:
+            placeholders = ",".join("?" for _ in article_id_list)
+            clauses.append(f"articles.id IN ({placeholders})")
+            params.extend(article_id_list)
+
+        if duplicate_group:
+            clauses.append("articles.duplicate_group = ?")
+            params.append(duplicate_group)
+
+        if primary_only:
+            clauses.append("articles.duplicate_of IS NULL")
+
         if since_hours:
-            clauses.append("published_at >= ?")
+            clauses.append("articles.published_at >= ?")
             params.append((utc_now() - timedelta(hours=since_hours)).isoformat())
 
         if extraction_status:
-            clauses.append("extraction_status = ?")
+            clauses.append("articles.extraction_status = ?")
             params.append(extraction_status)
 
         if extraction_error_category:
-            clauses.append("extraction_error_category = ?")
+            clauses.append("articles.extraction_error_category = ?")
             params.append(extraction_error_category)
 
         if due_only:
@@ -2943,8 +3352,11 @@ class ArticleRepository:
         return (
             """
             (
-                extraction_status IN ('error', 'throttled', 'blocked', 'temporary_error')
-                AND (extraction_next_retry_at = '' OR extraction_next_retry_at <= ?)
+                articles.extraction_status IN ('error', 'throttled', 'blocked', 'temporary_error')
+                AND (
+                    articles.extraction_next_retry_at = ''
+                    OR articles.extraction_next_retry_at <= ?
+                )
             )
             """,
             [utc_now().isoformat()],

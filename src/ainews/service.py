@@ -24,7 +24,15 @@ from .publisher import DigestPublisher
 from .repository import ArticleRepository
 from .source_registry import SourceRegistry
 from .telemetry import OperationTracker
-from .utils import clean_text, format_local_date, matches_keywords, truncate_text, utc_now
+from .utils import (
+    clean_text,
+    format_local_date,
+    matches_keywords,
+    parse_datetime,
+    truncate_text,
+    url_host,
+    utc_now,
+)
 
 EXPORT_SCHEMA_VERSION = "1.0"
 PUBLIC_ERROR_MESSAGE = "operation failed; inspect server logs with the response X-Request-ID"
@@ -32,6 +40,14 @@ PUBLIC_SKIPPED_MESSAGE = "extraction skipped by extractor policy"
 logger = logging.getLogger("ainews.service")
 SOURCE_COOLDOWN_CATEGORIES = {"throttled", "blocked"}
 SOURCE_COOLDOWN_ALERT_KEY_PREFIX = "source_cooldown:"
+DIGEST_SYNDICATION_HOSTS = {
+    "news.google.com",
+    "news.googleusercontent.com",
+    "news.yahoo.com",
+    "www.yahoo.com",
+    "finance.yahoo.com",
+    "www.msn.com",
+}
 
 
 class NewsService:
@@ -277,9 +293,11 @@ class NewsService:
         )
         results = []
         inserted_total = 0
+        grouped_total = 0
         fetched_total = 0
         resolved_total = 0
         resolution_errors = 0
+        touched_article_ids: List[int] = []
         failure_categories: Counter[str] = Counter()
         resolution_cache: Dict[str, Optional[str]] = {}
 
@@ -290,8 +308,10 @@ class NewsService:
                 "fetched": 0,
                 "inserted": 0,
                 "skipped": 0,
+                "grouped_duplicates": 0,
                 "resolved_urls": 0,
                 "resolution_errors": 0,
+                "article_ids": [],
                 "status": "ok",
             }
             try:
@@ -338,8 +358,17 @@ class NewsService:
                 resolution_errors += int(status["resolution_errors"])
 
                 for article in filtered_articles:
-                    if self.repository.insert_if_new(article):
+                    insert_result = self.repository.insert_article(article)
+                    stored_article = insert_result.get("article")
+                    if isinstance(stored_article, dict) and stored_article.get("id") is not None:
+                        article_id = int(stored_article["id"])
+                        touched_article_ids.append(article_id)
+                        status["article_ids"].append(article_id)
+                    if insert_result.get("inserted"):
                         status["inserted"] += 1
+                        if insert_result.get("grouped"):
+                            grouped_total += 1
+                            status["grouped_duplicates"] = int(status.get("grouped_duplicates", 0)) + 1
                     else:
                         status["skipped"] += 1
                 inserted_total += status["inserted"]
@@ -380,8 +409,10 @@ class NewsService:
             "sources": results,
             "fetched_total": fetched_total,
             "inserted_total": inserted_total,
+            "grouped_total": grouped_total,
             "resolved_total": resolved_total,
             "resolution_errors": resolution_errors,
+            "article_ids": touched_article_ids,
             "stored_total": self.repository.count_articles(),
             "failure_categories": dict(failure_categories),
         }
@@ -392,6 +423,7 @@ class NewsService:
                 "requested": len(results),
                 "fetched_total": fetched_total,
                 "inserted_total": inserted_total,
+                "grouped_total": grouped_total,
                 "resolved_total": resolved_total,
                 "resolution_errors": resolution_errors,
                 "stored_total": payload["stored_total"],
@@ -532,6 +564,8 @@ class NewsService:
         region: Optional[str] = None,
         language: Optional[str] = None,
         source_id: Optional[str] = None,
+        duplicate_group: Optional[str] = None,
+        primary_only: bool = False,
         since_hours: Optional[int] = None,
         extraction_status: Optional[str] = None,
         extraction_error_category: Optional[str] = None,
@@ -543,6 +577,8 @@ class NewsService:
             region=region,
             language=language,
             source_id=source_id,
+            duplicate_group=duplicate_group,
+            primary_only=primary_only,
             since_hours=since_hours,
             extraction_status=extraction_status,
             extraction_error_category=extraction_error_category,
@@ -1120,14 +1156,20 @@ class NewsService:
         *,
         is_hidden: Optional[bool] = None,
         is_pinned: Optional[bool] = None,
+        must_include: Optional[bool] = None,
         editorial_note: Optional[str] = None,
     ) -> Optional[dict]:
         article = self.repository.update_article_curation(
             article_id,
             is_hidden=is_hidden,
             is_pinned=is_pinned,
+            must_include=must_include,
             editorial_note=editorial_note,
         )
+        return self._present_article(article) if article else None
+
+    def set_duplicate_primary(self, article_id: int) -> Optional[dict]:
+        article = self.repository.set_duplicate_primary(article_id)
         return self._present_article(article) if article else None
 
     def list_digests(self, *, region: Optional[str] = None, limit: int = 20) -> List[dict]:
@@ -1336,11 +1378,27 @@ class NewsService:
             },
         )
         ingest_result = self.ingest(max_items_per_source=max_items_per_source)
-        extract_result = self.extract_articles(since_hours=lookback, limit=limit, force=False)
-        enrich_result = self.enrich_articles(since_hours=lookback, limit=limit, force=False)
+        touched_article_ids = [
+            int(article_id)
+            for article_id in ingest_result.get("article_ids", [])
+            if article_id is not None
+        ]
+        extract_result = self.extract_articles(
+            article_ids=touched_article_ids or None,
+            since_hours=None if touched_article_ids else lookback,
+            limit=limit,
+            force=False,
+        )
+        enrich_result = self.enrich_articles(
+            article_ids=touched_article_ids or None,
+            since_hours=None if touched_article_ids else lookback,
+            limit=limit,
+            force=False,
+        )
         digest_result = self.build_digest(
             region=region,
-            since_hours=lookback,
+            article_ids=touched_article_ids or None,
+            since_hours=None if touched_article_ids else lookback,
             limit=limit,
             use_llm=use_llm,
             persist=effective_persist,
@@ -1633,16 +1691,19 @@ class NewsService:
         self,
         *,
         region: str = "all",
+        article_ids: Optional[Iterable[int]] = None,
         since_hours: Optional[int] = None,
         limit: int = 50,
         use_llm: bool = True,
         persist: bool = False,
     ) -> Dict[str, object]:
         lookback = since_hours or self.settings.default_lookback_hours
+        digest_article_ids = [int(article_id) for article_id in (article_ids or []) if article_id is not None]
         operation = self.telemetry.start(
             "digest",
             context={
                 "region": region,
+                "article_ids": digest_article_ids,
                 "since_hours": lookback,
                 "limit": limit,
                 "use_llm": use_llm,
@@ -1651,7 +1712,8 @@ class NewsService:
         )
         articles = self.repository.list_articles(
             region=region,
-            since_hours=lookback,
+            article_ids=digest_article_ids or None,
+            since_hours=None if digest_article_ids else lookback,
             limit=limit,
             include_hidden=False,
         )
@@ -1668,13 +1730,15 @@ class NewsService:
                 )
                 articles = self.repository.list_articles(
                     region=region,
-                    since_hours=lookback,
+                    article_ids=digest_article_ids or None,
+                    since_hours=None if digest_article_ids else lookback,
                     limit=limit,
                     include_hidden=False,
                 )
 
         presented_articles = [self._present_article(article) for article in articles]
-        digest_articles = presented_articles[: self.settings.llm_digest_max_articles]
+        selection = self._build_digest_selection(presented_articles)
+        digest_articles = selection["selected_articles"]
 
         generation_mode = "fallback"
         if use_llm and self.llm_client.is_configured() and digest_articles:
@@ -1707,6 +1771,8 @@ class NewsService:
             "total_articles": len(presented_articles),
             "counts_by_region": dict(Counter(article["region"] for article in presented_articles)),
             "articles": presented_articles,
+            "selection_preview": selection["selection_preview"],
+            "selection_summary": selection["summary"],
             "digest": digest.to_dict(),
             "body_markdown": body_markdown,
             "generation_mode": generation_mode,
@@ -1720,6 +1786,7 @@ class NewsService:
                 body_markdown=body_markdown,
                 article_count=len(presented_articles),
                 source_count=len({article["source_id"] for article in presented_articles}),
+                payload=payload,
             )
 
         operation_record = self.telemetry.finish(
@@ -1908,7 +1975,133 @@ class NewsService:
         payload["compact_summary_zh"] = truncate_text(payload["display_summary_zh"], 260)
         payload["is_translated"] = bool(llm_title_zh and llm_summary_zh)
         payload["content_available"] = bool(clean_text(str(article.get("extracted_text", ""))))
+        payload["must_include"] = bool(article.get("must_include"))
+        payload["duplicate_group"] = clean_text(str(article.get("duplicate_group", "")))
+        payload["duplicate_of"] = article.get("duplicate_of")
+        payload["duplicate_count"] = int(article.get("duplicate_count") or 1)
+        payload["is_duplicate_primary"] = bool(article.get("is_duplicate_primary", payload["duplicate_of"] is None))
+        payload["duplicate_primary_id"] = int(article.get("duplicate_primary_id") or article.get("id") or 0)
+        payload["duplicate_primary_title"] = clean_text(
+            str(article.get("duplicate_primary_title", title))
+        ) or title
+        payload["duplicate_primary_source_name"] = clean_text(
+            str(article.get("duplicate_primary_source_name", article.get("source_name", "")))
+        )
         return payload
+
+    def _build_digest_selection(self, articles: List[dict]) -> Dict[str, object]:
+        ranked: List[dict] = []
+        duplicates_suppressed = 0
+        for article in articles:
+            if not article.get("is_duplicate_primary", article.get("duplicate_of") is None):
+                duplicates_suppressed += 1
+                continue
+            score, reasons = self._digest_rank(article)
+            enriched = dict(article)
+            enriched["rank_score"] = score
+            enriched["selection_reasons"] = reasons
+            ranked.append(enriched)
+
+        ranked.sort(
+            key=lambda item: (
+                float(item.get("rank_score") or 0.0),
+                clean_text(str(item.get("published_at", ""))),
+            ),
+            reverse=True,
+        )
+
+        forced = [item for item in ranked if item.get("must_include") or item.get("is_pinned")]
+        selected: List[dict] = []
+        seen_ids = set()
+        for item in forced + ranked:
+            article_id = int(item.get("id") or 0)
+            if article_id in seen_ids:
+                continue
+            if len(selected) >= self.settings.llm_digest_max_articles and not (
+                item.get("must_include") or item.get("is_pinned")
+            ):
+                continue
+            seen_ids.add(article_id)
+            selected.append(item)
+
+        selection_preview = [
+            {
+                "article_id": item["id"],
+                "title": item["display_title_zh"],
+                "source_name": item["source_name"],
+                "published_at": item["published_at"],
+                "rank_score": item["rank_score"],
+                "selection_reasons": item["selection_reasons"],
+                "duplicate_count": item["duplicate_count"],
+                "is_pinned": item["is_pinned"],
+                "must_include": item["must_include"],
+            }
+            for item in selected
+        ]
+        return {
+            "selected_articles": selected,
+            "selection_preview": selection_preview,
+            "summary": {
+                "candidate_articles": len(articles),
+                "unique_candidates": len(ranked),
+                "selected_count": len(selected),
+                "duplicates_suppressed": duplicates_suppressed,
+                "pinned_selected": sum(1 for item in selected if item.get("is_pinned")),
+                "must_include_selected": sum(1 for item in selected if item.get("must_include")),
+            },
+        }
+
+    @staticmethod
+    def _digest_rank(article: dict) -> tuple[float, List[str]]:
+        score = 0.0
+        reasons: List[str] = []
+        if article.get("must_include"):
+            score += 1000.0
+            reasons.append("must_include")
+        if article.get("is_pinned"):
+            score += 800.0
+            reasons.append("pinned")
+        if article.get("editorial_note"):
+            score += 60.0
+            reasons.append("editorial_note")
+        if article.get("region") == "international":
+            score += 40.0
+            reasons.append("international")
+        if article.get("is_translated"):
+            score += 30.0
+            reasons.append("translated")
+        if article.get("content_available"):
+            score += 35.0
+            reasons.append("full_text")
+        if int(article.get("duplicate_count") or 1) > 1:
+            score += 45.0
+            reasons.append("primary_of_duplicate_cluster")
+        if clean_text(str(article.get("display_brief_zh", ""))):
+            score += 25.0
+            reasons.append("llm_importance")
+        host = url_host(str(article.get("canonical_url") or article.get("url") or ""))
+        if host and host not in DIGEST_SYNDICATION_HOSTS:
+            score += 20.0
+            reasons.append("direct_source")
+        published_at = clean_text(str(article.get("published_at", "")))
+        if published_at:
+            age_hours = max(
+                0.0,
+                (utc_now() - parse_datetime(published_at)).total_seconds() / 3600.0,
+            )
+            if age_hours <= 6:
+                score += 120.0
+                reasons.append("fresh_6h")
+            elif age_hours <= 24:
+                score += 85.0
+                reasons.append("fresh_24h")
+            elif age_hours <= 48:
+                score += 45.0
+                reasons.append("fresh_48h")
+            else:
+                score += 10.0
+        score += min(25.0, len(clean_text(str(article.get("display_summary_zh", "")))) / 24.0)
+        return round(score, 2), reasons
 
     @staticmethod
     def _present_source(
@@ -2520,6 +2713,12 @@ class NewsService:
         return "\n".join(lines).strip()
 
     def _payload_from_stored_digest(self, stored_digest: Dict[str, object]) -> Dict[str, object]:
+        stored_payload = stored_digest.get("payload")
+        if isinstance(stored_payload, dict) and stored_payload.get("digest"):
+            payload = dict(stored_payload)
+            payload["stored_digest"] = stored_digest
+            payload["generation_mode"] = "stored"
+            return payload
         region = str(stored_digest.get("region", "all"))
         since_hours = int(stored_digest.get("since_hours") or self.settings.default_lookback_hours)
         limit = max(
@@ -2539,6 +2738,15 @@ class NewsService:
             "total_articles": len(presented_articles),
             "counts_by_region": dict(Counter(article["region"] for article in presented_articles)),
             "articles": presented_articles,
+            "selection_preview": [],
+            "selection_summary": {
+                "candidate_articles": len(presented_articles),
+                "unique_candidates": len(presented_articles),
+                "selected_count": 0,
+                "duplicates_suppressed": 0,
+                "pinned_selected": 0,
+                "must_include_selected": 0,
+            },
             "digest": dict(stored_digest.get("payload", {})),
             "body_markdown": str(stored_digest.get("body_markdown", "")),
             "generation_mode": "stored",

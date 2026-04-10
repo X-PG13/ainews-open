@@ -108,9 +108,11 @@ The current version includes:
 
 - A domestic and international AI source registry with Chinese sites, global media, and official blogs
 - RSS/Atom ingestion, basic cleanup, deduplicated persistence
+- Cross-source duplicate clustering using canonical URLs, resolved targets, normalized titles, and content fingerprints
 - Article body extraction, source-specific cleanup, and local storage
 - LLM-powered translation and summary enrichment for international stories
 - Chinese daily digest generation and digest history
+- Editorial controls for `pin`, `must_include`, duplicate-primary selection, and digest selection preview
 - A publication layer for Telegram, Feishu, a static site, and WeChat draft publishing
 - Feishu card messages and automatic WeChat cover upload
 - Publication history management and WeChat publish-status refresh

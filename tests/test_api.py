@@ -210,6 +210,83 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("publish", payload["operations"])
         self.assertEqual(payload["operations"]["publish"]["status"], "ok")
 
+    def test_admin_article_curation_can_set_must_include(self) -> None:
+        self._seed_article()
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        article_id = repository.list_articles(limit=10, include_hidden=True)[0]["id"]
+
+        response = self.client.patch(
+            f"/admin/articles/{article_id}",
+            headers={"X-Admin-Token": "secret-token"},
+            json={"must_include": True},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["article"]["must_include"])
+
+    def test_admin_can_promote_duplicate_primary(self) -> None:
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        published = utc_now()
+        repository.insert_if_new(
+            ArticleRecord(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                title="OpenAI launches enterprise governance controls",
+                url="https://openai.com/index/enterprise-governance",
+                canonical_url="https://openai.com/index/enterprise-governance",
+                summary="Direct release coverage.",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "Direct release coverage.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+        )
+        repository.insert_if_new(
+            ArticleRecord(
+                source_id="yahoo-ai",
+                source_name="Yahoo AI",
+                title="OpenAI launches enterprise governance controls",
+                url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                canonical_url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                summary="Syndicated coverage with alternative framing.",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "Syndicated coverage with alternative framing.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+        )
+        yahoo_id = next(
+            row["id"]
+            for row in repository.list_articles(limit=10, include_hidden=True)
+            if row["source_id"] == "yahoo-ai"
+        )
+
+        response = self.client.post(
+            f"/admin/articles/{yahoo_id}/duplicate-primary",
+            headers={"X-Admin-Token": "secret-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()["article"]
+        self.assertTrue(payload["is_duplicate_primary"])
+        self.assertEqual(payload["source_id"], "yahoo-ai")
+
     def test_admin_operations_includes_runtime_summary_sections(self) -> None:
         repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
         repository.upsert_source_state(

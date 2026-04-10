@@ -40,6 +40,9 @@ class ArticleRecord:
     topic: str
     content_hash: str
     dedup_key: str
+    normalized_title: str = ""
+    resolved_target: str = ""
+    content_fingerprint: str = ""
     raw_payload: Dict[str, object] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, object]:
