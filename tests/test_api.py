@@ -252,6 +252,92 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("selection_preview", payload)
         self.assertIn("selection_decisions", payload)
 
+    def test_admin_digest_snapshot_freezes_editor_payload(self) -> None:
+        self._seed_article()
+        self._seed_article(
+            title="Anthropic documents new rollback controls",
+            url="https://example.com/anthropic-rollback",
+        )
+        repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
+        anthropic_id = next(
+            int(item["id"])
+            for item in repository.list_articles(limit=10, include_hidden=True)
+            if item["title"] == "Anthropic documents new rollback controls"
+        )
+
+        response = self.client.post(
+            "/admin/digests/snapshot",
+            headers={"X-Admin-Token": "secret-token"},
+            json={
+                "region": "all",
+                "since_hours": 72,
+                "limit": 10,
+                "use_llm": False,
+                "editor_items": [
+                    {
+                        "article_id": anthropic_id,
+                        "selected": True,
+                        "manual_rank": 1,
+                        "section_override": "厂商动态",
+                        "publish_title_override": "编辑后标题",
+                        "publish_summary_override": "编辑后摘要",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["editor_snapshot"]["snapshot_status"], "draft")
+        self.assertTrue(payload["stored_digest"]["id"] >= 1)
+        self.assertEqual(payload["selection_preview"][0]["title"], "编辑后标题")
+
+    def test_admin_digest_editor_update_persists_overrides(self) -> None:
+        self._seed_article()
+        self._seed_article(
+            title="Anthropic documents new rollback controls",
+            url="https://example.com/anthropic-rollback",
+        )
+        create_response = self.client.post(
+            "/admin/digests/snapshot",
+            headers={"X-Admin-Token": "secret-token"},
+            json={
+                "region": "all",
+                "since_hours": 72,
+                "limit": 10,
+                "use_llm": False,
+            },
+        )
+        self.assertEqual(create_response.status_code, 200)
+        created = create_response.json()
+        digest_id = created["stored_digest"]["id"]
+        anthropic_item = next(
+            item
+            for item in created["editor_snapshot"]["items"]
+            if item["original_title"] == "Anthropic documents new rollback controls"
+        )
+
+        update_response = self.client.patch(
+            f"/admin/digests/{digest_id}/editor",
+            headers={"X-Admin-Token": "secret-token"},
+            json={
+                "editor_items": [
+                    {
+                        "article_id": anthropic_item["article_id"],
+                        "selected": True,
+                        "manual_rank": 1,
+                        "publish_title_override": "编辑后标题",
+                        "publish_summary_override": "编辑后摘要",
+                    }
+                ]
+            },
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        payload = update_response.json()
+        self.assertEqual(payload["selection_preview"][0]["title"], "编辑后标题")
+        self.assertEqual(payload["generation_mode"], "editor")
+
     def test_admin_can_promote_duplicate_primary(self) -> None:
         repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
         published = utc_now()

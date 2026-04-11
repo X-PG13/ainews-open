@@ -1177,6 +1177,113 @@ class NewsService:
     def list_digests(self, *, region: Optional[str] = None, limit: int = 20) -> List[dict]:
         return self.repository.list_digests(region=region, limit=limit)
 
+    def get_digest(self, digest_id: int) -> Dict[str, object]:
+        stored_digest = self.repository.get_digest(digest_id)
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        return self._payload_from_stored_digest(stored_digest)
+
+    def create_digest_snapshot(
+        self,
+        *,
+        region: str = "all",
+        article_ids: Optional[Iterable[int]] = None,
+        since_hours: Optional[int] = None,
+        limit: int = 50,
+        use_llm: bool = True,
+        editor_items: Optional[List[dict]] = None,
+    ) -> Dict[str, object]:
+        payload = self.build_digest(
+            region=region,
+            article_ids=article_ids,
+            since_hours=since_hours,
+            limit=limit,
+            use_llm=use_llm,
+            persist=False,
+        )
+        editor_snapshot = self._merge_editor_snapshot_items(
+            payload.get("editor_snapshot"),
+            editor_items,
+        )
+        persisted_payload = self._apply_editor_snapshot_to_payload(
+            payload,
+            editor_snapshot,
+            snapshot_status="draft",
+            frozen_at=utc_now().isoformat(),
+        )
+        digest = persisted_payload["digest"]
+        stored_digest = self.repository.save_digest(
+            region=str(persisted_payload.get("region") or region),
+            since_hours=int(persisted_payload.get("since_hours") or since_hours or self.settings.default_lookback_hours),
+            digest=DailyDigest(
+                title=str(digest.get("title") or ""),
+                overview=str(digest.get("overview") or ""),
+                highlights=list(digest.get("highlights") or []),
+                sections=list(digest.get("sections") or []),
+                closing=str(digest.get("closing") or ""),
+                provider=str(digest.get("provider") or ""),
+                model=str(digest.get("model") or ""),
+            ),
+            body_markdown=str(persisted_payload.get("body_markdown") or ""),
+            article_count=len(list(persisted_payload.get("selection_preview") or [])),
+            source_count=len(
+                {
+                    str(article.get("source_id") or "")
+                    for article in list(persisted_payload.get("articles") or [])
+                    if article.get("source_id")
+                }
+            ),
+            payload=self._payload_for_storage(persisted_payload),
+        )
+        persisted_payload["stored_digest"] = stored_digest
+        return persisted_payload
+
+    def update_digest_editor(
+        self,
+        digest_id: int,
+        *,
+        editor_items: List[dict],
+    ) -> Dict[str, object]:
+        stored_digest = self.repository.get_digest(digest_id)
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        payload = self._payload_from_stored_digest(stored_digest)
+        editor_snapshot = self._merge_editor_snapshot_items(
+            payload.get("editor_snapshot"),
+            editor_items,
+        )
+        updated_payload = self._apply_editor_snapshot_to_payload(
+            payload,
+            editor_snapshot,
+            snapshot_status="draft",
+            frozen_at=clean_text(str((payload.get("editor_snapshot") or {}).get("frozen_at", "")))
+            or utc_now().isoformat(),
+            last_published_at=clean_text(
+                str((payload.get("editor_snapshot") or {}).get("last_published_at", ""))
+            ),
+        )
+        digest = updated_payload["digest"]
+        stored_digest = self.repository.update_digest(
+            digest_id,
+            title=str(digest.get("title") or ""),
+            body_markdown=str(updated_payload.get("body_markdown") or ""),
+            provider=str(digest.get("provider") or ""),
+            model=str(digest.get("model") or ""),
+            article_count=len(list(updated_payload.get("selection_preview") or [])),
+            source_count=len(
+                {
+                    str(article.get("source_id") or "")
+                    for article in list(updated_payload.get("articles") or [])
+                    if article.get("source_id")
+                }
+            ),
+            payload=self._payload_for_storage(updated_payload),
+        )
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        updated_payload["stored_digest"] = stored_digest
+        return updated_payload
+
     def list_publications(
         self,
         *,
@@ -1650,6 +1757,27 @@ class NewsService:
             publish_result["status"] = "ok"
         publish_result["publication_records"] = records
         publish_result["failure_categories"] = dict(failure_categories)
+        if digest_id is not None and int(publish_result.get("published", 0)) > 0:
+            updated_payload = self._mark_editor_snapshot_published(payload)
+            updated_digest = self.repository.update_digest(
+                digest_id,
+                title=str(updated_payload.get("digest", {}).get("title") or ""),
+                body_markdown=str(updated_payload.get("body_markdown") or ""),
+                provider=str(updated_payload.get("digest", {}).get("provider") or ""),
+                model=str(updated_payload.get("digest", {}).get("model") or ""),
+                article_count=len(list(updated_payload.get("selection_preview") or [])),
+                source_count=len(
+                    {
+                        str(article.get("source_id") or "")
+                        for article in list(updated_payload.get("articles") or [])
+                        if article.get("source_id")
+                    }
+                ),
+                payload=self._payload_for_storage(updated_payload),
+            )
+            if updated_digest is not None:
+                payload["editor_snapshot"] = updated_payload.get("editor_snapshot", {})
+                payload["stored_digest"] = updated_digest
         operation_record = self.telemetry.finish(
             operation,
             status=str(publish_result["status"]),
@@ -1741,6 +1869,13 @@ class NewsService:
         presented_articles = [self._present_article(article) for article in articles]
         selection = self._build_digest_selection(presented_articles)
         digest_articles = selection["selected_articles"]
+        editor_snapshot = self._build_editor_snapshot(
+            presented_articles,
+            selection,
+            snapshot_status="draft" if persist else "preview",
+        )
+        if persist:
+            editor_snapshot["frozen_at"] = utc_now().isoformat()
 
         generation_mode = "fallback"
         if use_llm and self.llm_client.is_configured() and digest_articles:
@@ -1776,6 +1911,7 @@ class NewsService:
             "selection_preview": selection["selection_preview"],
             "selection_decisions": selection["selection_decisions"],
             "selection_summary": selection["summary"],
+            "editor_snapshot": editor_snapshot,
             "digest": digest.to_dict(),
             "body_markdown": body_markdown,
             "generation_mode": generation_mode,
@@ -2109,6 +2245,335 @@ class NewsService:
             "must_include": bool(article.get("must_include")),
             "is_suppressed": bool(article.get("is_suppressed")),
         }
+
+    @staticmethod
+    def _default_digest_section_title(article: dict) -> str:
+        return "国内动态" if str(article.get("region", "international")) == "domestic" else "国际动态"
+
+    def _build_editor_snapshot(
+        self,
+        articles: List[dict],
+        selection: Dict[str, object],
+        *,
+        snapshot_status: str,
+    ) -> Dict[str, object]:
+        article_map = {int(article["id"]): article for article in articles if article.get("id") is not None}
+        selected_ids = {
+            int(item["article_id"]) for item in list(selection.get("selection_preview") or [])
+        }
+        manual_rank = 1
+        items: List[dict] = []
+        for index, decision_item in enumerate(list(selection.get("selection_decisions") or [])):
+            article_id = int(decision_item["article_id"])
+            article = article_map.get(article_id)
+            if article is None:
+                continue
+            summary = clean_text(
+                str(
+                    article.get("display_brief_zh")
+                    or article.get("compact_summary_zh")
+                    or article.get("display_summary_zh")
+                    or article.get("summary")
+                    or ""
+                )
+            )
+            item = self._coerce_editor_snapshot_item(
+                {
+                    "article_id": article_id,
+                    "selected": article_id in selected_ids,
+                    "base_decision": clean_text(str(decision_item.get("decision") or "")) or "selected",
+                    "manual_rank": manual_rank if article_id in selected_ids else None,
+                    "section_override": "",
+                    "default_section": self._default_digest_section_title(article),
+                    "publish_title_override": "",
+                    "publish_summary_override": "",
+                    "original_title": clean_text(str(article.get("display_title_zh") or article.get("title") or "")),
+                    "original_summary": summary,
+                    "selection_reasons": list(decision_item.get("selection_reasons") or []),
+                    "rank_score": float(decision_item.get("rank_score") or 0.0),
+                    "source_name": clean_text(str(article.get("source_name") or "")),
+                    "published_at": clean_text(str(article.get("published_at") or "")),
+                    "duplicate_count": int(article.get("duplicate_count") or 1),
+                    "is_pinned": bool(article.get("is_pinned")),
+                    "must_include": bool(article.get("must_include")),
+                    "is_suppressed": bool(article.get("is_suppressed")),
+                    "sort_index": index,
+                },
+                default_index=index,
+            )
+            if item["selected"]:
+                manual_rank += 1
+            items.append(item)
+        return {
+            "snapshot_status": snapshot_status,
+            "frozen_at": "",
+            "updated_at": utc_now().isoformat(),
+            "last_published_at": "",
+            "items": items,
+        }
+
+    def _merge_editor_snapshot_items(
+        self,
+        editor_snapshot_payload: object,
+        editor_items: Optional[List[dict]],
+    ) -> Dict[str, object]:
+        base_snapshot = dict(editor_snapshot_payload) if isinstance(editor_snapshot_payload, dict) else {}
+        base_items = [
+            self._coerce_editor_snapshot_item(item, default_index=index)
+            for index, item in enumerate(list(base_snapshot.get("items") or []))
+            if isinstance(item, dict)
+        ]
+        if not editor_items:
+            base_snapshot["items"] = base_items
+            return base_snapshot
+
+        overrides = {
+            int(item["article_id"]): self._coerce_editor_snapshot_item(item, default_index=index)
+            for index, item in enumerate(editor_items)
+            if isinstance(item, dict) and item.get("article_id") is not None
+        }
+        merged_items: List[dict] = []
+        for index, item in enumerate(base_items):
+            merged = dict(item)
+            override = overrides.get(int(item["article_id"]))
+            if override:
+                for key in (
+                    "selected",
+                    "manual_rank",
+                    "section_override",
+                    "publish_title_override",
+                    "publish_summary_override",
+                ):
+                    merged[key] = override.get(key)
+            merged["sort_index"] = index
+            merged_items.append(self._coerce_editor_snapshot_item(merged, default_index=index))
+
+        base_snapshot["items"] = merged_items
+        return base_snapshot
+
+    @staticmethod
+    def _coerce_editor_snapshot_item(item: dict, *, default_index: int) -> dict:
+        manual_rank = item.get("manual_rank")
+        try:
+            manual_rank_value = int(manual_rank) if manual_rank not in (None, "", False) else None
+        except (TypeError, ValueError):
+            manual_rank_value = None
+        if manual_rank_value is not None and manual_rank_value < 1:
+            manual_rank_value = None
+        return {
+            "article_id": int(item["article_id"]),
+            "selected": bool(item.get("selected")),
+            "base_decision": clean_text(str(item.get("base_decision") or "")) or "selected",
+            "manual_rank": manual_rank_value,
+            "section_override": clean_text(str(item.get("section_override") or "")),
+            "default_section": clean_text(str(item.get("default_section") or "")),
+            "publish_title_override": clean_text(str(item.get("publish_title_override") or "")),
+            "publish_summary_override": clean_text(str(item.get("publish_summary_override") or "")),
+            "original_title": clean_text(str(item.get("original_title") or "")),
+            "original_summary": clean_text(str(item.get("original_summary") or "")),
+            "selection_reasons": [clean_text(str(reason)) for reason in list(item.get("selection_reasons") or []) if clean_text(str(reason))],
+            "rank_score": float(item.get("rank_score") or 0.0),
+            "source_name": clean_text(str(item.get("source_name") or "")),
+            "published_at": clean_text(str(item.get("published_at") or "")),
+            "duplicate_count": int(item.get("duplicate_count") or 1),
+            "is_pinned": bool(item.get("is_pinned")),
+            "must_include": bool(item.get("must_include")),
+            "is_suppressed": bool(item.get("is_suppressed")),
+            "sort_index": int(item.get("sort_index") or default_index),
+        }
+
+    def _apply_editor_snapshot_to_payload(
+        self,
+        payload: Dict[str, object],
+        editor_snapshot: Dict[str, object],
+        *,
+        snapshot_status: str,
+        frozen_at: str = "",
+        last_published_at: str = "",
+    ) -> Dict[str, object]:
+        snapshot = self._merge_editor_snapshot_items(editor_snapshot, None)
+        snapshot["snapshot_status"] = snapshot_status
+        snapshot["frozen_at"] = clean_text(frozen_at) or clean_text(str(snapshot.get("frozen_at") or ""))
+        snapshot["last_published_at"] = clean_text(last_published_at) or clean_text(
+            str(snapshot.get("last_published_at") or "")
+        )
+        snapshot["updated_at"] = utc_now().isoformat()
+
+        articles = [dict(article) for article in list(payload.get("articles") or [])]
+        selection = self._editor_snapshot_to_selection(articles, snapshot)
+        digest = self._build_snapshot_digest(
+            selection["selected_articles"],
+            region=str(payload.get("region") or "all"),
+            since_hours=int(payload.get("since_hours") or self.settings.default_lookback_hours),
+        )
+
+        updated_payload = dict(payload)
+        updated_payload["selection_preview"] = selection["selection_preview"]
+        updated_payload["selection_decisions"] = selection["selection_decisions"]
+        updated_payload["selection_summary"] = selection["summary"]
+        updated_payload["editor_snapshot"] = snapshot
+        updated_payload["digest"] = digest.to_dict()
+        updated_payload["body_markdown"] = self._render_digest_markdown(digest)
+        updated_payload["generation_mode"] = "editor"
+        return updated_payload
+
+    def _editor_snapshot_to_selection(
+        self,
+        articles: List[dict],
+        editor_snapshot: Dict[str, object],
+    ) -> Dict[str, object]:
+        article_map = {int(article["id"]): article for article in articles if article.get("id") is not None}
+        snapshot_items = [
+            self._coerce_editor_snapshot_item(item, default_index=index)
+            for index, item in enumerate(list(editor_snapshot.get("items") or []))
+            if isinstance(item, dict)
+        ]
+        selected_articles: List[dict] = []
+        selection_preview: List[dict] = []
+        selection_decisions: List[dict] = []
+        duplicates_suppressed = 0
+        editorially_suppressed = 0
+        ranked_out = 0
+
+        for item in snapshot_items:
+            article = article_map.get(int(item["article_id"]))
+            if article is None:
+                continue
+            title = clean_text(item.get("publish_title_override")) or clean_text(item.get("original_title")) or clean_text(
+                str(article.get("display_title_zh") or article.get("title") or "")
+            )
+            summary = clean_text(item.get("publish_summary_override")) or clean_text(item.get("original_summary")) or clean_text(
+                str(article.get("compact_summary_zh") or article.get("display_summary_zh") or article.get("summary") or "")
+            )
+            section_title = clean_text(item.get("section_override")) or clean_text(item.get("default_section")) or self._default_digest_section_title(article)
+            reasons = list(item.get("selection_reasons") or [])
+            base_decision = clean_text(item.get("base_decision")) or "selected"
+            selected = bool(item.get("selected"))
+            decision = "selected" if selected else (base_decision if base_decision != "selected" else "editor_excluded")
+            if selected and base_decision != "selected":
+                reasons = ["manual_restore", base_decision, *reasons]
+            elif not selected and base_decision == "selected":
+                reasons = ["editor_excluded", *reasons]
+
+            decision_payload = {
+                "article_id": int(item["article_id"]),
+                "title": title,
+                "source_name": clean_text(item.get("source_name")) or clean_text(str(article.get("source_name") or "")),
+                "published_at": clean_text(item.get("published_at")) or clean_text(str(article.get("published_at") or "")),
+                "rank_score": float(item.get("rank_score") or article.get("rank_score") or 0.0),
+                "selection_reasons": reasons,
+                "decision": decision,
+                "duplicate_count": int(item.get("duplicate_count") or article.get("duplicate_count") or 1),
+                "is_pinned": bool(item.get("is_pinned") or article.get("is_pinned")),
+                "must_include": bool(item.get("must_include") or article.get("must_include")),
+                "is_suppressed": bool(item.get("is_suppressed") or article.get("is_suppressed")),
+                "manual_rank": item.get("manual_rank"),
+                "section": section_title,
+                "publish_summary": summary,
+            }
+            selection_decisions.append(decision_payload)
+            if selected:
+                selected_article = dict(article)
+                selected_article["display_title_zh"] = title
+                selected_article["display_summary_zh"] = summary
+                selected_article["compact_summary_zh"] = summary
+                selected_article["display_brief_zh"] = summary
+                selected_article["section_override"] = section_title
+                selected_article["manual_rank"] = item.get("manual_rank")
+                selected_article["rank_score"] = float(item.get("rank_score") or article.get("rank_score") or 0.0)
+                selected_articles.append(selected_article)
+                selection_preview.append(decision_payload)
+            elif decision == "duplicate_secondary":
+                duplicates_suppressed += 1
+            elif decision == "suppressed":
+                editorially_suppressed += 1
+            else:
+                ranked_out += 1
+
+        selected_articles.sort(
+            key=lambda article: (
+                int(article.get("manual_rank") or 10_000),
+                -float(article.get("rank_score") or 0.0),
+                -(
+                    parse_datetime(clean_text(str(article.get("published_at") or ""))).timestamp()
+                    if parse_datetime(clean_text(str(article.get("published_at") or "")))
+                    else 0.0
+                ),
+            )
+        )
+        selection_preview.sort(
+            key=lambda item: (
+                int(item.get("manual_rank") or 10_000),
+                -float(item.get("rank_score") or 0.0),
+            )
+        )
+        selection_decisions.sort(
+            key=lambda item: (
+                0 if item.get("decision") == "selected" else 1,
+                int(item.get("manual_rank") or 10_000),
+                -float(item.get("rank_score") or 0.0),
+                clean_text(str(item.get("published_at") or "")),
+            )
+        )
+        return {
+            "selected_articles": selected_articles,
+            "selection_preview": selection_preview,
+            "selection_decisions": selection_decisions,
+            "summary": {
+                "candidate_articles": len(snapshot_items),
+                "unique_candidates": len(snapshot_items) - duplicates_suppressed,
+                "selected_count": len(selected_articles),
+                "duplicates_suppressed": duplicates_suppressed,
+                "editorially_suppressed": editorially_suppressed,
+                "ranked_out": ranked_out,
+                "pinned_selected": sum(1 for item in selected_articles if item.get("is_pinned")),
+                "must_include_selected": sum(1 for item in selected_articles if item.get("must_include")),
+            },
+        }
+
+    def _build_snapshot_digest(
+        self,
+        articles: List[dict],
+        *,
+        region: str,
+        since_hours: int,
+    ) -> DailyDigest:
+        region_names = {
+            "all": "全网",
+            "domestic": "国内",
+            "international": "国际",
+        }
+        highlights = [
+            f"{article['display_title_zh']} | {article['source_name']}" for article in articles[:4]
+        ]
+        sections: List[Dict[str, object]] = []
+        section_index: Dict[str, int] = {}
+        for article in articles:
+            section_title = clean_text(str(article.get("section_override") or "")) or self._default_digest_section_title(article)
+            brief = clean_text(str(article.get("display_brief_zh", "")))
+            summary = clean_text(str(article.get("compact_summary_zh", "")))
+            line = f"{article['display_title_zh']}。{brief or summary}"
+            if section_title not in section_index:
+                section_index[section_title] = len(sections)
+                sections.append({"title": section_title, "items": []})
+            sections[section_index[section_title]]["items"].append(line)
+
+        return DailyDigest(
+            title=f"{format_local_date()} {region_names.get(region, '全网')} AI 新闻日报",
+            overview=f"最近 {since_hours} 小时已冻结 {len(articles)} 条 AI 新闻用于本次发布。",
+            highlights=highlights,
+            sections=sections,
+            closing="以上内容基于已确认的编辑稿生成，发布前仍可继续复核。",
+        )
+
+    def _mark_editor_snapshot_published(self, payload: Dict[str, object]) -> Dict[str, object]:
+        snapshot = dict(payload.get("editor_snapshot") or {})
+        snapshot["snapshot_status"] = "published"
+        snapshot["last_published_at"] = utc_now().isoformat()
+        snapshot["updated_at"] = utc_now().isoformat()
+        updated_payload = dict(payload)
+        updated_payload["editor_snapshot"] = snapshot
+        return updated_payload
 
     @staticmethod
     def _digest_rank(article: dict) -> tuple[float, List[str]]:
@@ -2775,6 +3240,14 @@ class NewsService:
         stored_payload = stored_digest.get("payload")
         if isinstance(stored_payload, dict) and stored_payload.get("digest"):
             payload = dict(stored_payload)
+            if not isinstance(payload.get("editor_snapshot"), dict):
+                articles = [dict(article) for article in list(payload.get("articles") or [])]
+                selection = self._build_digest_selection(articles)
+                payload["editor_snapshot"] = self._build_editor_snapshot(
+                    articles,
+                    selection,
+                    snapshot_status="draft",
+                )
             payload["stored_digest"] = stored_digest
             payload["generation_mode"] = "stored"
             return payload
@@ -2809,11 +3282,25 @@ class NewsService:
                 "pinned_selected": 0,
                 "must_include_selected": 0,
             },
+            "editor_snapshot": {
+                "snapshot_status": "draft",
+                "frozen_at": "",
+                "updated_at": "",
+                "last_published_at": "",
+                "items": [],
+            },
             "digest": dict(stored_digest.get("payload", {})),
             "body_markdown": str(stored_digest.get("body_markdown", "")),
             "generation_mode": "stored",
             "stored_digest": stored_digest,
         }
+
+    @staticmethod
+    def _payload_for_storage(payload: Dict[str, object]) -> Dict[str, object]:
+        stored_payload = dict(payload)
+        stored_payload.pop("stored_digest", None)
+        stored_payload.pop("operation", None)
+        return stored_payload
 
     def _export_digest_payload(self, payload: Dict[str, object]) -> List[str]:
         date_prefix = format_local_date().replace("-", "")

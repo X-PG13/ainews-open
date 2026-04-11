@@ -64,6 +64,7 @@ python -m ainews serve --port 8000
 - 直接在 Operations 总览里查看 `/health`、最近 pipeline、来源冷却、来源告警和发布失败
 - 查看新闻池、日报存档、发布历史和微信发布状态
 - 直接从控制台触发抓取、翻译、生成日报和发布
+- 把预览冻结成可编辑发布稿，调整排序、分组、发布标题和摘要，然后按冻结稿发布而不是实时重算
 
 ## 公开 Demo
 
@@ -112,7 +113,7 @@ make check
 - 文章正文抓取、source-specific 清洗与本地持久化
 - 国际新闻 LLM 翻译与摘要补全
 - 中文日报生成与历史存档
-- `pin`、`must_include`、`suppress`、重复簇主记录切换、带入选/排除原因的日报编辑预览等控制能力
+- `pin`、`must_include`、`suppress`、重复簇主记录切换、带入选/排除原因的日报编辑预览，以及可冻结的发布前编辑稿能力
 - 日报发布层，可推送到 Telegram、飞书、自建静态站点和微信公众号草稿箱
 - 飞书卡片消息和微信公众号封面自动上传
 - 发布历史管理与微信公众号发布状态刷新
@@ -489,6 +490,18 @@ curl -X POST "http://127.0.0.1:8000/admin/digests/generate" \
   -H "X-Admin-Token: your-secret-token" \
   -d '{"region":"all","since_hours":48,"limit":20,"use_llm":true,"persist":true}'
 ```
+
+### `POST /admin/digests/preview`
+
+生成带入选、压制、重复簇次记录、排序落选原因的选稿预览。
+
+### `POST /admin/digests/snapshot`
+
+把当前预览冻结成一份可编辑的日报草稿。可选 `editor_items` 支持覆盖是否入选、手工排序、分组标题、发布标题和发布摘要。
+
+### `PATCH /admin/digests/{digest_id}/editor`
+
+原地更新一份已冻结的编辑稿。之后使用 `digest_id` 发布时，会优先发布这份已确认快照，而不是临时重新计算。
 
 ### `PATCH /admin/articles/{id}`
 

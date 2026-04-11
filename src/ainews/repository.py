@@ -2860,6 +2860,45 @@ class ArticleRepository:
             ).fetchone()
         return self._row_to_digest_dict(row) if row else None
 
+    def update_digest(
+        self,
+        digest_id: int,
+        *,
+        title: str,
+        body_markdown: str,
+        provider: str,
+        model: str,
+        article_count: int,
+        source_count: int,
+        payload: Dict[str, object],
+    ) -> Optional[dict]:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE digests
+                SET
+                    title = ?,
+                    body_markdown = ?,
+                    provider = ?,
+                    model = ?,
+                    article_count = ?,
+                    source_count = ?,
+                    payload = ?
+                WHERE id = ?
+                """,
+                (
+                    title,
+                    body_markdown,
+                    provider,
+                    model,
+                    article_count,
+                    source_count,
+                    json.dumps(payload, ensure_ascii=False),
+                    digest_id,
+                ),
+            )
+        return self.get_digest(digest_id)
+
     def list_digests(
         self,
         *,
