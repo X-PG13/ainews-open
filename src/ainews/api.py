@@ -60,6 +60,28 @@ class DigestRequest(BaseModel):
     persist: bool = True
 
 
+class DigestEditorItemRequest(BaseModel):
+    article_id: int = Field(ge=1)
+    selected: bool = True
+    manual_rank: Optional[int] = Field(default=None, ge=1, le=999)
+    section_override: Optional[str] = Field(default=None, max_length=80)
+    publish_title_override: Optional[str] = Field(default=None, max_length=300)
+    publish_summary_override: Optional[str] = Field(default=None, max_length=1000)
+
+
+class DigestSnapshotRequest(BaseModel):
+    region: str = Field(default="all")
+    article_ids: Optional[List[int]] = None
+    since_hours: Optional[int] = Field(default=None, ge=1, le=720)
+    limit: int = Field(default=30, ge=1, le=200)
+    use_llm: bool = True
+    editor_items: Optional[List[DigestEditorItemRequest]] = None
+
+
+class DigestEditorUpdateRequest(BaseModel):
+    editor_items: List[DigestEditorItemRequest] = Field(min_length=1)
+
+
 class PipelineRequest(BaseModel):
     region: str = Field(default="all")
     since_hours: Optional[int] = Field(default=None, ge=1, le=720)
@@ -857,6 +879,53 @@ def create_app() -> FastAPI:
                 limit=payload.limit,
                 use_llm=payload.use_llm,
                 persist=False,
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/digests/snapshot")
+    def admin_create_digest_snapshot(
+        payload: DigestSnapshotRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_create_digest_snapshot")
+        try:
+            return _sanitize_service_payload(service.create_digest_snapshot(
+                region=payload.region,
+                article_ids=payload.article_ids,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                use_llm=payload.use_llm,
+                editor_items=[item.model_dump() for item in list(payload.editor_items or [])],
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.patch("/admin/digests/{digest_id}/editor")
+    def admin_update_digest_editor(
+        digest_id: int,
+        payload: DigestEditorUpdateRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_update_digest_editor")
+        try:
+            return _sanitize_service_payload(service.update_digest_editor(
+                digest_id,
+                editor_items=[item.model_dump() for item in payload.editor_items],
             ))
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)

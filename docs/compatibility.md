@@ -70,6 +70,9 @@ The following routes are the intended stable HTTP surface for `v1.x`:
 - `POST /admin/enrich`
 - `POST /admin/extract`
 - `POST /admin/digests/generate`
+- `POST /admin/digests/preview`
+- `POST /admin/digests/snapshot`
+- `PATCH /admin/digests/{digest_id}/editor`
 - `POST /admin/pipeline`
 - `POST /admin/publish`
 - `GET /admin/digests`
@@ -97,6 +100,10 @@ The exported digest JSON keeps these top-level fields:
 - `digest`
 - `body_markdown`
 - `generation_mode`
+- `selection_preview`
+- `selection_decisions`
+- `selection_summary`
+- `editor_snapshot`
 - `stored_digest` when persistence is enabled
 
 The `digest` object keeps these fields:
@@ -108,6 +115,36 @@ The `digest` object keeps these fields:
 - `closing`
 - `provider`
 - `model`
+
+The `editor_snapshot` object keeps these fields:
+
+- `snapshot_status`
+- `frozen_at`
+- `updated_at`
+- `last_published_at`
+- `items`
+
+Each `editor_snapshot.items[]` entry keeps these fields:
+
+- `article_id`
+- `selected`
+- `base_decision`
+- `manual_rank`
+- `section_override`
+- `default_section`
+- `publish_title_override`
+- `publish_summary_override`
+- `original_title`
+- `original_summary`
+- `selection_reasons`
+- `rank_score`
+- `source_name`
+- `published_at`
+- `duplicate_count`
+- `is_pinned`
+- `must_include`
+- `is_suppressed`
+- `sort_index`
 
 The `articles` list keeps these fields as stable downstream contract:
 
@@ -131,6 +168,7 @@ The `articles` list keeps these fields as stable downstream contract:
 Publication behavior is part of the `v1.x` contract:
 
 - A stored digest plus target pair is idempotent by default.
+- When `digest_id` points at a stored digest with an `editor_snapshot`, publish routes reuse that frozen snapshot instead of rebuilding the digest live.
 - When the latest record for the same `digest_id + target` is `ok` or `pending`, the next publish call returns `skipped`.
 - A skipped duplicate publish does not create a new publication row.
 - `--force-republish` and `force_republish=true` bypass this guard intentionally.

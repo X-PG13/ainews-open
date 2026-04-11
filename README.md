@@ -64,6 +64,7 @@ After startup you can:
 - Use the Operations panel to inspect `/health`, recent pipeline runs, source cooldowns, source alerts, and publication failures in one screen
 - Browse the article pool, digest archive, publication history, and WeChat publish status
 - Trigger ingest, extraction, translation, digest generation, and publishing from the dashboard
+- Freeze a preview into a stored digest snapshot, edit ranking/section/title/summary overrides, and publish the confirmed snapshot instead of a fresh recompute
 
 ## Public Demo
 
@@ -112,7 +113,7 @@ The current version includes:
 - Article body extraction, source-specific cleanup, and local storage
 - LLM-powered translation and summary enrichment for international stories
 - Chinese daily digest generation and digest history
-- Editorial controls for `pin`, `must_include`, `suppress`, duplicate-primary selection, and digest selection preview with explicit inclusion/exclusion reasons
+- Editorial controls for `pin`, `must_include`, `suppress`, duplicate-primary selection, digest selection preview with explicit inclusion/exclusion reasons, and a frozen digest editor with publish-time overrides
 - A publication layer for Telegram, Feishu, a static site, and WeChat draft publishing
 - Feishu card messages and automatic WeChat cover upload
 - Publication history management and WeChat publish-status refresh
@@ -489,6 +490,18 @@ curl -X POST "http://127.0.0.1:8000/admin/digests/generate" \
   -H "X-Admin-Token: your-secret-token" \
   -d '{"region":"all","since_hours":48,"limit":20,"use_llm":true,"persist":true}'
 ```
+
+### `POST /admin/digests/preview`
+
+Build a ranked selection preview with explicit inclusion, suppression, duplicate-secondary, and ranked-out decisions.
+
+### `POST /admin/digests/snapshot`
+
+Freeze the current preview into a stored editable digest draft. Optional `editor_items` can override selection, manual rank, section title, publish title, and publish summary.
+
+### `PATCH /admin/digests/{digest_id}/editor`
+
+Update a frozen digest draft in place. Publishing with `digest_id` uses this stored snapshot so the outbound digest matches the reviewed editor state instead of a live recompute.
 
 ### `PATCH /admin/articles/{id}`
 

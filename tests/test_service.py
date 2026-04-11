@@ -506,6 +506,213 @@ class ServiceFilterTestCase(unittest.TestCase):
             )
             self.assertIn("suppressed", suppressed["selection_reasons"])
 
+    def test_create_digest_snapshot_persists_editor_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://openai.com/index/enterprise-governance",
+                    canonical_url="https://openai.com/index/enterprise-governance",
+                    summary="Direct release coverage.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "Direct release coverage.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="anthropic-news",
+                    source_name="Anthropic News",
+                    title="Anthropic documents new rollback controls",
+                    url="https://anthropic.com/news/rollback-controls",
+                    canonical_url="https://anthropic.com/news/rollback-controls",
+                    summary="Another strong enterprise AI story.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "Anthropic documents new rollback controls",
+                        "Another strong enterprise AI story.",
+                    ),
+                    dedup_key=make_dedup_key("Anthropic documents new rollback controls"),
+                    raw_payload={},
+                )
+            )
+            article_ids = [int(item["id"]) for item in repository.list_articles(limit=10, include_hidden=True)]
+            anthropic_id = next(
+                int(item["id"])
+                for item in repository.list_articles(limit=10, include_hidden=True)
+                if item["source_id"] == "anthropic-news"
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+            )
+
+            snapshot = service.create_digest_snapshot(
+                region="all",
+                article_ids=article_ids,
+                since_hours=24,
+                limit=10,
+                use_llm=False,
+                editor_items=[
+                    {
+                        "article_id": anthropic_id,
+                        "selected": True,
+                        "manual_rank": 1,
+                        "section_override": "厂商动态",
+                        "publish_title_override": "编辑后：Anthropic 回滚控制",
+                        "publish_summary_override": "编辑后摘要",
+                    }
+                ],
+            )
+
+            self.assertEqual(snapshot["editor_snapshot"]["snapshot_status"], "draft")
+            self.assertTrue(snapshot["stored_digest"]["id"] >= 1)
+            self.assertEqual(snapshot["selection_preview"][0]["article_id"], anthropic_id)
+            self.assertEqual(snapshot["selection_preview"][0]["title"], "编辑后：Anthropic 回滚控制")
+            self.assertEqual(snapshot["digest"]["sections"][0]["title"], "厂商动态")
+            self.assertIn("编辑后摘要", snapshot["digest"]["sections"][0]["items"][0])
+
+    def test_update_digest_editor_rewrites_snapshot_and_publish_uses_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://openai.com/index/enterprise-governance",
+                    canonical_url="https://openai.com/index/enterprise-governance",
+                    summary="Direct release coverage.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "Direct release coverage.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="anthropic-news",
+                    source_name="Anthropic News",
+                    title="Anthropic documents new rollback controls",
+                    url="https://anthropic.com/news/rollback-controls",
+                    canonical_url="https://anthropic.com/news/rollback-controls",
+                    summary="Another strong enterprise AI story.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "Anthropic documents new rollback controls",
+                        "Another strong enterprise AI story.",
+                    ),
+                    dedup_key=make_dedup_key("Anthropic documents new rollback controls"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+                publisher=StubPublisher(),
+            )
+            created = service.create_digest_snapshot(
+                region="all",
+                article_ids=[
+                    int(item["id"])
+                    for item in repository.list_articles(limit=10, include_hidden=True)
+                ],
+                since_hours=24,
+                limit=10,
+                use_llm=False,
+            )
+            digest_id = int(created["stored_digest"]["id"])
+            item_by_source = {
+                item["source_name"]: item for item in created["editor_snapshot"]["items"]
+            }
+            updated = service.update_digest_editor(
+                digest_id,
+                editor_items=[
+                    {
+                        "article_id": item_by_source["Anthropic News"]["article_id"],
+                        "selected": True,
+                        "manual_rank": 1,
+                        "publish_title_override": "编辑后：Anthropic 优先",
+                        "publish_summary_override": "编辑后摘要 A",
+                    },
+                    {
+                        "article_id": item_by_source["OpenAI News"]["article_id"],
+                        "selected": True,
+                        "manual_rank": 2,
+                        "publish_summary_override": "编辑后摘要 B",
+                    },
+                ],
+            )
+
+            self.assertEqual(updated["selection_preview"][0]["title"], "编辑后：Anthropic 优先")
+            self.assertEqual(updated["generation_mode"], "editor")
+            publish_result = service.publish_digest(digest_id=digest_id, targets=["static_site"])
+            self.assertEqual(publish_result["digest"]["selection_preview"][0]["title"], "编辑后：Anthropic 优先")
+            self.assertEqual(
+                publish_result["digest"]["editor_snapshot"]["snapshot_status"],
+                "published",
+            )
+
     def test_enrich_and_digest_with_llm_client(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             settings = Settings(

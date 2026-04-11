@@ -1,6 +1,7 @@
 const state = {
   token: localStorage.getItem("ainews_admin_token") || "",
   currentDigest: null,
+  currentDigestPayload: null,
   currentArticles: [],
   selectedDigestId: null,
 };
@@ -13,6 +14,8 @@ const refs = {
   extractButton: document.getElementById("extractButton"),
   enrichButton: document.getElementById("enrichButton"),
   digestPreviewButton: document.getElementById("digestPreviewButton"),
+  freezeDigestButton: document.getElementById("freezeDigestButton"),
+  saveDigestEditorButton: document.getElementById("saveDigestEditorButton"),
   digestButton: document.getElementById("digestButton"),
   pipelineButton: document.getElementById("pipelineButton"),
   publishButton: document.getElementById("publishButton"),
@@ -23,6 +26,7 @@ const refs = {
   resetSourceCooldownsButton: document.getElementById("resetSourceCooldownsButton"),
   digestView: document.getElementById("digestView"),
   digestPreviewView: document.getElementById("digestPreviewView"),
+  digestEditorView: document.getElementById("digestEditorView"),
   digestArchive: document.getElementById("digestArchive"),
   articlesList: document.getElementById("articlesList"),
   regionSelect: document.getElementById("regionSelect"),
@@ -499,9 +503,11 @@ function renderDigest(payload) {
   if (!digest) {
     refs.digestView.innerHTML = '<p class="muted">还没有生成日报。</p>';
     refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
+    refs.digestEditorView.innerHTML = '<p class="muted">先生成预览或打开一份已保存的日报，编辑页才会出现。</p>';
     return;
   }
   state.currentDigest = digest;
+  state.currentDigestPayload = digestPayload;
   const highlights = (digest.highlights || [])
     .map((item) => `<li>${escapeHtml(item)}</li>`)
     .join("");
@@ -541,6 +547,7 @@ function renderDigest(payload) {
     ${digest.closing ? `<p class="article-brief">${escapeHtml(digest.closing)}</p>` : ""}
   `;
   renderDigestPreview(digestPayload);
+  renderDigestEditor(digestPayload);
 }
 
 function decisionLabel(decision) {
@@ -562,6 +569,18 @@ function decisionStatusClass(decision) {
   if (decision === "selected") return "status-good";
   if (decision === "ranked_out" || decision === "duplicate_secondary") return "status-pending";
   return "status-warn";
+}
+
+function snapshotStatusClass(status) {
+  if (status === "published") return "status-good";
+  if (status === "draft") return "status-pending";
+  return "";
+}
+
+function snapshotStatusLabel(status) {
+  if (status === "published") return "已发布快照";
+  if (status === "draft") return "编辑稿";
+  return "预览";
 }
 
 function renderDigestPreview(payload) {
@@ -598,6 +617,74 @@ function renderDigestPreview(payload) {
   `;
 }
 
+function renderDigestEditor(payload) {
+  const snapshot = payload?.editor_snapshot || null;
+  const items = snapshot?.items || [];
+  if (!items.length) {
+    refs.digestEditorView.innerHTML = '<p class="muted">先生成预览或打开一份已保存的日报，编辑页才会出现。</p>';
+    return;
+  }
+  const summary = payload?.selection_summary || {};
+  refs.digestEditorView.innerHTML = `
+    <p class="article-brief">
+      <span class="chip ${snapshotStatusClass(snapshot.snapshot_status)}">${escapeHtml(snapshotStatusLabel(snapshot.snapshot_status))}</span>
+      <span class="chip">候选 ${escapeHtml(String(summary.candidate_articles || items.length))}</span>
+      <span class="chip">入选 ${escapeHtml(String(summary.selected_count || 0))}</span>
+      ${
+        snapshot.last_published_at
+          ? `<span class="chip">最近发布 ${escapeHtml(snapshot.last_published_at)}</span>`
+          : ""
+      }
+    </p>
+    ${items
+      .map(
+        (item) => `
+          <article class="publication-card digest-editor-item" data-article-id="${item.article_id}">
+            <header class="publication-head">
+              <div>
+                <strong>${escapeHtml(item.original_title || "")}</strong>
+                <div class="publication-meta">
+                  <span>${escapeHtml(item.source_name || "")}</span>
+                  <span>${escapeHtml(item.published_at || "")}</span>
+                </div>
+              </div>
+              <div class="chip-row compact">
+                <span class="chip ${decisionStatusClass(item.base_decision === "selected" || item.selected ? "selected" : item.base_decision)}">${escapeHtml(decisionLabel(item.base_decision || "selected"))}</span>
+                <span class="chip">score ${escapeHtml(String(item.rank_score || 0))}</span>
+                ${item.must_include ? '<span class="chip">must_include</span>' : ""}
+                ${item.is_pinned ? '<span class="chip">pinned</span>' : ""}
+              </div>
+            </header>
+            <div class="form-grid digest-editor-grid">
+              <label class="check-label">
+                <input data-role="selected" type="checkbox" ${item.selected ? "checked" : ""} />
+                纳入发布稿
+              </label>
+              <label>
+                排序
+                <input data-role="manual-rank" type="number" min="1" max="999" value="${escapeAttribute(String(item.manual_rank || ""))}" />
+              </label>
+              <label>
+                分组标题
+                <input data-role="section-override" type="text" placeholder="${escapeAttribute(item.default_section || "")}" value="${escapeAttribute(item.section_override || "")}" />
+              </label>
+            </div>
+            <label>
+              发布标题
+              <input data-role="publish-title-override" type="text" placeholder="${escapeAttribute(item.original_title || "")}" value="${escapeAttribute(item.publish_title_override || "")}" />
+            </label>
+            <label>
+              发布摘要
+              <textarea data-role="publish-summary-override" placeholder="${escapeAttribute(item.original_summary || "")}">${escapeHtml(item.publish_summary_override || "")}</textarea>
+            </label>
+            <p class="article-brief"><strong>原因：</strong>${escapeHtml((item.selection_reasons || []).join(", ") || "none")}</p>
+          </article>
+        `
+      )
+      .join("")}
+  `;
+}
+
 function renderArchive(digests) {
   refs.digestArchive.innerHTML = digests.length
     ? digests
@@ -606,6 +693,11 @@ function renderArchive(digests) {
           <article class="archive-item" data-digest-id="${item.id}">
             <strong>${escapeHtml(item.title)}</strong>
             <p class="muted">${escapeHtml(item.generated_at)} · ${escapeHtml(item.region)} · ${item.article_count} 篇</p>
+            ${
+              item.payload?.editor_snapshot?.snapshot_status
+                ? `<div class="chip-row compact"><span class="chip ${snapshotStatusClass(item.payload.editor_snapshot.snapshot_status)}">${escapeHtml(snapshotStatusLabel(item.payload.editor_snapshot.snapshot_status))}</span></div>`
+                : ""
+            }
             <button class="button ghost" data-action="open-digest" data-digest-id="${item.id}">查看</button>
           </article>
         `
@@ -1204,6 +1296,63 @@ async function previewDigest() {
   renderDigest(payload);
 }
 
+function collectDigestEditorItems() {
+  return Array.from(refs.digestEditorView.querySelectorAll(".digest-editor-item")).map((card) => {
+    const articleId = Number(card.dataset.articleId);
+    const selected = card.querySelector('[data-role="selected"]').checked;
+    const manualRankRaw = card.querySelector('[data-role="manual-rank"]').value.trim();
+    return {
+      article_id: articleId,
+      selected,
+      manual_rank: manualRankRaw ? Number(manualRankRaw) : null,
+      section_override: card.querySelector('[data-role="section-override"]').value.trim() || null,
+      publish_title_override:
+        card.querySelector('[data-role="publish-title-override"]').value.trim() || null,
+      publish_summary_override:
+        card.querySelector('[data-role="publish-summary-override"]').value.trim() || null,
+    };
+  });
+}
+
+async function freezeDigestSnapshot() {
+  const filters = getFilters();
+  const payload = await fetchJson("/admin/digests/snapshot", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      region: filters.region,
+      since_hours: filters.since_hours,
+      limit: filters.limit,
+      use_llm: true,
+      article_ids: (state.currentDigestPayload?.articles || []).map((item) => item.id),
+      editor_items: collectDigestEditorItems(),
+    }),
+  });
+  logJob("freeze digest snapshot", payload);
+  renderDigest(payload);
+  setSelectedDigestId(payload.stored_digest?.id || payload.digest?.stored_digest?.id || null);
+  await refreshAll();
+}
+
+async function saveDigestEditor() {
+  const digestId =
+    state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
+  if (!digestId) {
+    throw new Error("请先冻结为编辑稿，再保存编辑修改");
+  }
+  const payload = await fetchJson(`/admin/digests/${digestId}/editor`, {
+    method: "PATCH",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      editor_items: collectDigestEditorItems(),
+    }),
+  });
+  logJob("save digest editor", payload);
+  renderDigest(payload);
+  setSelectedDigestId(payload.stored_digest?.id || digestId);
+  await refreshAll();
+}
+
 async function runPipeline() {
   const filters = getFilters();
   const payload = await fetchJson("/admin/pipeline", {
@@ -1230,10 +1379,13 @@ async function runPipeline() {
 async function runPublish() {
   const filters = getFilters();
   const targets = getPublishTargets();
+  const digestId =
+    state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
   const payload = await fetchJson("/admin/publish", {
     method: "POST",
     headers: adminHeaders(),
     body: JSON.stringify({
+      digest_id: digestId,
       region: filters.region,
       since_hours: filters.since_hours,
       limit: filters.limit,
@@ -1292,6 +1444,8 @@ refs.ingestButton.addEventListener("click", () => runIngest().catch((error) => l
 refs.extractButton.addEventListener("click", () => runExtract().catch((error) => logJob("extract failed", { error: error.message })));
 refs.enrichButton.addEventListener("click", () => runEnrich().catch((error) => logJob("enrich failed", { error: error.message })));
 refs.digestPreviewButton.addEventListener("click", () => previewDigest().catch((error) => logJob("digest preview failed", { error: error.message })));
+refs.freezeDigestButton.addEventListener("click", () => freezeDigestSnapshot().catch((error) => logJob("freeze digest snapshot failed", { error: error.message })));
+refs.saveDigestEditorButton.addEventListener("click", () => saveDigestEditor().catch((error) => logJob("save digest editor failed", { error: error.message })));
 refs.digestButton.addEventListener("click", () => runDigest().catch((error) => logJob("digest failed", { error: error.message })));
 refs.pipelineButton.addEventListener("click", () => runPipeline().catch((error) => logJob("pipeline failed", { error: error.message })));
 refs.publishButton.addEventListener("click", () => runPublish().catch((error) => logJob("publish failed", { error: error.message })));
