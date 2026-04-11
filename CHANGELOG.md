@@ -2,6 +2,24 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.46] - 2026-04-11
+
+### Added
+
+- Frozen digest snapshot support with editable `manual_rank`, `section_override`, `publish_title_override`, and `publish_summary_override` fields
+- New admin routes `POST /admin/digests/snapshot` and `PATCH /admin/digests/{digest_id}/editor` for saving and revising publishable digest drafts
+
+### Changed
+
+- Package version is now `1.2.46`
+- Publish flows now prefer a stored digest snapshot when `digest_id` is supplied, so outbound content matches the reviewed editor state instead of a live recompute
+- The admin dashboard now includes a dedicated pre-publish digest editor panel for freezing, revising, and reviewing publish-time decisions
+
+### Fixed
+
+- Preserved editor snapshot state through stored digest payload reloads so previously archived digests can still be edited and republished safely
+- Kept digest compatibility docs and bilingual README guidance aligned with the new preview-to-snapshot publishing workflow
+
 ## [1.2.45] - 2026-04-10
 
 ### Added
