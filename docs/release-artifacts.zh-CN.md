@@ -22,6 +22,7 @@
 ## 下载并校验
 
 从 Release 页面下载 wheel、source archive 和 `sha256sums.txt`。
+在这些文件所在的同一目录里执行 checksum 校验命令。
 
 ### Linux
 
