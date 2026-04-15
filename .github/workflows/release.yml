@@ -46,7 +46,13 @@ jobs:
         run: python -m build
 
       - name: Generate artifact checksums
-        run: sha256sum dist/* > dist/sha256sums.txt
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          : > sha256sums.txt
+          for artifact in *.whl *.tar.gz; do
+            sha256sum "${artifact}" >> sha256sums.txt
+          done
 
       - name: Generate SBOM
         run: |

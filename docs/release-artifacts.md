@@ -22,6 +22,7 @@ For tags created through `.github/workflows/release.yml`, the smoke workflow is 
 ## Download And Verify
 
 From a release page, download the wheel, source archive, and `sha256sums.txt`.
+Run the checksum command from the same directory that contains those downloaded files.
 
 ### Linux
 

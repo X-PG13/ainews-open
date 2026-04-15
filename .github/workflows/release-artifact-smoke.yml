@@ -44,25 +44,26 @@ jobs:
 
       - name: Download release assets
         run: |
-          mkdir -p dist
+          mkdir -p release-assets
           gh release download "${RELEASE_TAG}" \
-            --dir dist \
+            --dir release-assets \
             --pattern "*.whl" \
             --pattern "*.tar.gz" \
             --pattern "sha256sums.txt"
-          ls -la dist
+          ls -la release-assets
 
       - name: Verify release checksums
-        run: sha256sum -c dist/sha256sums.txt
+        working-directory: release-assets
+        run: sha256sum -c sha256sums.txt
 
       - name: Install artifact
         run: |
           case "${{ matrix.artifact }}" in
             wheel)
-              ARTIFACT_PATH="$(find dist -maxdepth 1 -type f -name '*.whl' | head -n 1)"
+              ARTIFACT_PATH="$(find release-assets -maxdepth 1 -type f -name '*.whl' | head -n 1)"
               ;;
             sdist)
-              ARTIFACT_PATH="$(find dist -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
+              ARTIFACT_PATH="$(find release-assets -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
               ;;
           esac
           test -n "${ARTIFACT_PATH}"
