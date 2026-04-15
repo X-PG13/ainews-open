@@ -2,6 +2,23 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.48] - 2026-04-15
+
+### Added
+
+- Community triage guidance that defines when contributors should use GitHub Issues versus GitHub Discussions
+- Maintainer bootstrap docs for first-time GitHub Pages and PyPI trusted publishing setup
+
+### Changed
+
+- Package version is now `1.2.48`
+- README, deployment, release checklist, support policy, and issue templates now point maintainers and contributors to the new release-operations and discussion-routing docs
+
+### Fixed
+
+- Release checksum files now use downloaded asset filenames so `sha256sum -c sha256sums.txt` works directly from the release download directory
+- Release artifact smoke verification now checks checksums from the downloaded asset directory instead of assuming a `dist/` prefix
+
 ## [1.2.47] - 2026-04-15
 
 ### Added
