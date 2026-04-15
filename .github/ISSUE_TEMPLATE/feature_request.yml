@@ -1,9 +1,13 @@
 name: Feature Request
-description: Propose a new capability or workflow improvement
+description: Propose a concrete capability or workflow improvement that is ready to be tracked as work
 title: "[Feature] "
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when the change is concrete enough to track as implementation work. For early ideas or open-ended design exploration, start in GitHub Discussions first.
   - type: textarea
     id: problem
     attributes:

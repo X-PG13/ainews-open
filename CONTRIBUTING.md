@@ -57,7 +57,8 @@ make check
 
 ## Issues And Security
 
-- Use the GitHub issue templates for bugs and feature requests.
+- Use GitHub issues for reproducible bugs, scoped documentation defects, and concrete feature work.
+- Use GitHub Discussions for usage questions, early ideas, deployment notes, and design exploration that is not yet implementation-ready.
+- Start with `docs/community-triage.md` and `SUPPORT.md` if you are not sure which channel fits.
 - Do not report vulnerabilities through public issues; follow `SECURITY.md`.
 - Private vulnerability reports should go through the GitHub Security Advisory channel configured in `.github/ISSUE_TEMPLATE/config.yml`.
-- Read `SUPPORT.md` before opening broad usage questions or support requests.
