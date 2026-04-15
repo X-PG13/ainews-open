@@ -113,6 +113,62 @@ class RepositoryTestCase(unittest.TestCase):
             self.assertEqual(duplicate["duplicate_group"], primary["duplicate_group"])
             self.assertEqual(duplicate["duplicate_reason"], "normalized_title_dedup_key")
 
+    def test_repository_groups_old_variants_relative_to_article_publish_time(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repository = ArticleRepository(Path(temp_dir) / "ainews.db")
+            published = utc_now() - timedelta(days=30)
+
+            first = ArticleRecord(
+                source_id="openai-news",
+                source_name="OpenAI News",
+                title="OpenAI launches enterprise governance controls",
+                url="https://openai.com/index/enterprise-governance",
+                canonical_url="https://openai.com/index/enterprise-governance",
+                summary="Direct release coverage for enterprise governance controls.",
+                published_at=published,
+                discovered_at=published,
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "Direct release coverage for enterprise governance controls.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+            second = ArticleRecord(
+                source_id="yahoo-ai",
+                source_name="Yahoo AI",
+                title="OpenAI launches enterprise governance controls",
+                url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                canonical_url="https://www.yahoo.com/tech/openai-enterprise-governance-123.html",
+                summary="Syndicated coverage with alternate framing for enterprise governance controls.",
+                published_at=published + timedelta(minutes=5),
+                discovered_at=published + timedelta(minutes=5),
+                language="en",
+                region="international",
+                country="US",
+                topic="company",
+                content_hash=make_content_hash(
+                    "OpenAI launches enterprise governance controls",
+                    "Syndicated coverage with alternate framing for enterprise governance controls.",
+                ),
+                dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                raw_payload={},
+            )
+
+            self.assertTrue(repository.insert_if_new(first))
+            self.assertTrue(repository.insert_if_new(second))
+
+            rows = repository.list_articles(limit=10, include_hidden=True)
+            primary = next(row for row in rows if row["is_duplicate_primary"])
+            duplicate = next(row for row in rows if not row["is_duplicate_primary"])
+            self.assertEqual(primary["source_id"], "openai-news")
+            self.assertEqual(duplicate["duplicate_of"], primary["id"])
+            self.assertEqual(duplicate["duplicate_reason"], "normalized_title_dedup_key")
+
     def test_repository_can_promote_duplicate_primary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repository = ArticleRepository(Path(temp_dir) / "ainews.db")

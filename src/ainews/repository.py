@@ -581,8 +581,8 @@ class ArticleRepository:
     def insert_article(
         self, article: ArticleRecord, dedup_window_hours: int = 72
     ) -> Dict[str, object]:
-        threshold = (utc_now() - timedelta(hours=dedup_window_hours)).isoformat()
         prepared = self._prepare_article_record(article)
+        threshold = (prepared.published_at - timedelta(hours=dedup_window_hours)).isoformat()
 
         with self._connect() as connection:
             existing = connection.execute(
