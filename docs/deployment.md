@@ -153,10 +153,7 @@ The repository also includes:
 - [codeql.yml](../.github/workflows/codeql.yml) for security analysis
 - [.github/dependabot.yml](../.github/dependabot.yml) for dependency update PRs
 
-Release maintainers should also configure:
-
-- a `pypi` environment with PyPI trusted publishing enabled
-- GitHub Pages if the demo site should be public
+If this is the first time you are enabling GitHub Pages or PyPI publishing for the repository, follow [maintainer-bootstrap.md](./maintainer-bootstrap.md) for the exact repository settings, environment names, and trusted-publisher fields expected by these workflows.
 
 Recommended secrets:
 

@@ -96,6 +96,7 @@ make check
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Monitoring](docs/monitoring.md)
+- [Maintainer Bootstrap](docs/maintainer-bootstrap.md)
 - [PR Review Policy](docs/pr-review-policy.md)
 - [Release Artifacts](docs/release-artifacts.md)
 - [Use Cases](docs/use-cases.md)

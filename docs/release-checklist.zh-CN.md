@@ -32,6 +32,7 @@ make check
 
 确认以下项都正常：
 
+- 如果仓库要启用 GitHub Pages 或 PyPI，先确认 [maintainer-bootstrap.zh-CN.md](./maintainer-bootstrap.zh-CN.md) 里的首次初始化已经完成
 - GitHub Actions `CI` 为绿色
 - GitHub Actions `CodeQL` 为绿色
 - 上一个已发布 tag 的 GitHub Actions `Release Artifact Smoke` 为绿色
