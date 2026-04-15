@@ -3278,22 +3278,22 @@ class ArticleRepository:
             publication_rows = connection.execute(
                 """
                 SELECT
-                    id,
-                    digest_id,
-                    digest_snapshot_version,
-                    target,
-                    status,
-                    external_id,
-                    message,
-                    response_payload,
-                    created_at,
-                    updated_at,
+                    publications.id,
+                    publications.digest_id,
+                    publications.digest_snapshot_version,
+                    publications.target,
+                    publications.status,
+                    publications.external_id,
+                    publications.message,
+                    publications.response_payload,
+                    publications.created_at,
+                    publications.updated_at,
                     COALESCE(d.current_version, 0) AS current_digest_version
                 FROM publications
                 LEFT JOIN digests AS d
                     ON d.id = publications.digest_id
                 WHERE publications.digest_id = ?
-                ORDER BY created_at DESC
+                ORDER BY publications.created_at DESC
                 """,
                 (digest_id,),
             ).fetchall()

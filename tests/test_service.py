@@ -158,6 +158,21 @@ class StubPublisher:
             "errors": 0,
         }
 
+    def preview(self, payload, *, targets=None):
+        requested = self.normalize_targets(targets) or ["static_site"]
+        return {
+            "requested_targets": requested,
+            "targets": [
+                {
+                    "target": target,
+                    "preview": {
+                        "title": str((payload.get("digest") or {}).get("title") or ""),
+                    },
+                }
+                for target in requested
+            ],
+        }
+
     def can_refresh_publication(self, publication):
         return publication.get("target") == "wechat"
 
@@ -712,6 +727,167 @@ class ServiceFilterTestCase(unittest.TestCase):
                 publish_result["digest"]["editor_snapshot"]["snapshot_status"],
                 "published",
             )
+
+    def test_digest_versions_rollback_and_preview_targets_are_persisted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            settings = Settings(
+                database_path=Path(temp_dir) / "ainews.db",
+                sources_file=Path(temp_dir) / "sources.json",
+            )
+            repository = ArticleRepository(settings.database_path)
+            source = SourceDefinition(
+                id="openai-news",
+                name="OpenAI News",
+                url="https://openai.com/news/rss.xml",
+                region="international",
+                language="en",
+                country="US",
+                topic="company",
+            )
+            now = utc_now()
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id=source.id,
+                    source_name=source.name,
+                    title="OpenAI launches enterprise governance controls",
+                    url="https://openai.com/index/enterprise-governance",
+                    canonical_url="https://openai.com/index/enterprise-governance",
+                    summary="Direct release coverage.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "OpenAI launches enterprise governance controls",
+                        "Direct release coverage.",
+                    ),
+                    dedup_key=make_dedup_key("OpenAI launches enterprise governance controls"),
+                    raw_payload={},
+                )
+            )
+            repository.insert_if_new(
+                ArticleRecord(
+                    source_id="anthropic-news",
+                    source_name="Anthropic News",
+                    title="Anthropic documents new rollback controls",
+                    url="https://anthropic.com/news/rollback-controls",
+                    canonical_url="https://anthropic.com/news/rollback-controls",
+                    summary="Another strong enterprise AI story.",
+                    published_at=now,
+                    discovered_at=now,
+                    language="en",
+                    region="international",
+                    country="US",
+                    topic="company",
+                    content_hash=make_content_hash(
+                        "Anthropic documents new rollback controls",
+                        "Another strong enterprise AI story.",
+                    ),
+                    dedup_key=make_dedup_key("Anthropic documents new rollback controls"),
+                    raw_payload={},
+                )
+            )
+            service = NewsService(
+                settings,
+                repository=repository,
+                source_registry=StubRegistry([source]),
+                publisher=StubPublisher(),
+            )
+            articles = repository.list_articles(limit=10, include_hidden=True)
+            article_ids = [int(item["id"]) for item in articles]
+            openai_id = next(int(item["id"]) for item in articles if item["source_id"] == "openai-news")
+            anthropic_id = next(
+                int(item["id"]) for item in articles if item["source_id"] == "anthropic-news"
+            )
+
+            created = service.create_digest_snapshot(
+                region="all",
+                article_ids=article_ids,
+                since_hours=24,
+                limit=10,
+                use_llm=False,
+                editor_items=[
+                    {
+                        "article_id": openai_id,
+                        "selected": True,
+                        "manual_rank": 1,
+                        "publish_title_override": "版本1：OpenAI 优先",
+                        "publish_summary_override": "版本1摘要",
+                    }
+                ],
+                actor="editor-a",
+                change_summary="initial snapshot",
+            )
+            digest_id = int(created["stored_digest"]["id"])
+            version_one_title = created["selection_preview"][0]["title"]
+            self.assertEqual(created["stored_digest"]["current_version"], 1)
+
+            updated = service.update_digest_editor(
+                digest_id,
+                editor_items=[
+                    {
+                        "article_id": anthropic_id,
+                        "selected": True,
+                        "manual_rank": 1,
+                        "publish_title_override": "版本2：Anthropic 优先",
+                        "publish_summary_override": "版本2摘要",
+                    },
+                    {
+                        "article_id": openai_id,
+                        "selected": True,
+                        "manual_rank": 2,
+                    },
+                ],
+                actor="editor-b",
+                change_summary="promote anthropic",
+            )
+
+            self.assertEqual(updated["stored_digest"]["current_version"], 2)
+            self.assertEqual(updated["selection_preview"][0]["title"], "版本2：Anthropic 优先")
+            history = service.list_digest_versions(digest_id, limit=10)
+            self.assertEqual(history["current_version"], 2)
+            self.assertEqual([item["version"] for item in history["versions"][:2]], [2, 1])
+            self.assertEqual(history["versions"][0]["change_summary"], "promote anthropic")
+
+            preview = service.preview_publication_targets(
+                digest_id=digest_id,
+                targets=["static_site", "telegram"],
+            )
+            self.assertEqual(
+                preview["preview_targets"]["requested_targets"],
+                ["static_site", "telegram"],
+            )
+            self.assertEqual(len(preview["preview_targets"]["targets"]), 2)
+
+            publish_result = service.publish_digest(digest_id=digest_id, targets=["static_site"])
+            self.assertEqual(publish_result["digest_snapshot_version"], 2)
+            self.assertEqual(
+                publish_result["publication_records"][0]["digest_snapshot_version"],
+                2,
+            )
+            history = service.list_digest_versions(digest_id, limit=10)
+            version_two = next(item for item in history["versions"] if item["version"] == 2)
+            self.assertEqual(
+                version_two["publication_records"][0]["digest_snapshot_version"],
+                2,
+            )
+
+            rolled_back = service.rollback_digest_snapshot(
+                digest_id,
+                version=1,
+                actor="editor-c",
+                change_summary="restore version 1",
+            )
+
+            self.assertEqual(rolled_back["stored_digest"]["current_version"], 3)
+            self.assertEqual(rolled_back["selection_preview"][0]["title"], version_one_title)
+            history = service.list_digest_versions(digest_id, limit=10)
+            latest = history["versions"][0]
+            self.assertEqual(latest["version"], 3)
+            self.assertEqual(latest["action"], "rollback")
+            self.assertEqual(latest["restored_from_version"], 1)
 
     def test_enrich_and_digest_with_llm_client(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
