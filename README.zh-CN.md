@@ -96,6 +96,7 @@ make check
 - [数据库迁移](docs/database-migrations.md)
 - [故障排查](docs/troubleshooting.zh-CN.md)
 - [监控接入](docs/monitoring.zh-CN.md)
+- [维护者初始化清单](docs/maintainer-bootstrap.zh-CN.md)
 - [PR 审核约定](docs/pr-review-policy.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)

@@ -32,6 +32,7 @@ make check
 
 Confirm:
 
+- one-time repository setup in [maintainer-bootstrap.md](./maintainer-bootstrap.md) is complete if this repository publishes to GitHub Pages or PyPI
 - GitHub Actions `CI` is green
 - GitHub Actions `CodeQL` is green
 - GitHub Actions `Release Artifact Smoke` is green for the last published tag
