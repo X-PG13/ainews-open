@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-  { name = "Open Source Contributors" }
+  { name = "X-PG13", email = "2720174336@qq.com" }
 ]
 maintainers = [
   { name = "X-PG13", email = "2720174336@qq.com" }
