@@ -49,9 +49,18 @@ ARTICLE_EXTRA_COLUMNS = {
 
 PUBLICATION_EXTRA_COLUMNS = {
     "updated_at": "TEXT NOT NULL DEFAULT ''",
+    "digest_snapshot_version": "INTEGER NOT NULL DEFAULT 0",
 }
 
-CURRENT_SCHEMA_VERSION = 12
+DIGEST_EXTRA_COLUMNS = {
+    "updated_at": "TEXT NOT NULL DEFAULT ''",
+    "current_version": "INTEGER NOT NULL DEFAULT 1",
+    "created_by": "TEXT NOT NULL DEFAULT ''",
+    "updated_by": "TEXT NOT NULL DEFAULT ''",
+    "change_summary": "TEXT NOT NULL DEFAULT ''",
+}
+
+CURRENT_SCHEMA_VERSION = 13
 
 ARTICLE_SELECT_COLUMNS = """
     articles.id,
@@ -208,12 +217,32 @@ class ArticleRepository:
                     article_count INTEGER NOT NULL,
                     source_count INTEGER NOT NULL,
                     generated_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT '',
+                    current_version INTEGER NOT NULL DEFAULT 1,
+                    created_by TEXT NOT NULL DEFAULT '',
+                    updated_by TEXT NOT NULL DEFAULT '',
+                    change_summary TEXT NOT NULL DEFAULT '',
                     payload TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS digest_snapshot_versions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    digest_id INTEGER NOT NULL,
+                    version INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    created_by TEXT NOT NULL DEFAULT '',
+                    updated_by TEXT NOT NULL DEFAULT '',
+                    change_summary TEXT NOT NULL DEFAULT '',
+                    action TEXT NOT NULL DEFAULT '',
+                    restored_from_version INTEGER NOT NULL DEFAULT 0,
+                    payload TEXT NOT NULL,
+                    UNIQUE(digest_id, version)
                 );
 
                 CREATE TABLE IF NOT EXISTS publications (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     digest_id INTEGER,
+                    digest_snapshot_version INTEGER NOT NULL DEFAULT 0,
                     target TEXT NOT NULL,
                     status TEXT NOT NULL,
                     external_id TEXT NOT NULL,
@@ -316,6 +345,7 @@ class ArticleRepository:
                 """
             )
             self._ensure_article_migrations(connection)
+            self._ensure_digest_migrations(connection)
             self._ensure_publication_migrations(connection)
             self._ensure_source_state_migrations(connection)
             connection.executescript(
@@ -365,11 +395,23 @@ class ArticleRepository:
                 CREATE INDEX IF NOT EXISTS idx_digests_region_generated_at
                     ON digests(region, generated_at);
 
+                CREATE INDEX IF NOT EXISTS idx_digests_current_version
+                    ON digests(current_version);
+
+                CREATE INDEX IF NOT EXISTS idx_digest_snapshot_versions_digest_version
+                    ON digest_snapshot_versions(digest_id, version DESC);
+
+                CREATE INDEX IF NOT EXISTS idx_digest_snapshot_versions_created_at
+                    ON digest_snapshot_versions(created_at DESC);
+
                 CREATE INDEX IF NOT EXISTS idx_publications_created_at
                     ON publications(created_at);
 
                 CREATE INDEX IF NOT EXISTS idx_publications_digest_target
                     ON publications(digest_id, target, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_publications_digest_snapshot_version
+                    ON publications(digest_id, digest_snapshot_version, created_at);
 
                 CREATE INDEX IF NOT EXISTS idx_source_states_cooldown_until
                     ON source_states(cooldown_until);
@@ -421,6 +463,20 @@ class ArticleRepository:
                     raise
         self._backfill_article_metadata(connection)
 
+    def _ensure_digest_migrations(self, connection: sqlite3.Connection) -> None:
+        existing_columns = self._table_columns(connection, "digests")
+        for column_name, column_type in DIGEST_EXTRA_COLUMNS.items():
+            if column_name in existing_columns:
+                continue
+            try:
+                connection.execute(
+                    f"ALTER TABLE digests ADD COLUMN {column_name} {column_type}"
+                )
+            except sqlite3.OperationalError as exc:
+                if "duplicate column name" not in str(exc).lower():
+                    raise
+        self._backfill_digest_metadata(connection)
+
     def _ensure_publication_migrations(self, connection: sqlite3.Connection) -> None:
         existing_columns = self._table_columns(connection, "publications")
         for column_name, column_type in PUBLICATION_EXTRA_COLUMNS.items():
@@ -433,6 +489,102 @@ class ArticleRepository:
             except sqlite3.OperationalError as exc:
                 if "duplicate column name" not in str(exc).lower():
                     raise
+
+    def _backfill_digest_metadata(self, connection: sqlite3.Connection) -> None:
+        rows = connection.execute(
+            """
+            SELECT
+                id,
+                generated_at,
+                updated_at,
+                current_version,
+                created_by,
+                updated_by,
+                change_summary,
+                payload
+            FROM digests
+            """
+        ).fetchall()
+        for row in rows:
+            digest_id = int(row["id"])
+            payload = json.loads(row["payload"])
+            snapshot = payload.get("editor_snapshot") if isinstance(payload, dict) else {}
+            if not isinstance(snapshot, dict):
+                snapshot = {}
+            generated_at = clean_text(str(row["generated_at"] or ""))
+            updated_at = clean_text(str(row["updated_at"] or "")) or clean_text(
+                str(snapshot.get("updated_at") or "")
+            ) or generated_at
+            current_version = int(
+                row["current_version"]
+                or snapshot.get("version")
+                or 1
+            )
+            created_by = clean_text(str(row["created_by"] or "")) or clean_text(
+                str(snapshot.get("created_by") or "")
+            ) or "system"
+            updated_by = clean_text(str(row["updated_by"] or "")) or clean_text(
+                str(snapshot.get("updated_by") or "")
+            ) or created_by
+            change_summary = clean_text(str(row["change_summary"] or "")) or clean_text(
+                str(snapshot.get("change_summary") or "")
+            ) or "legacy digest snapshot"
+            connection.execute(
+                """
+                UPDATE digests
+                SET
+                    updated_at = ?,
+                    current_version = ?,
+                    created_by = ?,
+                    updated_by = ?,
+                    change_summary = ?
+                WHERE id = ?
+                """,
+                (
+                    updated_at,
+                    current_version,
+                    created_by,
+                    updated_by,
+                    change_summary,
+                    digest_id,
+                ),
+            )
+            existing_versions = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM digest_snapshot_versions
+                WHERE digest_id = ?
+                """,
+                (digest_id,),
+            ).fetchone()
+            if int(existing_versions["total"] or 0) > 0:
+                continue
+            connection.execute(
+                """
+                INSERT INTO digest_snapshot_versions (
+                    digest_id,
+                    version,
+                    created_at,
+                    created_by,
+                    updated_by,
+                    change_summary,
+                    action,
+                    restored_from_version,
+                    payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    digest_id,
+                    current_version,
+                    updated_at or generated_at or utc_now().isoformat(),
+                    created_by,
+                    updated_by,
+                    change_summary,
+                    "backfill",
+                    0,
+                    json.dumps(payload, ensure_ascii=False),
+                ),
+            )
 
     def _ensure_source_state_migrations(self, connection: sqlite3.Connection) -> None:
         existing_columns = self._table_columns(connection, "source_states")
@@ -2799,9 +2951,17 @@ class ArticleRepository:
         article_count: int,
         source_count: int,
         payload: Optional[dict] = None,
+        created_by: str = "",
+        updated_by: str = "",
+        change_summary: str = "",
     ) -> dict:
         generated_at = utc_now().isoformat()
+        updated_at = generated_at
         stored_payload = payload or digest.to_dict()
+        created_by_value = clean_text(created_by) or "system"
+        updated_by_value = clean_text(updated_by) or created_by_value
+        change_summary_value = clean_text(change_summary) or "generated digest snapshot"
+        current_version = 1
 
         with self._connect() as connection:
             cursor = connection.execute(
@@ -2816,8 +2976,13 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     generated_at,
+                    updated_at,
+                    current_version,
+                    created_by,
+                    updated_by,
+                    change_summary,
                     payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     region,
@@ -2829,10 +2994,27 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     generated_at,
+                    updated_at,
+                    current_version,
+                    created_by_value,
+                    updated_by_value,
+                    change_summary_value,
                     json.dumps(stored_payload, ensure_ascii=False),
                 ),
             )
             digest_id = int(cursor.lastrowid)
+            self._insert_digest_snapshot_version(
+                connection,
+                digest_id=digest_id,
+                version=current_version,
+                created_at=updated_at,
+                created_by=created_by_value,
+                updated_by=updated_by_value,
+                change_summary=change_summary_value,
+                action="create",
+                restored_from_version=0,
+                payload=stored_payload,
+            )
 
         return self.get_digest(digest_id) or {}
 
@@ -2851,6 +3033,11 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     generated_at,
+                    updated_at,
+                    current_version,
+                    created_by,
+                    updated_by,
+                    change_summary,
                     payload
                 FROM digests
                 WHERE id = ?
@@ -2871,7 +3058,11 @@ class ArticleRepository:
         article_count: int,
         source_count: int,
         payload: Dict[str, object],
+        updated_by: Optional[str] = None,
+        change_summary: Optional[str] = None,
+        updated_at: Optional[str] = None,
     ) -> Optional[dict]:
+        updated_at_value = clean_text(updated_at or "") or utc_now().isoformat()
         with self._connect() as connection:
             connection.execute(
                 """
@@ -2883,7 +3074,10 @@ class ArticleRepository:
                     model = ?,
                     article_count = ?,
                     source_count = ?,
-                    payload = ?
+                    payload = ?,
+                    updated_at = ?,
+                    updated_by = COALESCE(?, updated_by),
+                    change_summary = COALESCE(?, change_summary)
                 WHERE id = ?
                 """,
                 (
@@ -2894,8 +3088,92 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     json.dumps(payload, ensure_ascii=False),
+                    updated_at_value,
+                    clean_text(updated_by or "") or None,
+                    clean_text(change_summary or "") or None,
                     digest_id,
                 ),
+            )
+        return self.get_digest(digest_id)
+
+    def save_digest_version(
+        self,
+        digest_id: int,
+        *,
+        title: str,
+        body_markdown: str,
+        provider: str,
+        model: str,
+        article_count: int,
+        source_count: int,
+        payload: Dict[str, object],
+        updated_by: str,
+        change_summary: str,
+        action: str,
+        restored_from_version: int = 0,
+    ) -> Optional[dict]:
+        updated_at = utc_now().isoformat()
+        actor = clean_text(updated_by) or "admin"
+        summary = clean_text(change_summary) or f"{clean_text(action) or 'snapshot'} update"
+        with self._connect() as connection:
+            current_row = connection.execute(
+                """
+                SELECT created_by, current_version
+                FROM digests
+                WHERE id = ?
+                LIMIT 1
+                """,
+                (digest_id,),
+            ).fetchone()
+            if current_row is None:
+                return None
+            created_by = clean_text(str(current_row["created_by"] or "")) or actor
+            next_version = int(current_row["current_version"] or 0) + 1
+            connection.execute(
+                """
+                UPDATE digests
+                SET
+                    title = ?,
+                    body_markdown = ?,
+                    provider = ?,
+                    model = ?,
+                    article_count = ?,
+                    source_count = ?,
+                    payload = ?,
+                    updated_at = ?,
+                    current_version = ?,
+                    created_by = ?,
+                    updated_by = ?,
+                    change_summary = ?
+                WHERE id = ?
+                """,
+                (
+                    title,
+                    body_markdown,
+                    provider,
+                    model,
+                    article_count,
+                    source_count,
+                    json.dumps(payload, ensure_ascii=False),
+                    updated_at,
+                    next_version,
+                    created_by,
+                    actor,
+                    summary,
+                    digest_id,
+                ),
+            )
+            self._insert_digest_snapshot_version(
+                connection,
+                digest_id=digest_id,
+                version=next_version,
+                created_at=updated_at,
+                created_by=created_by,
+                updated_by=actor,
+                change_summary=summary,
+                action=action,
+                restored_from_version=restored_from_version,
+                payload=payload,
             )
         return self.get_digest(digest_id)
 
@@ -2931,6 +3209,11 @@ class ArticleRepository:
                     article_count,
                     source_count,
                     generated_at,
+                    updated_at,
+                    current_version,
+                    created_by,
+                    updated_by,
+                    change_summary,
                     payload
                 FROM digests
                 {where_sql}
@@ -2947,10 +3230,136 @@ class ArticleRepository:
         payload["payload"] = json.loads(payload["payload"])
         return payload
 
+    def get_digest_version(self, digest_id: int, version: int) -> Optional[dict]:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    id,
+                    digest_id,
+                    version,
+                    created_at,
+                    created_by,
+                    updated_by,
+                    change_summary,
+                    action,
+                    restored_from_version,
+                    payload
+                FROM digest_snapshot_versions
+                WHERE digest_id = ? AND version = ?
+                LIMIT 1
+                """,
+                (digest_id, version),
+            ).fetchone()
+        return self._row_to_digest_version_dict(row) if row else None
+
+    def list_digest_versions(self, digest_id: int, *, limit: int = 20) -> List[dict]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    id,
+                    digest_id,
+                    version,
+                    created_at,
+                    created_by,
+                    updated_by,
+                    change_summary,
+                    action,
+                    restored_from_version,
+                    payload
+                FROM digest_snapshot_versions
+                WHERE digest_id = ?
+                ORDER BY version DESC
+                LIMIT ?
+                """,
+                (digest_id, limit),
+            ).fetchall()
+            publication_rows = connection.execute(
+                """
+                SELECT
+                    publications.id,
+                    publications.digest_id,
+                    publications.digest_snapshot_version,
+                    publications.target,
+                    publications.status,
+                    publications.external_id,
+                    publications.message,
+                    publications.response_payload,
+                    publications.created_at,
+                    publications.updated_at,
+                    COALESCE(d.current_version, 0) AS current_digest_version
+                FROM publications
+                LEFT JOIN digests AS d
+                    ON d.id = publications.digest_id
+                WHERE publications.digest_id = ?
+                ORDER BY publications.created_at DESC
+                """,
+                (digest_id,),
+            ).fetchall()
+        publications_by_version: Dict[int, List[Dict[str, object]]] = {}
+        for row in publication_rows:
+            publication = self._row_to_publication_dict(row)
+            version = int(publication.get("digest_snapshot_version") or 0)
+            publications_by_version.setdefault(version, []).append(publication)
+        versions = [self._row_to_digest_version_dict(row) for row in rows]
+        for item in versions:
+            version = int(item.get("version") or 0)
+            item["publication_records"] = publications_by_version.get(version, [])
+        return versions
+
+    @staticmethod
+    def _row_to_digest_version_dict(row: sqlite3.Row) -> Dict[str, object]:
+        payload = dict(row)
+        payload["payload"] = json.loads(payload["payload"])
+        return payload
+
+    @staticmethod
+    def _insert_digest_snapshot_version(
+        connection: sqlite3.Connection,
+        *,
+        digest_id: int,
+        version: int,
+        created_at: str,
+        created_by: str,
+        updated_by: str,
+        change_summary: str,
+        action: str,
+        restored_from_version: int,
+        payload: Dict[str, object],
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO digest_snapshot_versions (
+                digest_id,
+                version,
+                created_at,
+                created_by,
+                updated_by,
+                change_summary,
+                action,
+                restored_from_version,
+                payload
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                digest_id,
+                version,
+                created_at,
+                clean_text(created_by) or "system",
+                clean_text(updated_by) or clean_text(created_by) or "system",
+                clean_text(change_summary),
+                clean_text(action),
+                restored_from_version,
+                json.dumps(payload, ensure_ascii=False),
+            ),
+        )
+
     def save_publication(
         self,
         *,
         digest_id: Optional[int],
+        digest_snapshot_version: int = 0,
         target: str,
         status: str,
         external_id: str = "",
@@ -2964,6 +3373,7 @@ class ArticleRepository:
                 """
                 INSERT INTO publications (
                     digest_id,
+                    digest_snapshot_version,
                     target,
                     status,
                     external_id,
@@ -2971,10 +3381,11 @@ class ArticleRepository:
                     response_payload,
                     created_at,
                     updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     digest_id,
+                    digest_snapshot_version,
                     target,
                     status,
                     external_id,
@@ -3032,17 +3443,21 @@ class ArticleRepository:
             row = connection.execute(
                 """
                 SELECT
-                    id,
-                    digest_id,
-                    target,
-                    status,
-                    external_id,
-                    message,
-                    response_payload,
-                    created_at,
-                    updated_at
+                    publications.id,
+                    publications.digest_id,
+                    publications.digest_snapshot_version,
+                    publications.target,
+                    publications.status,
+                    publications.external_id,
+                    publications.message,
+                    publications.response_payload,
+                    publications.created_at,
+                    publications.updated_at,
+                    COALESCE(d.current_version, 0) AS current_digest_version
                 FROM publications
-                WHERE id = ?
+                LEFT JOIN digests AS d
+                    ON d.id = publications.digest_id
+                WHERE publications.id = ?
                 LIMIT 1
                 """,
                 (publication_id,),
@@ -3063,16 +3478,16 @@ class ArticleRepository:
         publication_id_list = list(publication_ids or [])
         if publication_id_list:
             placeholders = ",".join("?" for _ in publication_id_list)
-            clauses.append(f"id IN ({placeholders})")
+            clauses.append(f"publications.id IN ({placeholders})")
             params.extend(publication_id_list)
         if digest_id is not None:
-            clauses.append("digest_id = ?")
+            clauses.append("publications.digest_id = ?")
             params.append(digest_id)
         if target:
-            clauses.append("target = ?")
+            clauses.append("publications.target = ?")
             params.append(target)
         if status:
-            clauses.append("status = ?")
+            clauses.append("publications.status = ?")
             params.append(status)
 
         where_sql = ""
@@ -3084,18 +3499,22 @@ class ArticleRepository:
             rows = connection.execute(
                 f"""
                 SELECT
-                    id,
-                    digest_id,
-                    target,
-                    status,
-                    external_id,
-                    message,
-                    response_payload,
-                    created_at,
-                    updated_at
+                    publications.id,
+                    publications.digest_id,
+                    publications.digest_snapshot_version,
+                    publications.target,
+                    publications.status,
+                    publications.external_id,
+                    publications.message,
+                    publications.response_payload,
+                    publications.created_at,
+                    publications.updated_at,
+                    COALESCE(d.current_version, 0) AS current_digest_version
                 FROM publications
+                LEFT JOIN digests AS d
+                    ON d.id = publications.digest_id
                 {where_sql}
-                ORDER BY created_at DESC
+                ORDER BY publications.created_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -3109,13 +3528,13 @@ class ArticleRepository:
         target: str,
         statuses: Optional[Iterable[str]] = None,
     ) -> Optional[dict]:
-        clauses = ["digest_id = ?", "target = ?"]
+        clauses = ["publications.digest_id = ?", "publications.target = ?"]
         params: List[object] = [digest_id, target]
 
         status_list = [str(item) for item in (statuses or []) if str(item)]
         if status_list:
             placeholders = ",".join("?" for _ in status_list)
-            clauses.append(f"status IN ({placeholders})")
+            clauses.append(f"publications.status IN ({placeholders})")
             params.extend(status_list)
 
         where_sql = " AND ".join(clauses)
@@ -3123,18 +3542,22 @@ class ArticleRepository:
             row = connection.execute(
                 f"""
                 SELECT
-                    id,
-                    digest_id,
-                    target,
-                    status,
-                    external_id,
-                    message,
-                    response_payload,
-                    created_at,
-                    updated_at
+                    publications.id,
+                    publications.digest_id,
+                    publications.digest_snapshot_version,
+                    publications.target,
+                    publications.status,
+                    publications.external_id,
+                    publications.message,
+                    publications.response_payload,
+                    publications.created_at,
+                    publications.updated_at,
+                    COALESCE(d.current_version, 0) AS current_digest_version
                 FROM publications
+                LEFT JOIN digests AS d
+                    ON d.id = publications.digest_id
                 WHERE {where_sql}
-                ORDER BY created_at DESC
+                ORDER BY publications.created_at DESC
                 LIMIT 1
                 """,
                 params,
@@ -3145,6 +3568,11 @@ class ArticleRepository:
     def _row_to_publication_dict(row: sqlite3.Row) -> Dict[str, object]:
         payload = dict(row)
         payload["response_payload"] = json.loads(payload["response_payload"])
+        payload["digest_changed_after_publish"] = bool(
+            int(payload.get("digest_snapshot_version") or 0) > 0
+            and int(payload.get("current_digest_version") or 0)
+            > int(payload.get("digest_snapshot_version") or 0)
+        )
         return payload
 
     def get_schema_version(self) -> int:

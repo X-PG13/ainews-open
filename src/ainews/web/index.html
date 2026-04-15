@@ -198,7 +198,45 @@
             </div>
           </div>
           <p class="muted">在这里调整最终顺序、分组、发布标题和发布摘要。保存后，发布链路会优先使用当前冻结稿而不是实时重算。</p>
+          <div class="form-grid">
+            <label>
+              编辑者
+              <input id="digestEditorActorInput" type="text" placeholder="例如：X-PG13" />
+            </label>
+            <label>
+              变更摘要
+              <input id="digestChangeSummaryInput" type="text" placeholder="例如：调整头条顺序并补标题" />
+            </label>
+          </div>
           <div id="digestEditorView" class="publication-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">History</p>
+              <h2>编辑稿版本历史</h2>
+            </div>
+            <div class="toolbar-row">
+              <button id="refreshDigestHistoryButton" class="button ghost">刷新历史</button>
+            </div>
+          </div>
+          <p class="muted">每次保存编辑稿都会生成新版本。你可以查看变更摘要、发布记录，并一键回滚到旧版本。</p>
+          <div id="digestHistoryView" class="publication-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Publish Preview</p>
+              <h2>目标平台最终预览</h2>
+            </div>
+            <div class="toolbar-row">
+              <button id="refreshPublishPreviewButton" class="button ghost">刷新预览</button>
+            </div>
+          </div>
+          <p class="muted">这里展示 Telegram、飞书、静态站点和公众号的最终输出形态，确保发布内容和冻结稿一致。</p>
+          <div id="publishPreviewView" class="publication-list"></div>
         </article>
 
         <article class="panel">

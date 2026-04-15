@@ -173,6 +173,31 @@ class DigestPublisher:
         )
         return payload
 
+    def preview(
+        self,
+        payload: Dict[str, object],
+        *,
+        targets: Optional[Iterable[str]] = None,
+    ) -> Dict[str, object]:
+        requested = self._normalize_targets(targets)
+        if not requested:
+            requested = self._normalize_targets(self.settings.publish_targets.split(","))
+        if not requested:
+            requested = ["telegram", "feishu", "static_site", "wechat"]
+
+        previews = []
+        for target in requested:
+            previews.append(
+                {
+                    "target": target,
+                    "preview": self._preview_target(target, payload),
+                }
+            )
+        return {
+            "requested_targets": requested,
+            "targets": previews,
+        }
+
     def _publish_target(
         self,
         target: str,
@@ -189,6 +214,41 @@ class DigestPublisher:
         if target == "wechat":
             submit = self.settings.wechat_publish_after_draft if wechat_submit is None else wechat_submit
             return self._publish_wechat(payload, submit=submit)
+        raise ValueError(f"unsupported publish target: {target}")
+
+    def _preview_target(self, target: str, payload: Dict[str, object]) -> Dict[str, object]:
+        if target == "telegram":
+            text = self._render_plain_text(payload)
+            return {
+                "text": text,
+                "chunks": self._split_text(text, max_chars=4000),
+            }
+        if target == "feishu":
+            text_body = self._build_feishu_text_body(payload)
+            card_body = self._build_feishu_card_body(payload)
+            card = card_body.get("card", {}) if isinstance(card_body, dict) else {}
+            header = card.get("header", {}) if isinstance(card, dict) else {}
+            return {
+                "text": clean_text(str((text_body.get("content") or {}).get("text") or "")),
+                "card": card_body,
+                "card_title": clean_text(str((header.get("title") or {}).get("content") or "")),
+            }
+        if target == "static_site":
+            return {
+                "html": self._render_static_site_html(payload),
+            }
+        if target == "wechat":
+            digest = payload.get("digest") or {}
+            articles = payload.get("articles") or []
+            primary_link = clean_text(self.settings.wechat_content_source_url)
+            if not primary_link and articles:
+                primary_link = clean_text(str(articles[0].get("url", "")))
+            return {
+                "title": self._wechat_title(str(digest.get("title", "AI 新闻日报"))),
+                "digest": truncate_text(str(digest.get("overview", "")), 120),
+                "content_source_url": primary_link,
+                "content_html": self._render_wechat_content(payload),
+            }
         raise ValueError(f"unsupported publish target: {target}")
 
     def _publish_telegram(self, payload: Dict[str, object]) -> PublicationResult:
