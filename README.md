@@ -99,6 +99,7 @@ make check
 - [PR Review Policy](docs/pr-review-policy.md)
 - [Release Artifacts](docs/release-artifacts.md)
 - [Use Cases](docs/use-cases.md)
+- [Community Triage](docs/community-triage.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
 - [Release Checklist](docs/release-checklist.md)
 - [Support Policy](SUPPORT.md)
@@ -216,7 +217,7 @@ python -m pip install -e ".[dev]"
 
 This repository already includes the expected open-source project baseline:
 
-- Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `GOVERNANCE.md`, `MAINTAINERS.md`, `CITATION.cff`
+- Community docs: `CONTRIBUTING.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `GOVERNANCE.md`, `MAINTAINERS.md`, `CITATION.cff`, `docs/community-triage.md`
 - Collaboration templates: GitHub issue templates, pull request template, `CODEOWNERS`, and review policy
 - Quality gates: `ruff`, unit tests, coverage, package build validation, `pre-commit`
 - Automation: CI, tag-based release workflow, CodeQL, Dependabot

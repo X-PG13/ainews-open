@@ -99,6 +99,7 @@ make check
 - [PR 审核约定](docs/pr-review-policy.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
+- [社区分流规范](docs/community-triage.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)
 - [发版清单](docs/release-checklist.zh-CN.md)
 - [支持策略](SUPPORT.md)
@@ -216,7 +217,7 @@ python -m pip install -e ".[dev]"
 
 当前仓库已经补齐以下开源工程基线：
 
-- 社区文档：`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`、`GOVERNANCE.md`、`MAINTAINERS.md`、`CITATION.cff`
+- 社区文档：`CONTRIBUTING.md`、`SUPPORT.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`、`GOVERNANCE.md`、`MAINTAINERS.md`、`CITATION.cff`、`docs/community-triage.zh-CN.md`
 - 协作模板：GitHub issue templates、pull request template、`CODEOWNERS` 和审核约定
 - 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
 - 自动化：CI、tag release workflow、CodeQL、Dependabot
@@ -240,6 +241,7 @@ python -m pip install -e ".[dev]"
 
 - `ROADMAP.md`
 - `SUPPORT.md`
+- `docs/community-triage.zh-CN.md`
 - `GOVERNANCE.md`
 - `MAINTAINERS.md`
 - `docs/architecture.md`

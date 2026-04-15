@@ -4,6 +4,10 @@ title: "[Bug] "
 labels:
   - bug
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible defects. For usage questions or broader design discussion, start in GitHub Discussions instead.
   - type: textarea
     id: summary
     attributes:

@@ -3,6 +3,9 @@ contact_links:
   - name: Security Reporting
     url: https://github.com/X-PG13/ainews-open/security/advisories/new
     about: Report sensitive vulnerabilities privately through GitHub Security Advisories instead of public issues.
+  - name: GitHub Discussions
+    url: https://github.com/X-PG13/ainews-open/discussions
+    about: Ask usage questions, validate early ideas, or share deployment notes without opening an issue first.
   - name: Support Policy
     url: https://github.com/X-PG13/ainews-open/blob/main/SUPPORT.md
     about: Read the support boundaries and version policy before opening broad usage requests.
