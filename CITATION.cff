@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use AI News Open in research, operations reporting, or demos, please cite it using the metadata below."
+title: "AI News Open"
+type: software
+version: "1.2.46"
+license: "MIT"
+abstract: "Open-source workflow for aggregating AI news, translating global coverage into Chinese, and publishing daily digests across channels."
+authors:
+  - family-names: "X-PG13"
+repository-code: "https://github.com/X-PG13/ainews-open"
+url: "https://github.com/X-PG13/ainews-open"
+keywords:
+  - "ai"
+  - "news"
+  - "digest"
+  - "fastapi"
+  - "rss"
+  - "telegram"
+  - "wechat"
