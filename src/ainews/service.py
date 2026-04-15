@@ -1183,6 +1183,16 @@ class NewsService:
             raise ValueError("digest not found")
         return self._payload_from_stored_digest(stored_digest)
 
+    def list_digest_versions(self, digest_id: int, *, limit: int = 20) -> Dict[str, object]:
+        stored_digest = self.repository.get_digest(digest_id)
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        return {
+            "digest_id": digest_id,
+            "current_version": int(stored_digest.get("current_version") or 1),
+            "versions": self.repository.list_digest_versions(digest_id, limit=limit),
+        }
+
     def create_digest_snapshot(
         self,
         *,
@@ -1192,6 +1202,8 @@ class NewsService:
         limit: int = 50,
         use_llm: bool = True,
         editor_items: Optional[List[dict]] = None,
+        actor: str = "",
+        change_summary: str = "",
     ) -> Dict[str, object]:
         payload = self.build_digest(
             region=region,
@@ -1210,6 +1222,10 @@ class NewsService:
             editor_snapshot,
             snapshot_status="draft",
             frozen_at=utc_now().isoformat(),
+            version=1,
+            created_by=self._editor_actor(actor),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(change_summary, fallback="frozen from preview"),
         )
         digest = persisted_payload["digest"]
         stored_digest = self.repository.save_digest(
@@ -1234,6 +1250,9 @@ class NewsService:
                 }
             ),
             payload=self._payload_for_storage(persisted_payload),
+            created_by=self._editor_actor(actor),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(change_summary, fallback="frozen from preview"),
         )
         persisted_payload["stored_digest"] = stored_digest
         return persisted_payload
@@ -1243,6 +1262,8 @@ class NewsService:
         digest_id: int,
         *,
         editor_items: List[dict],
+        actor: str = "",
+        change_summary: str = "",
     ) -> Dict[str, object]:
         stored_digest = self.repository.get_digest(digest_id)
         if stored_digest is None:
@@ -1261,9 +1282,15 @@ class NewsService:
             last_published_at=clean_text(
                 str((payload.get("editor_snapshot") or {}).get("last_published_at", ""))
             ),
+            version=int(stored_digest.get("current_version") or 1) + 1,
+            created_by=clean_text(
+                str((payload.get("editor_snapshot") or {}).get("created_by") or stored_digest.get("created_by") or "")
+            ) or self._editor_actor(actor),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(change_summary, fallback="updated digest editor"),
         )
         digest = updated_payload["digest"]
-        stored_digest = self.repository.update_digest(
+        stored_digest = self.repository.save_digest_version(
             digest_id,
             title=str(digest.get("title") or ""),
             body_markdown=str(updated_payload.get("body_markdown") or ""),
@@ -1278,11 +1305,112 @@ class NewsService:
                 }
             ),
             payload=self._payload_for_storage(updated_payload),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(change_summary, fallback="updated digest editor"),
+            action="edit",
         )
         if stored_digest is None:
             raise ValueError("digest not found")
         updated_payload["stored_digest"] = stored_digest
         return updated_payload
+
+    def rollback_digest_snapshot(
+        self,
+        digest_id: int,
+        *,
+        version: int,
+        actor: str = "",
+        change_summary: str = "",
+    ) -> Dict[str, object]:
+        stored_digest = self.repository.get_digest(digest_id)
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        target_version = self.repository.get_digest_version(digest_id, version)
+        if target_version is None:
+            raise ValueError("digest snapshot version not found")
+        payload = self._payload_from_stored_digest(stored_digest)
+        version_payload = target_version.get("payload")
+        if not isinstance(version_payload, dict) or not version_payload.get("digest"):
+            raise ValueError("digest snapshot version payload is invalid")
+        rollback_payload = dict(version_payload)
+        rollback_payload["stored_digest"] = stored_digest
+        rollback_payload["generation_mode"] = "editor"
+        updated_payload = self._apply_editor_snapshot_to_payload(
+            rollback_payload,
+            rollback_payload.get("editor_snapshot") if isinstance(rollback_payload.get("editor_snapshot"), dict) else {},
+            snapshot_status="draft",
+            frozen_at=clean_text(
+                str((rollback_payload.get("editor_snapshot") or {}).get("frozen_at", ""))
+            ) or utc_now().isoformat(),
+            last_published_at=clean_text(
+                str((rollback_payload.get("editor_snapshot") or {}).get("last_published_at", ""))
+            ),
+            version=int(stored_digest.get("current_version") or 1) + 1,
+            created_by=clean_text(
+                str((payload.get("editor_snapshot") or {}).get("created_by") or stored_digest.get("created_by") or "")
+            ) or self._editor_actor(actor),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(
+                change_summary,
+                fallback=f"rolled back to version {version}",
+            ),
+        )
+        digest = updated_payload["digest"]
+        stored_digest = self.repository.save_digest_version(
+            digest_id,
+            title=str(digest.get("title") or ""),
+            body_markdown=str(updated_payload.get("body_markdown") or ""),
+            provider=str(digest.get("provider") or ""),
+            model=str(digest.get("model") or ""),
+            article_count=len(list(updated_payload.get("selection_preview") or [])),
+            source_count=len(
+                {
+                    str(article.get("source_id") or "")
+                    for article in list(updated_payload.get("articles") or [])
+                    if article.get("source_id")
+                }
+            ),
+            payload=self._payload_for_storage(updated_payload),
+            updated_by=self._editor_actor(actor),
+            change_summary=self._editor_change_summary(
+                change_summary,
+                fallback=f"rolled back to version {version}",
+            ),
+            action="rollback",
+            restored_from_version=version,
+        )
+        if stored_digest is None:
+            raise ValueError("digest not found")
+        updated_payload["stored_digest"] = stored_digest
+        return updated_payload
+
+    def preview_publication_targets(
+        self,
+        *,
+        digest_id: Optional[int] = None,
+        region: str = "all",
+        since_hours: Optional[int] = None,
+        limit: int = 30,
+        use_llm: bool = True,
+        targets: Optional[Iterable[str]] = None,
+    ) -> Dict[str, object]:
+        if digest_id is not None:
+            stored_digest = self.repository.get_digest(digest_id)
+            if stored_digest is None:
+                raise ValueError("digest not found")
+            payload = self._payload_from_stored_digest(stored_digest)
+        else:
+            payload = self.build_digest(
+                region=region,
+                since_hours=since_hours,
+                limit=limit,
+                use_llm=use_llm,
+                persist=False,
+            )
+        return {
+            "digest": payload,
+            "preview_targets": self.publisher.preview(payload, targets=targets),
+        }
 
     def list_publications(
         self,
@@ -1709,6 +1837,11 @@ class NewsService:
         }
         records = []
         merged_targets = []
+        snapshot_version = int(
+            (payload.get("editor_snapshot") or {}).get("version")
+            or (payload.get("stored_digest") or {}).get("current_version")
+            or 0
+        )
         failure_categories: Counter[str] = Counter()
         for target in requested_targets:
             if target in already_published:
@@ -1738,6 +1871,7 @@ class NewsService:
             merged_targets.append(item)
             record = self.repository.save_publication(
                 digest_id=digest_id,
+                digest_snapshot_version=snapshot_version,
                 target=str(item.get("target", "")),
                 status=self._publication_record_status(item),
                 external_id=str(item.get("external_id", "")),
@@ -1751,6 +1885,7 @@ class NewsService:
         publish_result["targets"] = merged_targets
         publish_result["published"] = int(publish_result.get("published", 0))
         publish_result["skipped"] = len(already_published)
+        publish_result["digest_snapshot_version"] = snapshot_version
         if publish_result.get("errors", 0):
             publish_result["status"] = "partial_error"
         else:
@@ -1876,6 +2011,10 @@ class NewsService:
         )
         if persist:
             editor_snapshot["frozen_at"] = utc_now().isoformat()
+            editor_snapshot["version"] = 1
+            editor_snapshot["created_by"] = "system"
+            editor_snapshot["updated_by"] = "system"
+            editor_snapshot["change_summary"] = "generated digest snapshot"
 
         generation_mode = "fallback"
         if use_llm and self.llm_client.is_configured() and digest_articles:
@@ -1926,6 +2065,9 @@ class NewsService:
                 article_count=len(presented_articles),
                 source_count=len({article["source_id"] for article in presented_articles}),
                 payload=payload,
+                created_by="system",
+                updated_by="system",
+                change_summary="generated digest snapshot",
             )
 
         operation_record = self.telemetry.finish(
@@ -2250,6 +2392,14 @@ class NewsService:
     def _default_digest_section_title(article: dict) -> str:
         return "国内动态" if str(article.get("region", "international")) == "domestic" else "国际动态"
 
+    @staticmethod
+    def _editor_actor(actor: str) -> str:
+        return clean_text(actor) or "admin"
+
+    @staticmethod
+    def _editor_change_summary(change_summary: str, *, fallback: str) -> str:
+        return clean_text(change_summary) or fallback
+
     def _build_editor_snapshot(
         self,
         articles: List[dict],
@@ -2305,6 +2455,10 @@ class NewsService:
                 manual_rank += 1
             items.append(item)
         return {
+            "version": 0,
+            "created_by": "",
+            "updated_by": "",
+            "change_summary": "",
             "snapshot_status": snapshot_status,
             "frozen_at": "",
             "updated_at": utc_now().isoformat(),
@@ -2388,10 +2542,20 @@ class NewsService:
         editor_snapshot: Dict[str, object],
         *,
         snapshot_status: str,
+        version: Optional[int] = None,
+        created_by: str = "",
+        updated_by: str = "",
+        change_summary: str = "",
         frozen_at: str = "",
         last_published_at: str = "",
     ) -> Dict[str, object]:
         snapshot = self._merge_editor_snapshot_items(editor_snapshot, None)
+        snapshot["version"] = int(version or snapshot.get("version") or 1)
+        snapshot["created_by"] = clean_text(created_by) or clean_text(str(snapshot.get("created_by") or "")) or "admin"
+        snapshot["updated_by"] = clean_text(updated_by) or clean_text(str(snapshot.get("updated_by") or "")) or snapshot["created_by"]
+        snapshot["change_summary"] = clean_text(change_summary) or clean_text(
+            str(snapshot.get("change_summary") or "")
+        )
         snapshot["snapshot_status"] = snapshot_status
         snapshot["frozen_at"] = clean_text(frozen_at) or clean_text(str(snapshot.get("frozen_at") or ""))
         snapshot["last_published_at"] = clean_text(last_published_at) or clean_text(
@@ -3248,6 +3412,10 @@ class NewsService:
                     selection,
                     snapshot_status="draft",
                 )
+            payload["editor_snapshot"] = self._apply_editor_snapshot_metadata_from_store(
+                payload.get("editor_snapshot"),
+                stored_digest,
+            )
             payload["stored_digest"] = stored_digest
             payload["generation_mode"] = "stored"
             return payload
@@ -3283,9 +3451,13 @@ class NewsService:
                 "must_include_selected": 0,
             },
             "editor_snapshot": {
+                "version": int(stored_digest.get("current_version") or 1),
+                "created_by": clean_text(str(stored_digest.get("created_by") or "")) or "system",
+                "updated_by": clean_text(str(stored_digest.get("updated_by") or "")) or "system",
+                "change_summary": clean_text(str(stored_digest.get("change_summary") or "")),
                 "snapshot_status": "draft",
                 "frozen_at": "",
-                "updated_at": "",
+                "updated_at": clean_text(str(stored_digest.get("updated_at") or "")),
                 "last_published_at": "",
                 "items": [],
             },
@@ -3301,6 +3473,21 @@ class NewsService:
         stored_payload.pop("stored_digest", None)
         stored_payload.pop("operation", None)
         return stored_payload
+
+    @staticmethod
+    def _apply_editor_snapshot_metadata_from_store(
+        editor_snapshot: object,
+        stored_digest: Dict[str, object],
+    ) -> Dict[str, object]:
+        snapshot = dict(editor_snapshot) if isinstance(editor_snapshot, dict) else {}
+        snapshot["version"] = int(snapshot.get("version") or stored_digest.get("current_version") or 1)
+        snapshot["created_by"] = clean_text(str(snapshot.get("created_by") or stored_digest.get("created_by") or "")) or "system"
+        snapshot["updated_by"] = clean_text(str(snapshot.get("updated_by") or stored_digest.get("updated_by") or "")) or snapshot["created_by"]
+        snapshot["change_summary"] = clean_text(
+            str(snapshot.get("change_summary") or stored_digest.get("change_summary") or "")
+        )
+        snapshot["updated_at"] = clean_text(str(snapshot.get("updated_at") or stored_digest.get("updated_at") or ""))
+        return snapshot
 
     def _export_digest_payload(self, payload: Dict[str, object]) -> List[str]:
         date_prefix = format_local_date().replace("-", "")

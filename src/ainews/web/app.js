@@ -4,6 +4,7 @@ const state = {
   currentDigestPayload: null,
   currentArticles: [],
   selectedDigestId: null,
+  editorActor: localStorage.getItem("ainews_digest_editor_actor") || "",
 };
 
 const refs = {
@@ -16,6 +17,8 @@ const refs = {
   digestPreviewButton: document.getElementById("digestPreviewButton"),
   freezeDigestButton: document.getElementById("freezeDigestButton"),
   saveDigestEditorButton: document.getElementById("saveDigestEditorButton"),
+  digestEditorActorInput: document.getElementById("digestEditorActorInput"),
+  digestChangeSummaryInput: document.getElementById("digestChangeSummaryInput"),
   digestButton: document.getElementById("digestButton"),
   pipelineButton: document.getElementById("pipelineButton"),
   publishButton: document.getElementById("publishButton"),
@@ -27,6 +30,8 @@ const refs = {
   digestView: document.getElementById("digestView"),
   digestPreviewView: document.getElementById("digestPreviewView"),
   digestEditorView: document.getElementById("digestEditorView"),
+  digestHistoryView: document.getElementById("digestHistoryView"),
+  refreshDigestHistoryButton: document.getElementById("refreshDigestHistoryButton"),
   digestArchive: document.getElementById("digestArchive"),
   articlesList: document.getElementById("articlesList"),
   regionSelect: document.getElementById("regionSelect"),
@@ -49,6 +54,8 @@ const refs = {
   retryExtractionSelectionButton: document.getElementById("retryExtractionSelectionButton"),
   sourceAlertsList: document.getElementById("sourceAlertsList"),
   refreshSourceAlertsButton: document.getElementById("refreshSourceAlertsButton"),
+  publishPreviewView: document.getElementById("publishPreviewView"),
+  refreshPublishPreviewButton: document.getElementById("refreshPublishPreviewButton"),
   operationsSummary: document.getElementById("operationsSummary"),
   operationsHealth: document.getElementById("operationsHealth"),
   operationsMetrics: document.getElementById("operationsMetrics"),
@@ -61,6 +68,7 @@ const refs = {
 };
 
 refs.adminToken.value = state.token;
+refs.digestEditorActorInput.value = state.editorActor;
 
 function adminHeaders() {
   const headers = { "Content-Type": "application/json" };
@@ -90,6 +98,13 @@ function getFilters() {
     since_hours: Number(refs.sinceHoursSelect.value),
     limit: Number(refs.limitInput.value),
     max_items_per_source: Number(refs.maxItemsInput.value),
+  };
+}
+
+function getDigestEditorMeta() {
+  return {
+    actor: refs.digestEditorActorInput.value.trim() || null,
+    change_summary: refs.digestChangeSummaryInput.value.trim() || null,
   };
 }
 
@@ -504,6 +519,8 @@ function renderDigest(payload) {
     refs.digestView.innerHTML = '<p class="muted">还没有生成日报。</p>';
     refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
     refs.digestEditorView.innerHTML = '<p class="muted">先生成预览或打开一份已保存的日报，编辑页才会出现。</p>';
+    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
+    refs.publishPreviewView.innerHTML = '<p class="muted">打开一份日报或冻结编辑稿后，这里会显示目标平台最终预览。</p>';
     return;
   }
   state.currentDigest = digest;
@@ -548,6 +565,13 @@ function renderDigest(payload) {
   `;
   renderDigestPreview(digestPayload);
   renderDigestEditor(digestPayload);
+  const digestId = digestPayload?.stored_digest?.id || null;
+  if (digestId) {
+    loadDigestHistory(digestId).catch((error) => logJob("load digest history failed", { error: error.message, digestId }));
+  } else {
+    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
+  }
+  loadPublishPreview(digestId).catch((error) => logJob("load publish preview failed", { error: error.message, digestId }));
 }
 
 function decisionLabel(decision) {
@@ -685,6 +709,128 @@ function renderDigestEditor(payload) {
   `;
 }
 
+function renderDigestHistory(payload) {
+  const versions = payload?.versions || [];
+  const currentVersion = payload?.current_version || 0;
+  if (!versions.length) {
+    refs.digestHistoryView.innerHTML = '<p class="muted">当前还没有可用的编辑版本历史。</p>';
+    return;
+  }
+  refs.digestHistoryView.innerHTML = versions
+    .map((item) => {
+      const publicationRecords = item.publication_records || [];
+      return `
+        <article class="publication-card">
+          <header class="publication-head">
+            <div>
+              <strong>v${escapeHtml(String(item.version || 0))}</strong>
+              <div class="publication-meta">
+                <span>${escapeHtml(item.created_at || "")}</span>
+                <span>created_by: ${escapeHtml(item.created_by || "system")}</span>
+                <span>updated_by: ${escapeHtml(item.updated_by || item.created_by || "system")}</span>
+              </div>
+            </div>
+            <div class="chip-row compact">
+              ${item.version === currentVersion ? '<span class="chip status-good">当前版本</span>' : ""}
+              ${item.action ? `<span class="chip">${escapeHtml(item.action)}</span>` : ""}
+              ${item.restored_from_version ? `<span class="chip">from v${escapeHtml(String(item.restored_from_version))}</span>` : ""}
+            </div>
+          </header>
+          <p class="article-brief">${escapeHtml(item.change_summary || "no change summary")}</p>
+          ${
+            publicationRecords.length
+              ? `<div class="chip-row">${publicationRecords
+                  .map(
+                    (record) =>
+                      `<span class="chip ${publicationStatusClass(record.status)}">${escapeHtml(publicationTargetLabel(record.target))} · ${escapeHtml(publicationStatusLabel(record.status))}${record.digest_changed_after_publish ? " · stale" : ""}</span>`
+                  )
+                  .join("")}</div>`
+              : '<p class="muted">这一版还没有发布记录。</p>'
+          }
+          ${
+            item.version !== currentVersion
+              ? `<div class="article-actions"><button class="button ghost" data-action="rollback-digest-version" data-version="${item.version}">回滚到这一版</button></div>`
+              : ""
+          }
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderPublishPreview(payload) {
+  const targets = payload?.preview_targets?.targets || [];
+  if (!targets.length) {
+    refs.publishPreviewView.innerHTML = '<p class="muted">选择一份日报后，这里会显示目标平台最终预览。</p>';
+    return;
+  }
+  refs.publishPreviewView.innerHTML = targets
+    .map((entry) => {
+      const target = entry.target;
+      const preview = entry.preview || {};
+      if (target === "telegram") {
+        return `
+          <article class="publication-card">
+            <header class="publication-head">
+              <strong>Telegram</strong>
+              <span class="chip">chunks ${escapeHtml(String((preview.chunks || []).length || 0))}</span>
+            </header>
+            <pre class="terminal">${escapeHtml(preview.text || "")}</pre>
+          </article>
+        `;
+      }
+      if (target === "feishu") {
+        return `
+          <article class="publication-card">
+            <header class="publication-head">
+              <strong>飞书</strong>
+              <span class="chip">${escapeHtml(preview.card_title || "interactive card")}</span>
+            </header>
+            <p class="article-brief"><strong>文本消息</strong></p>
+            <pre class="terminal">${escapeHtml(preview.text || "")}</pre>
+          </article>
+        `;
+      }
+      if (target === "static_site") {
+        return `
+          <article class="publication-card">
+            <header class="publication-head">
+              <strong>静态站点</strong>
+              <span class="chip">HTML</span>
+            </header>
+            <iframe class="preview-frame" sandbox="" srcdoc="${escapeAttribute(preview.html || "")}"></iframe>
+          </article>
+        `;
+      }
+      if (target === "wechat") {
+        const wechatDocument = `
+          <!doctype html>
+          <html lang="zh-CN"><head><meta charset="utf-8"><style>
+          body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Noto Sans SC',sans-serif;padding:18px;color:#1b1711;background:#fff;}
+          h1{font-size:22px;line-height:1.35;margin:0 0 12px;}
+          .digest{color:#6f665b;font-size:14px;margin-bottom:14px;}
+          img{max-width:100%;}
+          </style></head><body>
+          <h1>${escapeHtml(preview.title || "")}</h1>
+          <p class="digest">${escapeHtml(preview.digest || "")}</p>
+          ${preview.content_html || ""}
+          </body></html>
+        `;
+        return `
+          <article class="publication-card">
+            <header class="publication-head">
+              <strong>公众号</strong>
+              <span class="chip">${escapeHtml(preview.content_source_url || "no source link")}</span>
+            </header>
+            <iframe class="preview-frame" sandbox="" srcdoc="${escapeAttribute(wechatDocument)}"></iframe>
+          </article>
+        `;
+      }
+      return "";
+    })
+    .join("");
+}
+
 function renderArchive(digests) {
   refs.digestArchive.innerHTML = digests.length
     ? digests
@@ -692,10 +838,10 @@ function renderArchive(digests) {
           (item) => `
           <article class="archive-item" data-digest-id="${item.id}">
             <strong>${escapeHtml(item.title)}</strong>
-            <p class="muted">${escapeHtml(item.generated_at)} · ${escapeHtml(item.region)} · ${item.article_count} 篇</p>
+            <p class="muted">${escapeHtml(item.generated_at)} · ${escapeHtml(item.region)} · ${item.article_count} 篇 · v${escapeHtml(String(item.current_version || 1))}</p>
             ${
               item.payload?.editor_snapshot?.snapshot_status
-                ? `<div class="chip-row compact"><span class="chip ${snapshotStatusClass(item.payload.editor_snapshot.snapshot_status)}">${escapeHtml(snapshotStatusLabel(item.payload.editor_snapshot.snapshot_status))}</span></div>`
+                ? `<div class="chip-row compact"><span class="chip ${snapshotStatusClass(item.payload.editor_snapshot.snapshot_status)}">${escapeHtml(snapshotStatusLabel(item.payload.editor_snapshot.snapshot_status))}</span><span class="chip">${escapeHtml(item.updated_by || item.created_by || "system")}</span></div>`
                 : ""
             }
             <button class="button ghost" data-action="open-digest" data-digest-id="${item.id}">查看</button>
@@ -758,6 +904,16 @@ function renderPublications(publications) {
                 <div class="chip-row compact">
                   <span class="chip">${escapeHtml(publicationTargetLabel(publication.target))}</span>
                   <span class="chip ${publicationStatusClass(publication.status)}">${escapeHtml(publicationStatusLabel(publication.status))}</span>
+                  ${
+                    publication.digest_snapshot_version
+                      ? `<span class="chip">v${escapeHtml(String(publication.digest_snapshot_version))}</span>`
+                      : ""
+                  }
+                  ${
+                    publication.digest_changed_after_publish
+                      ? '<span class="chip warn">发布后已变更</span>'
+                      : ""
+                  }
                 </div>
                 <span class="muted">${escapeHtml(publication.updated_at || publication.created_at || "")}</span>
               </header>
@@ -1093,11 +1249,44 @@ async function loadDigests() {
   }
 }
 
+async function loadDigestHistory(digestId = null) {
+  const resolvedDigestId =
+    digestId || state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
+  if (!resolvedDigestId) {
+    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
+    return;
+  }
+  const payload = await fetchJson(`/admin/digests/${resolvedDigestId}/history?limit=20`, {
+    headers: adminHeaders(),
+  });
+  renderDigestHistory(payload);
+}
+
 async function loadPublications() {
   const payload = await fetchJson(`/admin/publications?${buildPublicationQuery().toString()}`, {
     headers: adminHeaders(),
   });
   renderPublications(payload.publications || []);
+}
+
+async function loadPublishPreview(digestId = null) {
+  const filters = getFilters();
+  const resolvedDigestId =
+    digestId || state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
+  const targets = getPublishTargets();
+  const payload = await fetchJson("/admin/publish/preview", {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      digest_id: resolvedDigestId,
+      region: filters.region,
+      since_hours: filters.since_hours,
+      limit: filters.limit,
+      use_llm: true,
+      targets: targets.length ? targets : null,
+    }),
+  });
+  renderPublishPreview(payload);
 }
 
 async function loadExtractionOps() {
@@ -1316,6 +1505,7 @@ function collectDigestEditorItems() {
 
 async function freezeDigestSnapshot() {
   const filters = getFilters();
+  const editorMeta = getDigestEditorMeta();
   const payload = await fetchJson("/admin/digests/snapshot", {
     method: "POST",
     headers: adminHeaders(),
@@ -1326,6 +1516,8 @@ async function freezeDigestSnapshot() {
       use_llm: true,
       article_ids: (state.currentDigestPayload?.articles || []).map((item) => item.id),
       editor_items: collectDigestEditorItems(),
+      actor: editorMeta.actor,
+      change_summary: editorMeta.change_summary,
     }),
   });
   logJob("freeze digest snapshot", payload);
@@ -1340,14 +1532,39 @@ async function saveDigestEditor() {
   if (!digestId) {
     throw new Error("请先冻结为编辑稿，再保存编辑修改");
   }
+  const editorMeta = getDigestEditorMeta();
   const payload = await fetchJson(`/admin/digests/${digestId}/editor`, {
     method: "PATCH",
     headers: adminHeaders(),
     body: JSON.stringify({
       editor_items: collectDigestEditorItems(),
+      actor: editorMeta.actor,
+      change_summary: editorMeta.change_summary,
     }),
   });
   logJob("save digest editor", payload);
+  renderDigest(payload);
+  setSelectedDigestId(payload.stored_digest?.id || digestId);
+  await refreshAll();
+}
+
+async function rollbackDigestVersion(version) {
+  const digestId =
+    state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
+  if (!digestId) {
+    throw new Error("请先打开一份已保存的日报");
+  }
+  const editorMeta = getDigestEditorMeta();
+  const payload = await fetchJson(`/admin/digests/${digestId}/rollback`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({
+      version,
+      actor: editorMeta.actor,
+      change_summary: editorMeta.change_summary,
+    }),
+  });
+  logJob("rollback digest version", payload);
   renderDigest(payload);
   setSelectedDigestId(payload.stored_digest?.id || digestId);
   await refreshAll();
@@ -1432,6 +1649,10 @@ refs.saveTokenButton.addEventListener("click", () => {
   localStorage.setItem("ainews_admin_token", state.token);
   logJob("token", { saved: Boolean(state.token) });
 });
+refs.digestEditorActorInput.addEventListener("change", () => {
+  state.editorActor = refs.digestEditorActorInput.value.trim();
+  localStorage.setItem("ainews_digest_editor_actor", state.editorActor);
+});
 
 refs.refreshAllButton.addEventListener("click", refreshAll);
 refs.refreshSourcesButton.addEventListener("click", () =>
@@ -1446,6 +1667,8 @@ refs.enrichButton.addEventListener("click", () => runEnrich().catch((error) => l
 refs.digestPreviewButton.addEventListener("click", () => previewDigest().catch((error) => logJob("digest preview failed", { error: error.message })));
 refs.freezeDigestButton.addEventListener("click", () => freezeDigestSnapshot().catch((error) => logJob("freeze digest snapshot failed", { error: error.message })));
 refs.saveDigestEditorButton.addEventListener("click", () => saveDigestEditor().catch((error) => logJob("save digest editor failed", { error: error.message })));
+refs.refreshDigestHistoryButton.addEventListener("click", () => loadDigestHistory().catch((error) => logJob("load digest history failed", { error: error.message })));
+refs.refreshPublishPreviewButton.addEventListener("click", () => loadPublishPreview().catch((error) => logJob("load publish preview failed", { error: error.message })));
 refs.digestButton.addEventListener("click", () => runDigest().catch((error) => logJob("digest failed", { error: error.message })));
 refs.pipelineButton.addEventListener("click", () => runPipeline().catch((error) => logJob("pipeline failed", { error: error.message })));
 refs.publishButton.addEventListener("click", () => runPublish().catch((error) => logJob("publish failed", { error: error.message })));
@@ -1470,6 +1693,11 @@ refs.publicationTargetFilter.addEventListener("change", () =>
 );
 refs.publicationStatusFilter.addEventListener("change", () =>
   loadPublications().catch((error) => logJob("load publications failed", { error: error.message }))
+);
+refs.publishTargetInputs.forEach((input) =>
+  input.addEventListener("change", () =>
+    loadPublishPreview().catch((error) => logJob("load publish preview failed", { error: error.message }))
+  )
 );
 refs.extractionStatusFilter.addEventListener("change", () =>
   loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
@@ -1514,6 +1742,16 @@ refs.articlesList.addEventListener("click", async (event) => {
     }
   } catch (error) {
     logJob("article update failed", { error: error.message, articleId });
+  }
+});
+
+refs.digestHistoryView.addEventListener("click", async (event) => {
+  const button = event.target.closest('button[data-action="rollback-digest-version"]');
+  if (!button) return;
+  try {
+    await rollbackDigestVersion(Number(button.dataset.version));
+  } catch (error) {
+    logJob("rollback digest version failed", { error: error.message, version: button.dataset.version });
   }
 });
 

@@ -76,10 +76,20 @@ class DigestSnapshotRequest(BaseModel):
     limit: int = Field(default=30, ge=1, le=200)
     use_llm: bool = True
     editor_items: Optional[List[DigestEditorItemRequest]] = None
+    actor: Optional[str] = Field(default=None, max_length=80)
+    change_summary: Optional[str] = Field(default=None, max_length=240)
 
 
 class DigestEditorUpdateRequest(BaseModel):
     editor_items: List[DigestEditorItemRequest] = Field(min_length=1)
+    actor: Optional[str] = Field(default=None, max_length=80)
+    change_summary: Optional[str] = Field(default=None, max_length=240)
+
+
+class DigestRollbackRequest(BaseModel):
+    version: int = Field(ge=1)
+    actor: Optional[str] = Field(default=None, max_length=80)
+    change_summary: Optional[str] = Field(default=None, max_length=240)
 
 
 class PipelineRequest(BaseModel):
@@ -107,6 +117,15 @@ class PublishRequest(BaseModel):
     targets: Optional[List[str]] = None
     wechat_submit: Optional[bool] = None
     force_republish: bool = False
+
+
+class PublishPreviewRequest(BaseModel):
+    digest_id: Optional[int] = Field(default=None, ge=1)
+    region: str = Field(default="all")
+    since_hours: Optional[int] = Field(default=None, ge=1, le=720)
+    limit: int = Field(default=30, ge=1, le=200)
+    use_llm: bool = True
+    targets: Optional[List[str]] = None
 
 
 class RefreshPublicationsRequest(BaseModel):
@@ -904,6 +923,8 @@ def create_app() -> FastAPI:
                 limit=payload.limit,
                 use_llm=payload.use_llm,
                 editor_items=[item.model_dump() for item in list(payload.editor_items or [])],
+                actor=payload.actor or "",
+                change_summary=payload.change_summary or "",
             ))
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)
@@ -926,6 +947,51 @@ def create_app() -> FastAPI:
             return _sanitize_service_payload(service.update_digest_editor(
                 digest_id,
                 editor_items=[item.model_dump() for item in payload.editor_items],
+                actor=payload.actor or "",
+                change_summary=payload.change_summary or "",
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.get("/admin/digests/{digest_id}/history")
+    def admin_digest_history(
+        digest_id: int,
+        request: Request,
+        limit: int = Query(default=20, ge=1, le=100),
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_digest_history")
+        try:
+            return _sanitize_service_payload(service.list_digest_versions(digest_id, limit=limit))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/digests/{digest_id}/rollback")
+    def admin_digest_rollback(
+        digest_id: int,
+        payload: DigestRollbackRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_digest_rollback")
+        try:
+            return _sanitize_service_payload(service.rollback_digest_snapshot(
+                digest_id,
+                version=payload.version,
+                actor=payload.actor or "",
+                change_summary=payload.change_summary or "",
             ))
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)
@@ -985,6 +1051,31 @@ def create_app() -> FastAPI:
                 targets=payload.targets,
                 wechat_submit=payload.wechat_submit,
                 force_republish=payload.force_republish,
+            ))
+        except HTTPException as exc:
+            return _handle_route_http_exception(request, exc)
+        except LookupError:
+            return _handle_route_lookup_error(request)
+        except ValueError:
+            return _handle_route_value_error(request)
+        except Exception:
+            return _handle_route_unexpected_error(request)
+
+    @app.post("/admin/publish/preview")
+    def admin_publish_preview(
+        payload: PublishPreviewRequest,
+        request: Request,
+        _: None = Depends(require_admin),
+    ) -> dict:
+        _begin_route_action(request, "admin_publish_preview")
+        try:
+            return _sanitize_service_payload(service.preview_publication_targets(
+                digest_id=payload.digest_id,
+                region=payload.region,
+                since_hours=payload.since_hours,
+                limit=payload.limit,
+                use_llm=payload.use_llm,
+                targets=payload.targets,
             ))
         except HTTPException as exc:
             return _handle_route_http_exception(request, exc)

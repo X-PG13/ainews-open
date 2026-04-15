@@ -481,6 +481,15 @@ textarea {
   text-decoration: underline;
 }
 
+.preview-frame {
+  width: 100%;
+  min-height: 420px;
+  margin-top: 12px;
+  border: 1px solid rgba(23, 23, 23, 0.08);
+  border-radius: 16px;
+  background: #fff;
+}
+
 @media (max-width: 1100px) {
   .hero,
   .operations-grid,
