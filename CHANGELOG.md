@@ -2,6 +2,25 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.47] - 2026-04-15
+
+### Added
+
+- Versioned digest history, rollback routes, and publish-target preview support for stored snapshots
+- Governance metadata and contributor-facing architecture docs through `GOVERNANCE.md`, `MAINTAINERS.md`, `CITATION.cff`, and `docs/architecture.md`
+
+### Changed
+
+- Package version is now `1.2.47`
+- Package author and maintainer metadata now point to `X-PG13 <2720174336@qq.com>`
+- Publication history now records the digest snapshot version used for each publish attempt and surfaces when a digest changed after publish
+
+### Fixed
+
+- Duplicate clustering for replayed or historical feeds now uses article publish time instead of the wall clock
+- Qualified publication history queries so digest version history no longer fails with `ambiguous column name: id`
+- Added service and API regression coverage for digest history, rollback, and publish preview flows
+
 ## [1.2.46] - 2026-04-11
 
 ### Added

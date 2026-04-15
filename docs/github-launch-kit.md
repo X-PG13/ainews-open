@@ -6,18 +6,18 @@ This file is the first public-facing copy pack for the GitHub repository and rel
 
 ### Suggested Tag
 
-`v1.2.46`
+`v1.2.47`
 
 ### Suggested Title
 
-`AI News Open v1.2.46 · Frozen Digest Snapshot Editing`
+`AI News Open v1.2.47 · Auditable Digest Publishing`
 
 ### Release Notes
 
 ```md
-## AI News Open v1.2.46
+## AI News Open v1.2.47
 
-AI News Open `v1.2.46` adds a frozen digest snapshot workflow so maintainers can preview, edit, save, and publish a confirmed digest draft instead of relying on a live recompute at publish time.
+AI News Open `v1.2.47` makes digest publishing auditable end to end with version history, rollback, publish-target previews, and a more complete open-source governance baseline.
 
 ### What it does
 
@@ -40,10 +40,11 @@ AI News Open `v1.2.46` adds a frozen digest snapshot workflow so maintainers can
 
 ### Highlights in this release
 
-- New digest snapshot APIs for freezing a preview into a stored editable draft and updating that draft in place
-- New dashboard editor controls for manual rank, section overrides, publish title overrides, and publish summary overrides
-- Publish flows now reuse the confirmed snapshot behind a stored `digest_id`, which removes preview-versus-publish drift when new articles arrive between review and send
-- Compatibility docs and bilingual README guidance now describe the preview, snapshot, editor, and publish-from-snapshot contract
+- Stored digests now keep a versioned edit history with rollback APIs and dashboard history views
+- Publish flows can preview final Telegram, Feishu, static-site, and WeChat payloads before outbound delivery
+- Publication records now pin the digest snapshot version they were created from, making post-publish drift visible in the admin console
+- Historical-feed deduplication is stable again because duplicate clustering now uses article publish time rather than the ingest wall clock
+- Governance, maintainer ownership, citation metadata, and architecture docs are now first-class repository entry points
 
 ### Quick start
 
