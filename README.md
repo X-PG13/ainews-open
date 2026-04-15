@@ -88,6 +88,7 @@ make check
 
 ## Operator Docs
 
+- [Architecture Overview](docs/architecture.md)
 - [Compatibility Contract](docs/compatibility.md)
 - [Configuration Matrix](docs/configuration.md)
 - [First Deploy Guide](docs/first-deploy.md)
@@ -215,7 +216,7 @@ python -m pip install -e ".[dev]"
 
 This repository already includes the expected open-source project baseline:
 
-- Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`
+- Community docs: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `GOVERNANCE.md`, `MAINTAINERS.md`, `CITATION.cff`
 - Collaboration templates: GitHub issue templates, pull request template, `CODEOWNERS`, and review policy
 - Quality gates: `ruff`, unit tests, coverage, package build validation, `pre-commit`
 - Automation: CI, tag-based release workflow, CodeQL, Dependabot
@@ -239,6 +240,9 @@ Recommended community scaffolding:
 
 - `ROADMAP.md`
 - `SUPPORT.md`
+- `GOVERNANCE.md`
+- `MAINTAINERS.md`
+- `docs/architecture.md`
 - `.github/labels.yml`
 
 ## LLM Translation and Digest Generation

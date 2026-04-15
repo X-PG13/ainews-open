@@ -46,6 +46,9 @@ Repository = "https://github.com/X-PG13/ainews-open"
 Documentation = "https://github.com/X-PG13/ainews-open#readme"
 Issues = "https://github.com/X-PG13/ainews-open/issues"
 Changelog = "https://github.com/X-PG13/ainews-open/blob/main/CHANGELOG.md"
+Support = "https://github.com/X-PG13/ainews-open/blob/main/SUPPORT.md"
+Security = "https://github.com/X-PG13/ainews-open/security/policy"
+Governance = "https://github.com/X-PG13/ainews-open/blob/main/GOVERNANCE.md"
 
 [project.optional-dependencies]
 dev = [

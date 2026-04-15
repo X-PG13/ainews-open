@@ -88,6 +88,7 @@ make check
 
 ## 运维与交付文档
 
+- [架构总览](docs/architecture.md)
 - [兼容性约定](docs/compatibility.md)
 - [配置矩阵](docs/configuration.zh-CN.md)
 - [首次部署指南](docs/first-deploy.zh-CN.md)
@@ -215,7 +216,7 @@ python -m pip install -e ".[dev]"
 
 当前仓库已经补齐以下开源工程基线：
 
-- 社区文档：`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`
+- 社区文档：`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`、`GOVERNANCE.md`、`MAINTAINERS.md`、`CITATION.cff`
 - 协作模板：GitHub issue templates、pull request template、`CODEOWNERS` 和审核约定
 - 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
 - 自动化：CI、tag release workflow、CodeQL、Dependabot
@@ -239,6 +240,9 @@ python -m pip install -e ".[dev]"
 
 - `ROADMAP.md`
 - `SUPPORT.md`
+- `GOVERNANCE.md`
+- `MAINTAINERS.md`
+- `docs/architecture.md`
 - `.github/labels.yml`
 
 ## LLM 翻译与日报
