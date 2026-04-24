@@ -241,9 +241,10 @@ python -m pip install -e ".[dev]"
 
 社区协作建议配套：
 
-- `ROADMAP.md`
+- `ROADMAP.zh-CN.md`
 - `SUPPORT.md`
 - `docs/community-triage.zh-CN.md`
+- `docs/support-lifecycle.zh-CN.md`
 - `GOVERNANCE.md`
 - `MAINTAINERS.md`
 - `docs/architecture.md`

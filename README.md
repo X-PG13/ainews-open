@@ -243,6 +243,8 @@ Recommended community scaffolding:
 
 - `ROADMAP.md`
 - `SUPPORT.md`
+- `docs/community-triage.md`
+- `docs/support-lifecycle.md`
 - `GOVERNANCE.md`
 - `MAINTAINERS.md`
 - `docs/architecture.md`
