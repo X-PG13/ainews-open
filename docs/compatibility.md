@@ -17,7 +17,10 @@ Starting with `v1.0.0`, the project treats the following as stable public contra
 - Additive changes are allowed in `v1.x`.
 - Renaming or removing environment variables, CLI flags, HTTP routes, or exported JSON fields is treated as a breaking change.
 - Breaking changes must wait for `v2.0.0` or ship with an explicit compatibility bridge and migration notes.
+- Deprecations must be announced in a minor release before any hard removal or contract shutdown.
 - Exported JSON keeps a top-level `schema_version` field so downstream consumers can pin behavior.
+
+Use [support-lifecycle.md](./support-lifecycle.md) for the release-state policy and deprecation window that sits on top of this contract.
 
 ## Stable Environment Variables
 
@@ -180,6 +183,7 @@ This contract prevents duplicate records and repeated outbound publishes in the 
 When a future change must break contract:
 
 1. Document it in [CHANGELOG.md](../CHANGELOG.md).
-2. Add migration notes.
-3. Keep the old behavior during a deprecation window when practical.
-4. Only remove the old contract in the next major version.
+2. Add migration notes and replacement guidance.
+3. Mark the old contract as deprecated in the relevant docs.
+4. Keep the old behavior during the deprecation window defined in [support-lifecycle.md](./support-lifecycle.md).
+5. Only remove the old contract in the next major version unless a security or safety issue forces earlier action.
