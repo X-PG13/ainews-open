@@ -97,6 +97,7 @@ make check
 - [故障排查](docs/troubleshooting.zh-CN.md)
 - [监控接入](docs/monitoring.zh-CN.md)
 - [维护者初始化清单](docs/maintainer-bootstrap.zh-CN.md)
+- [支持生命周期](docs/support-lifecycle.zh-CN.md)
 - [PR 审核约定](docs/pr-review-policy.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
@@ -218,7 +219,7 @@ python -m pip install -e ".[dev]"
 
 当前仓库已经补齐以下开源工程基线：
 
-- 社区文档：`CONTRIBUTING.md`、`SUPPORT.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`、`GOVERNANCE.md`、`MAINTAINERS.md`、`CITATION.cff`、`docs/community-triage.zh-CN.md`
+- 社区文档：`CONTRIBUTING.md`、`SUPPORT.md`、`CODE_OF_CONDUCT.md`、`SECURITY.md`、`CHANGELOG.md`、`GOVERNANCE.md`、`MAINTAINERS.md`、`CITATION.cff`、`docs/community-triage.zh-CN.md`、`docs/support-lifecycle.zh-CN.md`
 - 协作模板：GitHub issue templates、pull request template、`CODEOWNERS` 和审核约定
 - 质量门禁：`ruff` lint、单元测试、coverage、包构建校验、`pre-commit`
 - 自动化：CI、tag release workflow、CodeQL、Dependabot

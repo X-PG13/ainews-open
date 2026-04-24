@@ -4,9 +4,12 @@
 
 | Version line | Status | Notes |
 | --- | --- | --- |
-| `1.x` latest minor | Supported | Receives bug fixes, docs updates, and security guidance. |
-| Older `1.x` minors | Best effort | Upgrade to the latest `1.x` before opening support requests. |
+| `1.x` latest minor | Active support | Receives bug fixes, docs updates, and security guidance. |
+| `1.x` immediately previous minor | Maintenance support | Upgrade to the latest `1.x`; backports are best-effort and severe regressions are handled case by case. |
+| Older `1.x` minors | Unsupported | Historical releases only. |
 | `0.x` | Unsupported | Historical releases only. |
+
+See `docs/support-lifecycle.md` for the full minor-release support window and deprecation policy.
 
 ## Where To Ask For Help
 
