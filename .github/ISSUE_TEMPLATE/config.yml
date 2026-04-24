@@ -11,4 +11,7 @@ contact_links:
     about: Read the support boundaries and version policy before opening broad usage requests.
   - name: Roadmap
     url: https://github.com/X-PG13/ainews-open/blob/main/ROADMAP.md
-    about: Check planned priorities before filing roadmap-scale feature requests.
+    about: Check current maintainer priorities before filing roadmap-scale feature requests.
+  - name: 路线图（简体中文）
+    url: https://github.com/X-PG13/ainews-open/blob/main/ROADMAP.zh-CN.md
+    about: 提交路线图级别的功能请求前，先看当前版本规划和维护者优先级。

@@ -105,7 +105,7 @@ make check
 - [贡献者手册](docs/contributor-playbook.md)
 - [发版清单](docs/release-checklist.zh-CN.md)
 - [支持策略](SUPPORT.md)
-- [路线图](ROADMAP.md)
+- [路线图](ROADMAP.zh-CN.md)
 
 ## 当前能力
 
