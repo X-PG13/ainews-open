@@ -61,7 +61,7 @@ git push origin vX.Y.Z
 - 最终版 release notes
 - release artifact 的安装与校验说明
 
-3. 额外验证一次 release artifact 安装说明可用：
+3. 按 [Release 产物校验](./release-artifacts.zh-CN.md) 文档里的完整流程校验最终 tag。至少要确认 wheel 可安装，并且 CLI 能启动：
 
 ```bash
 python -m pip install ainews_open-X.Y.Z-py3-none-any.whl

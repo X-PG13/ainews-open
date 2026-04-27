@@ -19,6 +19,80 @@
 这条 workflow 应该被视为 release 完成前的强制门禁。它没通过之前，不要对外公告新 tag。
 如果 tag 是通过 `.github/workflows/release.yml` 发出来的，这条 smoke workflow 会在 GitHub Release 发布后自动触发。你仍然可以针对任意已发布 tag 手动重跑。
 
+## 可直接复制的校验流程
+
+把 `VERSION` 设置为不带前导 `v` 的 release tag，然后把 release 资产下载到一个干净目录：
+
+```bash
+export VERSION=1.2.49
+export REPO=X-PG13/ainews-open
+mkdir -p "ainews-open-${VERSION}-release"
+cd "ainews-open-${VERSION}-release"
+
+curl -LO "https://github.com/${REPO}/releases/download/v${VERSION}/ainews_open-${VERSION}-py3-none-any.whl"
+curl -LO "https://github.com/${REPO}/releases/download/v${VERSION}/ainews_open-${VERSION}.tar.gz"
+curl -LO "https://github.com/${REPO}/releases/download/v${VERSION}/sha256sums.txt"
+curl -LO "https://github.com/${REPO}/releases/download/v${VERSION}/v${VERSION}-sbom.json"
+```
+
+用 Python 校验 checksum，这样同一条命令可以同时适用于 Linux 和 macOS：
+
+```bash
+python - <<'PY'
+from pathlib import Path
+import hashlib
+
+for line in Path("sha256sums.txt").read_text(encoding="utf-8").splitlines():
+    expected, filename = line.split(maxsplit=1)
+    filename = filename.lstrip("*")
+    actual = hashlib.sha256(Path(filename).read_bytes()).hexdigest()
+    if actual != expected.lower():
+        raise SystemExit(f"checksum mismatch: {filename}")
+    print(f"ok {filename}")
+PY
+```
+
+从已下载的 wheel 安装，而不是从 PyPI 安装 `ainews-open`，并做最小烟测：
+
+```bash
+python -m venv .venv-wheel
+. .venv-wheel/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "./ainews_open-${VERSION}-py3-none-any.whl"
+python -m ainews --help
+python -m ainews stats
+deactivate
+```
+
+在另一个干净环境里从 source archive 安装：
+
+```bash
+python -m venv .venv-sdist
+. .venv-sdist/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "./ainews_open-${VERSION}.tar.gz"
+python -m ainews --help
+python -m ainews stats
+deactivate
+```
+
+检查 SBOM 至少是可机器读取的 CycloneDX JSON：
+
+```bash
+python - <<'PY'
+from pathlib import Path
+import json
+import os
+
+sbom_path = Path(f"v{os.environ['VERSION']}-sbom.json")
+sbom = json.loads(sbom_path.read_text(encoding="utf-8"))
+components = len(sbom.get("components", []))
+print(f"{sbom.get('bomFormat')} {sbom.get('specVersion')} components={components}")
+if sbom.get("bomFormat") != "CycloneDX":
+    raise SystemExit("unexpected SBOM format")
+PY
+```
+
 ## 下载并校验
 
 从 Release 页面下载 wheel、source archive 和 `sha256sums.txt`。
