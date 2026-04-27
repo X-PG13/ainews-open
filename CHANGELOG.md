@@ -2,6 +2,25 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.49] - 2026-04-27
+
+### Added
+
+- Support lifecycle docs that define active support, maintenance support, unsupported releases, and the `v1.x` deprecation policy
+- Chinese roadmap translation plus a refreshed roadmap that separates current release priorities from completed governance work
+- Markdown relative-link regression test coverage for repository docs, `docs/`, and `.github/` Markdown files
+
+### Changed
+
+- Package version is now `1.2.49`
+- README community-baseline links now include the community triage and support lifecycle docs in both English and Simplified Chinese
+- Issue-template roadmap contact links now point contributors to current maintainer priorities in English and Simplified Chinese
+- GitHub Pages and release supply-chain workflow actions were refreshed to their newer major versions
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured
+
 ## [1.2.48] - 2026-04-15
 
 ### Added
