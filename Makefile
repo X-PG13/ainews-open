@@ -61,10 +61,23 @@ smoke:
 	@AINEWS_HOME="$(CURDIR)/.ainews-smoke" $(PYTHON) -m uvicorn ainews.api:create_app --factory --host 127.0.0.1 --port 8001 >/tmp/ainews-smoke.log 2>&1 & \
 	PID=$$!; \
 	trap 'kill $$PID >/dev/null 2>&1 || true' EXIT; \
+	rm -f /tmp/ainews-smoke-health.json /tmp/ainews-smoke-curl.log; \
+	READY=0; \
 	for attempt in $$(seq 1 30); do \
-		if curl -fsS http://127.0.0.1:8001/health >/tmp/ainews-smoke-health.json; then \
+		if curl -fsS http://127.0.0.1:8001/health >/tmp/ainews-smoke-health.json 2>/tmp/ainews-smoke-curl.log; then \
+			READY=1; \
 			break; \
 		fi; \
 		sleep 1; \
 	done; \
-	$(PYTHON) -c 'import json; payload=json.load(open("/tmp/ainews-smoke-health.json", "r", encoding="utf-8")); assert payload["ready"] is True'
+	if [ "$$READY" -ne 1 ]; then \
+		echo "Smoke server did not become ready after 30 seconds." >&2; \
+		if [ -s /tmp/ainews-smoke-curl.log ]; then \
+			echo "Last curl error:" >&2; \
+			sed 's/^/  /' /tmp/ainews-smoke-curl.log >&2; \
+		fi; \
+		echo "Smoke server log:" >&2; \
+		sed 's/^/  /' /tmp/ainews-smoke.log >&2; \
+		exit 1; \
+	fi; \
+	$(PYTHON) -c 'import json; payload=json.load(open("/tmp/ainews-smoke-health.json", "r", encoding="utf-8")); assert payload["ready"] is True, payload'
