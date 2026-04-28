@@ -70,6 +70,20 @@
 - [pypi-publish.yml](../.github/workflows/pypi-publish.yml) 会在 GitHub Release 发布后把包发到 PyPI，或者由维护者手动触发
 - [demo-pages.yml](../.github/workflows/demo-pages.yml) 会在 `main` 上的 demo 变更或手动触发时部署 `docs/demo/`
 
+## 依赖升级策略
+
+Dependabot PR 只作为升级通知，不视为可以直接合并的维护者提交。
+
+维护者不应把 Dependabot PR 直接 merge 到 `main`。如果确认需要升级某个依赖或 GitHub Actions：
+
+1. 先阅读 Dependabot PR，确认升级范围、release notes 和兼容性风险。
+2. 从 `main` 新建一个由维护者提交的 review 分支。
+3. 在这个分支上应用同样的依赖升级，并运行常规检查。
+4. 开启并合并这个由维护者提交的 PR。
+5. 人工 PR 合并后，关闭原来的 Dependabot PR。
+
+这样可以保留依赖升级的可审查性，同时避免默认分支出现 bot-authored commits。
+
 ## 维护者快速自检
 
 - `Settings` -> `Pages` 的 `Source` 已经是 `GitHub Actions`

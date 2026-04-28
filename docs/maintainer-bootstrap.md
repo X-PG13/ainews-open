@@ -70,6 +70,20 @@ Notes:
 - [pypi-publish.yml](../.github/workflows/pypi-publish.yml) publishes the built package to PyPI when a GitHub Release is published, or when maintainers dispatch it manually.
 - [demo-pages.yml](../.github/workflows/demo-pages.yml) deploys the demo site from `docs/demo/` on `main` changes or manual dispatch.
 
+## Dependency Update Policy
+
+Dependabot PRs are upgrade notifications, not merge-ready maintainer commits.
+
+Maintainers should not directly merge Dependabot PRs into `main`. When a dependency or GitHub Actions update is desired:
+
+1. Review the Dependabot PR for scope, release notes, and compatibility risk.
+2. Create a human-authored review branch from `main`.
+3. Apply the same dependency update on that branch and run the normal checks.
+4. Open and merge the human-authored PR.
+5. Close the original Dependabot PR after the human-authored PR merges.
+
+This keeps dependency upgrades reviewable while avoiding bot-authored commits on the default branch.
+
 ## Maintainer Audit Checklist
 
 - `Settings` -> `Pages` uses `GitHub Actions` as the source.
