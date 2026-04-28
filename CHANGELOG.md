@@ -2,6 +2,19 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.52] - 2026-04-28
+
+### Added
+
+- Release metadata regression test that keeps package version, runtime version, changelog entry, and release notes indexes aligned
+- Manual dependency and GitHub Actions update review checklist for maintainer-authored upgrades instead of direct Dependabot merges
+- Security issue intake and response flow covering private disclosure, maintainer triage, fix/release handling, and public disclosure
+
+### Changed
+
+- Package version is now `1.2.52`
+- README, support policy, and support lifecycle docs now link to the security reporting and response process
+
 ## [1.2.51] - 2026-04-28
 
 ### Added
