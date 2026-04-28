@@ -235,6 +235,10 @@ Before publishing the repository, still confirm two things:
 1. Your private security reporting channel is configured in GitHub Security Advisories.
 2. The organization name, repository URLs, and maintainer metadata in `README.md` and `pyproject.toml` match your real public values.
 
+Security reports, maintainer triage, and disclosure expectations are documented
+in [SECURITY.md](SECURITY.md). Support boundaries are documented in
+[SUPPORT.md](SUPPORT.md) and [Support Lifecycle](docs/support-lifecycle.md).
+
 If you are preparing a GitHub launch, you can reuse:
 
 - `docs/github-launch-kit.md`

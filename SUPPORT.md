@@ -14,7 +14,7 @@ See `docs/support-lifecycle.md` for the full minor-release support window and de
 ## Where To Ask For Help
 
 - Bugs: open a GitHub issue with the bug template.
-- Security: use GitHub Security Advisories, not public issues.
+- Security: use GitHub Security Advisories, not public issues; see `SECURITY.md` for reporting, triage, and disclosure expectations.
 - Feature requests: use the feature request template once the request is concrete enough to track as implementation work.
 - Usage questions, early ideas, showcase posts, and design discussion: use GitHub Discussions. See `docs/community-triage.md` for the issue-vs-discussion split.
 

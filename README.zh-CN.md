@@ -100,6 +100,7 @@ make check
 - [路线图](ROADMAP.zh-CN.md)
 - [支持生命周期](docs/support-lifecycle.zh-CN.md)
 - [PR 审核约定](docs/pr-review-policy.zh-CN.md)
+- [安全策略](SECURITY.md)
 - [Release Notes](docs/releases/README.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
