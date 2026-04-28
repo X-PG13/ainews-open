@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 PROJECT_VERSION_RE = re.compile(r'^version = "([^"]+)"$', re.MULTILINE)
+PROJECT_NAME_RE = re.compile(r'^name = "([^"]+)"$', re.MULTILINE)
 RUNTIME_VERSION_RE = re.compile(r'^__version__ = "([^"]+)"$', re.MULTILINE)
 CHANGELOG_RELEASE_RE = re.compile(
     r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$",
@@ -27,6 +28,24 @@ def _match_required(pattern: re.Pattern[str], text: str, label: str) -> str:
 
 def _project_version() -> str:
     return _match_required(PROJECT_VERSION_RE, _read_text("pyproject.toml"), "project.version")
+
+
+def _project_name() -> str:
+    return _match_required(PROJECT_NAME_RE, _read_text("pyproject.toml"), "project.name")
+
+
+def _distribution_name() -> str:
+    return re.sub(r"[-_.]+", "_", _project_name()).lower()
+
+
+def _expected_release_asset_names(version: str) -> tuple[str, str, str, str]:
+    distribution = _distribution_name()
+    return (
+        f"{distribution}-{version}-py3-none-any.whl",
+        f"{distribution}-{version}.tar.gz",
+        "sha256sums.txt",
+        f"v{version}-sbom.json",
+    )
 
 
 def _markdown_section(text: str, heading: str) -> str:
@@ -76,6 +95,53 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         release_index_zh = _read_text("docs/releases/README.zh-CN.md")
         self.assertIn(release_link, _markdown_section(release_index, "Latest"))
         self.assertIn(release_link, _markdown_section(release_index_zh, LATEST_HEADING_ZH))
+
+    def test_release_asset_names_match_current_package_version(self) -> None:
+        version = _project_version()
+
+        self.assertEqual(
+            _expected_release_asset_names(version),
+            (
+                f"ainews_open-{version}-py3-none-any.whl",
+                f"ainews_open-{version}.tar.gz",
+                "sha256sums.txt",
+                f"v{version}-sbom.json",
+            ),
+        )
+
+    def test_release_asset_contract_is_documented_and_enforced(self) -> None:
+        distribution = _distribution_name()
+        templated_asset_names = (
+            f"{distribution}-${{VERSION}}-py3-none-any.whl",
+            f"{distribution}-${{VERSION}}.tar.gz",
+            "sha256sums.txt",
+            "v${VERSION}-sbom.json",
+        )
+        release_docs = _read_text("docs/release-artifacts.md")
+        release_docs_zh = _read_text("docs/release-artifacts.zh-CN.md")
+
+        for asset_name in templated_asset_names:
+            self.assertIn(asset_name, release_docs)
+            self.assertIn(asset_name, release_docs_zh)
+
+        release_workflow = _read_text(".github/workflows/release.yml")
+        self.assertIn("for artifact in *.whl *.tar.gz; do", release_workflow)
+        self.assertIn('-o "dist/${GITHUB_REF_NAME}-sbom.json"', release_workflow)
+        self.assertIn('gh release create "${TAG}" dist/*', release_workflow)
+
+        smoke_workflow = _read_text(".github/workflows/release-artifact-smoke.yml")
+        self.assertIn('VERSION="${RELEASE_TAG#v}"', smoke_workflow)
+        self.assertIn(
+            f'echo "WHEEL_ASSET={distribution}-${{VERSION}}-py3-none-any.whl"',
+            smoke_workflow,
+        )
+        self.assertIn(f'echo "SDIST_ASSET={distribution}-${{VERSION}}.tar.gz"', smoke_workflow)
+        self.assertIn('echo "CHECKSUMS_ASSET=sha256sums.txt"', smoke_workflow)
+        self.assertIn('echo "SBOM_ASSET=v${VERSION}-sbom.json"', smoke_workflow)
+
+        for asset_variable in ("WHEEL_ASSET", "SDIST_ASSET", "CHECKSUMS_ASSET", "SBOM_ASSET"):
+            self.assertIn(f'--pattern "${{{asset_variable}}}"', smoke_workflow)
+            self.assertIn(f'"${{{asset_variable}}}"', smoke_workflow)
 
 
 if __name__ == "__main__":

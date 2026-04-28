@@ -42,31 +42,57 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Define expected release assets
+        run: |
+          case "${RELEASE_TAG}" in
+            v*) ;;
+            *)
+              echo "RELEASE_TAG must start with v: ${RELEASE_TAG}" >&2
+              exit 1
+              ;;
+          esac
+
+          VERSION="${RELEASE_TAG#v}"
+          {
+            echo "RELEASE_VERSION=${VERSION}"
+            echo "WHEEL_ASSET=ainews_open-${VERSION}-py3-none-any.whl"
+            echo "SDIST_ASSET=ainews_open-${VERSION}.tar.gz"
+            echo "CHECKSUMS_ASSET=sha256sums.txt"
+            echo "SBOM_ASSET=v${VERSION}-sbom.json"
+          } >> "${GITHUB_ENV}"
+
       - name: Download release assets
         run: |
           mkdir -p release-assets
           gh release download "${RELEASE_TAG}" \
             --dir release-assets \
-            --pattern "*.whl" \
-            --pattern "*.tar.gz" \
-            --pattern "sha256sums.txt"
+            --pattern "${WHEEL_ASSET}" \
+            --pattern "${SDIST_ASSET}" \
+            --pattern "${CHECKSUMS_ASSET}" \
+            --pattern "${SBOM_ASSET}"
           ls -la release-assets
+
+      - name: Verify expected release assets
+        run: |
+          for asset in "${WHEEL_ASSET}" "${SDIST_ASSET}" "${CHECKSUMS_ASSET}" "${SBOM_ASSET}"; do
+            test -f "release-assets/${asset}"
+          done
 
       - name: Verify release checksums
         working-directory: release-assets
-        run: sha256sum -c sha256sums.txt
+        run: sha256sum -c "${CHECKSUMS_ASSET}"
 
       - name: Install artifact
         run: |
           case "${{ matrix.artifact }}" in
             wheel)
-              ARTIFACT_PATH="$(find release-assets -maxdepth 1 -type f -name '*.whl' | head -n 1)"
+              ARTIFACT_PATH="release-assets/${WHEEL_ASSET}"
               ;;
             sdist)
-              ARTIFACT_PATH="$(find release-assets -maxdepth 1 -type f -name '*.tar.gz' | head -n 1)"
+              ARTIFACT_PATH="release-assets/${SDIST_ASSET}"
               ;;
           esac
-          test -n "${ARTIFACT_PATH}"
+          test -f "${ARTIFACT_PATH}"
           python -m pip install --upgrade pip
           python -m pip install "${ARTIFACT_PATH}"
 
