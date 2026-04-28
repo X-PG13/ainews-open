@@ -2,6 +2,21 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.50] - 2026-04-28
+
+### Added
+
+- Release asset verification docs now include a copy-pasteable flow for downloading wheel, source archive, checksums, and SBOM assets
+- Post-release smoke checklist covering tag validation, GitHub Release assets, workflow status, clean installs, and milestone closeout
+- Release notes index pages in English and Simplified Chinese for easier discovery of recent releases and maintainer release docs
+
+### Changed
+
+- Package version is now `1.2.50`
+- Release checklist now points maintainers to the fuller release artifact verification flow
+- README, roadmap, and support lifecycle docs now cross-link roadmap, support policy, and release notes entry points more directly
+- Roadmap status now reflects `v1.2.50` maintenance work while keeping PyPI trusted publishing explicitly deferred
+
 ## [1.2.49] - 2026-04-27
 
 ### Added
