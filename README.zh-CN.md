@@ -97,15 +97,16 @@ make check
 - [故障排查](docs/troubleshooting.zh-CN.md)
 - [监控接入](docs/monitoring.zh-CN.md)
 - [维护者初始化清单](docs/maintainer-bootstrap.zh-CN.md)
+- [路线图](ROADMAP.zh-CN.md)
 - [支持生命周期](docs/support-lifecycle.zh-CN.md)
 - [PR 审核约定](docs/pr-review-policy.zh-CN.md)
+- [Release Notes](docs/releases/README.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
 - [社区分流规范](docs/community-triage.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)
 - [发版清单](docs/release-checklist.zh-CN.md)
 - [支持策略](SUPPORT.md)
-- [路线图](ROADMAP.zh-CN.md)
 
 ## 当前能力
 

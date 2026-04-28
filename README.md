@@ -97,15 +97,16 @@ make check
 - [Troubleshooting](docs/troubleshooting.md)
 - [Monitoring](docs/monitoring.md)
 - [Maintainer Bootstrap](docs/maintainer-bootstrap.md)
+- [Roadmap](ROADMAP.md)
 - [Support Lifecycle](docs/support-lifecycle.md)
 - [PR Review Policy](docs/pr-review-policy.md)
+- [Release Notes](docs/releases/README.md)
 - [Release Artifacts](docs/release-artifacts.md)
 - [Use Cases](docs/use-cases.md)
 - [Community Triage](docs/community-triage.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
 - [Release Checklist](docs/release-checklist.md)
 - [Support Policy](SUPPORT.md)
-- [Roadmap](ROADMAP.md)
 
 ## What You Get
 

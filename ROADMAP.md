@@ -7,15 +7,20 @@ This roadmap tracks current maintainer priorities. Release notes remain the hist
 ## Current Status
 
 - Stable line: `v1.2.x`
-- Latest release: `v1.2.48`
-- Current open milestone: `v1.2.49`
-- Current open release-engineering item: trusted PyPI publishing bootstrap and the first package publish
+- Latest release: `v1.2.49`
+- Current open milestone: `v1.2.50`
+- Deferred release-engineering item: trusted PyPI publishing bootstrap and the first package publish
 
-## In Progress: v1.2.49 Maintenance
+## In Progress: v1.2.50 Maintenance
+
+- Improve release verification and post-release smoke documentation.
+- Keep roadmap, support lifecycle, and release notes easier to discover from primary docs entry points.
+- Keep release automation, checksum verification, SBOM generation, and provenance attestation healthy as ongoing maintenance.
+
+## Deferred: PyPI
 
 - Configure the PyPI trusted publisher for `ainews-open`.
 - Publish the package to PyPI for the first time after the trusted-publisher bootstrap is complete.
-- Keep release automation, checksum verification, SBOM generation, and provenance attestation healthy as part of ongoing maintenance.
 
 ## Planned: v1.3 Product Surface
 
@@ -44,3 +49,8 @@ This roadmap tracks current maintainer priorities. Release notes remain the hist
 - Keep `good first issue`, `help wanted`, `v1.x`, and area labels current as triage metadata.
 - Document more worked examples for extending sources, extraction rules, and publishers over time.
 - Keep roadmap, milestone, and release documentation aligned so feature requests land against current priorities instead of stale backlog items.
+
+## Related Docs
+
+- [Release Notes](docs/releases/README.md)
+- [Support Lifecycle](docs/support-lifecycle.md)

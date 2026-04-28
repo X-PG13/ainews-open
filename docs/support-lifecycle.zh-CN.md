@@ -83,4 +83,6 @@ AI News Open 对当前稳定 major 线使用三种发布状态。
 
 - [SUPPORT.md](../SUPPORT.md)
 - [Compatibility Contract](./compatibility.md)
+- [路线图](../ROADMAP.zh-CN.md)
+- [Release Notes](./releases/README.zh-CN.md)
 - [Release Checklist](./release-checklist.md)
