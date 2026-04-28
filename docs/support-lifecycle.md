@@ -83,4 +83,6 @@ If a deprecated behavior cannot remain in place because of security, safety, or 
 
 - [SUPPORT.md](../SUPPORT.md)
 - [Compatibility Contract](./compatibility.md)
+- [Roadmap](../ROADMAP.md)
+- [Release Notes](./releases/README.md)
 - [Release Checklist](./release-checklist.md)

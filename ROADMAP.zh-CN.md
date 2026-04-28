@@ -7,15 +7,20 @@
 ## 当前状态
 
 - 稳定版本线：`v1.2.x`
-- 最新 release：`v1.2.48`
-- 当前开启的 milestone：`v1.2.49`
-- 当前唯一明确未完成的 release engineering 项：PyPI trusted publishing 初始化和首次发包
+- 最新 release：`v1.2.49`
+- 当前开启的 milestone：`v1.2.50`
+- 延期的 release engineering 项：PyPI trusted publishing 初始化和首次发包
 
-## 进行中：v1.2.49 维护事项
+## 进行中：v1.2.50 维护事项
+
+- 改进 release 校验和发版后 smoke 文档。
+- 让 roadmap、支持生命周期和 release notes 更容易从主要文档入口发现。
+- 持续维护 release automation、checksum 校验、SBOM 生成和 provenance attestation。
+
+## 延期：PyPI
 
 - 为 `ainews-open` 配置 PyPI trusted publisher。
 - 在 trusted publisher 初始化完成后，完成第一次 PyPI 发布。
-- 持续维护 release automation、checksum 校验、SBOM 生成和 provenance attestation。
 
 ## 计划中：v1.3 产品能力
 
@@ -44,3 +49,8 @@
 - 继续把 `good first issue`、`help wanted`、`v1.x` 和 area labels 维护成稳定的分诊元数据。
 - 随着时间推进，为 source、extractor 和 publisher 扩展补更多可执行示例。
 - 保持 roadmap、milestone 和 release 文档同步，避免功能请求继续落到过时 backlog 上。
+
+## 相关文档
+
+- [Release Notes](docs/releases/README.zh-CN.md)
+- [支持生命周期](docs/support-lifecycle.zh-CN.md)
