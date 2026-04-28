@@ -2,6 +2,17 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.51] - 2026-04-28
+
+### Added
+
+- Maintainer dependency update policy that treats Dependabot PRs as upgrade notifications instead of directly mergeable commits
+
+### Changed
+
+- Package version is now `1.2.51`
+- Maintainer bootstrap docs now describe the human-authored review branch flow for dependency and GitHub Actions upgrades
+
 ## [1.2.50] - 2026-04-28
 
 ### Added
