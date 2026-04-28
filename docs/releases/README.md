@@ -18,6 +18,7 @@ Release notes are the historical record of shipped changes. Use them with [CHANG
 
 - [Release Checklist](../release-checklist.md)
 - [Release Artifacts](../release-artifacts.md)
+- [Release Recovery Notes](../release-recovery.md)
 - [Support Lifecycle](../support-lifecycle.md)
 
 For the full published archive, use [GitHub Releases](https://github.com/X-PG13/ainews-open/releases).

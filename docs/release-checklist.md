@@ -42,6 +42,7 @@ Confirm:
 
 Release is not considered complete until `Release Artifact Smoke` passes for the published tag.
 The standard release flow now dispatches that smoke workflow automatically after publishing the GitHub Release.
+If a merge, tag, release, or workflow command times out after it may have changed GitHub state, use the [release recovery notes](./release-recovery.md) before retrying the mutating command.
 
 ## GitHub Release
 
@@ -103,6 +104,8 @@ Run the post-release smoke checklist before announcing the release or closing it
 - [ ] Leave deferred work in a separate milestone instead of carrying it inside the closed release milestone.
 
 ## Post-Release Failure Triage
+
+Use the [release recovery notes](./release-recovery.md) for command-level recovery when GitHub network calls time out or local refs need repair.
 
 - Missing or partial release assets: confirm the tag points to the intended commit, then re-run the `Release` workflow. Do not move or recreate a public tag unless the published tag itself points to the wrong commit and the maintainer explicitly accepts the compatibility risk.
 - Failed `Release Artifact Smoke`: inspect whether the failure is checksum, wheel install, source archive install, CLI startup, or `/health` startup. Fix the release workflow or package issue in a follow-up PR, then publish a new patch tag if the released assets are already public.

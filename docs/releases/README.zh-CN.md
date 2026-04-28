@@ -18,6 +18,7 @@ Release notes 是已经发布内容的历史记录。逐版本审查时同时参
 
 - [发版清单](../release-checklist.zh-CN.md)
 - [Release 产物校验](../release-artifacts.zh-CN.md)
+- [Release 恢复说明](../release-recovery.zh-CN.md)
 - [支持生命周期](../support-lifecycle.zh-CN.md)
 
 完整公开发布归档见 [GitHub Releases](https://github.com/X-PG13/ainews-open/releases)。
