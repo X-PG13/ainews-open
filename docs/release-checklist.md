@@ -61,7 +61,7 @@ git push origin vX.Y.Z
 - final release notes
 - artifact install and checksum verification guidance
 
-3. Verify the release artifact instructions still work:
+3. Follow the [release artifact verification flow](./release-artifacts.md#copy-paste-verification-flow) for the final tag. At minimum, verify the wheel installs and the CLI starts:
 
 ```bash
 python -m pip install ainews_open-X.Y.Z-py3-none-any.whl
