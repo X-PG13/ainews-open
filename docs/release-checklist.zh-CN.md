@@ -42,6 +42,7 @@ make check
 
 如果已发布 tag 对应的 `Release Artifact Smoke` 还没通过，这次 release 就不算完成。
 标准 release 流程现在会在 GitHub Release 发布后自动触发这条 smoke workflow。
+如果 merge、tag、release 或 workflow 命令超时，而且它可能已经改动 GitHub 状态，重试写操作前先按 [Release 恢复说明](./release-recovery.zh-CN.md) 验证远端状态。
 
 ## GitHub Release
 
@@ -103,6 +104,8 @@ python -m ainews --help
 - [ ] 延期事项放到单独 milestone，不要留在已经关闭的 release milestone 里。
 
 ## 发版后失败分流
+
+当 GitHub 网络调用超时，或本地 ref 需要修复时，按 [Release 恢复说明](./release-recovery.zh-CN.md) 做命令级恢复。
 
 - Release 制品缺失或不完整：先确认 tag 指向预期 commit，再重跑 `Release` workflow。除非公开 tag 本身指错 commit，并且维护者明确接受兼容性风险，否则不要移动或重建公开 tag。
 - `Release Artifact Smoke` 失败：先判断失败点是 checksum、wheel 安装、source archive 安装、CLI 启动，还是 `/health` 启动。通过后续 PR 修复 release workflow 或打包问题；如果资产已经公开，修复后应发新的 patch tag。
