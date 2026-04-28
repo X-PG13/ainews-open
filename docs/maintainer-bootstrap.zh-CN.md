@@ -74,13 +74,19 @@
 
 Dependabot PR 只作为升级通知，不视为可以直接合并的维护者提交。
 
-维护者不应把 Dependabot PR 直接 merge 到 `main`。如果确认需要升级某个依赖或 GitHub Actions：
+维护者不应把 Dependabot PR 直接 merge 到 `main`。不要在 Dependabot PR 上点 GitHub 的 merge 按钮，也不要把 bot-authored commits cherry-pick 到默认分支。
 
-1. 先阅读 Dependabot PR，确认升级范围、release notes 和兼容性风险。
-2. 从 `main` 新建一个由维护者提交的 review 分支。
-3. 在这个分支上应用同样的依赖升级，并运行常规检查。
-4. 开启并合并这个由维护者提交的 PR。
-5. 人工 PR 合并后，关闭原来的 Dependabot PR。
+如果确认需要升级某个依赖或 GitHub Actions，按下面的 checklist 处理：
+
+1. 只把 Dependabot PR 当作通知。先阅读被改动的 package 或 action、release notes、安全上下文和兼容性风险。
+2. 从当前 `main` 新建一个由维护者提交的 review 分支，例如 `review/deps-<package>` 或 `review/actions-<action-name>`。
+3. 在这个分支上手动应用同样的升级：
+   - Python 依赖升级：编辑相关依赖元数据，例如 `pyproject.toml`，并确保版本边界是有意设置的。
+   - GitHub Actions 升级：编辑相关 workflow 里的 action 引用；除非升级说明明确要求，否则不要顺手改 permissions 和 triggers。
+4. 运行 `make check PYTHON=./.venv-dev/bin/python`。如果改动影响文档链接，再额外运行 `./.venv-dev/bin/python -m unittest tests.test_docs_links -v`。
+5. 从 review 分支开启一个由维护者提交的 PR。在 PR 描述里提到原 Dependabot PR，方便 reviewer 对照通知和人工改动。
+6. 等 review 和 checks 都通过后，合并这个人工 PR。
+7. 人工 PR 合并后，关闭原来的 Dependabot PR，并留一句简短评论指向已合并的维护者 PR。
 
 这样可以保留依赖升级的可审查性，同时避免默认分支出现 bot-authored commits。
 
