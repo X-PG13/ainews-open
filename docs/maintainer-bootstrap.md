@@ -74,13 +74,21 @@ Notes:
 
 Dependabot PRs are upgrade notifications, not merge-ready maintainer commits.
 
-Maintainers should not directly merge Dependabot PRs into `main`. When a dependency or GitHub Actions update is desired:
+Maintainers should not directly merge Dependabot PRs into `main`. Do not use the
+GitHub merge button on a Dependabot PR, and do not cherry-pick bot-authored
+commits onto the default branch.
 
-1. Review the Dependabot PR for scope, release notes, and compatibility risk.
-2. Create a human-authored review branch from `main`.
-3. Apply the same dependency update on that branch and run the normal checks.
-4. Open and merge the human-authored PR.
-5. Close the original Dependabot PR after the human-authored PR merges.
+Use this checklist when a dependency or GitHub Actions update is desired:
+
+1. Treat the Dependabot PR as a notification only. Read the changed package or action, release notes, security context, and compatibility risk.
+2. Create a human-authored review branch from the current `main`, for example `review/deps-<package>` or `review/actions-<action-name>`.
+3. Apply the same upgrade manually on that branch:
+   - Python dependency updates: edit the relevant dependency metadata such as `pyproject.toml`, keeping version bounds intentional.
+   - GitHub Actions updates: edit the relevant workflow action references, keeping permissions and triggers unchanged unless the upgrade requires a documented change.
+4. Run `make check PYTHON=./.venv-dev/bin/python`. If the change affects documentation links, also run `./.venv-dev/bin/python -m unittest tests.test_docs_links -v` before opening the PR.
+5. Open a maintainer-authored PR from the review branch. Mention the original Dependabot PR in the body so reviewers can compare the notification with the manual change.
+6. Merge the maintainer-authored PR after review and green checks.
+7. Close the original Dependabot PR after the human-authored PR merges, leaving a short comment that points to the merged maintainer PR.
 
 This keeps dependency upgrades reviewable while avoiding bot-authored commits on the default branch.
 
