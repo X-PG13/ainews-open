@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.53] - 2026-04-29
+
+### Added
+
+- Release asset naming regression guard that keeps wheel, source archive, checksum, and SBOM names aligned with package metadata, release docs, and workflows
+- Release recovery notes for interrupted GitHub PR, tag, release, and workflow operations in English and Simplified Chinese
+
+### Changed
+
+- Package version is now `1.2.53`
+- Release artifact smoke now downloads the exact expected wheel, source archive, checksum file, and SBOM names instead of broad artifact globs
+
+### Fixed
+
+- Local smoke checks now suppress expected startup retry noise and only print the last curl error plus server log when readiness never succeeds
+
 ## [1.2.52] - 2026-04-28
 
 ### Added
