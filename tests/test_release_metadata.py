@@ -11,6 +11,7 @@ CHANGELOG_RELEASE_RE = re.compile(
     r"^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$",
     re.MULTILINE,
 )
+MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]\n]+\]\(([^)\n]+)\)")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 LATEST_HEADING_ZH = "\u6700\u65b0\u7248\u672c"
 
@@ -59,6 +60,15 @@ def _markdown_section(text: str, heading: str) -> str:
     if next_heading is None:
         return text[content_start:]
     return text[content_start : content_start + next_heading.start()]
+
+
+def _markdown_link_targets(relative_path: str) -> set[str]:
+    targets: set[str] = set()
+    for target in MARKDOWN_LINK_RE.findall(_read_text(relative_path)):
+        path_target = target.split("#", 1)[0].strip()
+        if path_target:
+            targets.add(path_target)
+    return targets
 
 
 class ReleaseMetadataTestCase(unittest.TestCase):
@@ -142,6 +152,25 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         for asset_variable in ("WHEEL_ASSET", "SDIST_ASSET", "CHECKSUMS_ASSET", "SBOM_ASSET"):
             self.assertIn(f'--pattern "${{{asset_variable}}}"', smoke_workflow)
             self.assertIn(f'"${{{asset_variable}}}"', smoke_workflow)
+
+    def test_readmes_expose_release_maintenance_entry_points(self) -> None:
+        expected_readme_links = {
+            "docs/releases/README.md",
+            "docs/release-artifacts.md",
+            "docs/release-recovery.md",
+            "docs/release-checklist.md",
+            "docs/support-lifecycle.md",
+        }
+        expected_readme_zh_links = {
+            "docs/releases/README.zh-CN.md",
+            "docs/release-artifacts.zh-CN.md",
+            "docs/release-recovery.zh-CN.md",
+            "docs/release-checklist.zh-CN.md",
+            "docs/support-lifecycle.zh-CN.md",
+        }
+
+        self.assertLessEqual(expected_readme_links, _markdown_link_targets("README.md"))
+        self.assertLessEqual(expected_readme_zh_links, _markdown_link_targets("README.zh-CN.md"))
 
 
 if __name__ == "__main__":

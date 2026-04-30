@@ -103,6 +103,7 @@ make check
 - [安全策略](SECURITY.md)
 - [Release Notes](docs/releases/README.zh-CN.md)
 - [Release 产物校验](docs/release-artifacts.zh-CN.md)
+- [Release 恢复说明](docs/release-recovery.zh-CN.md)
 - [使用场景](docs/use-cases.zh-CN.md)
 - [社区分流规范](docs/community-triage.zh-CN.md)
 - [贡献者手册](docs/contributor-playbook.md)

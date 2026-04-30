@@ -102,6 +102,7 @@ make check
 - [PR Review Policy](docs/pr-review-policy.md)
 - [Release Notes](docs/releases/README.md)
 - [Release Artifacts](docs/release-artifacts.md)
+- [Release Recovery Notes](docs/release-recovery.md)
 - [Use Cases](docs/use-cases.md)
 - [Community Triage](docs/community-triage.md)
 - [Contributor Playbook](docs/contributor-playbook.md)
