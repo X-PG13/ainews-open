@@ -93,6 +93,44 @@ if sbom.get("bomFormat") != "CycloneDX":
 PY
 ```
 
+校验已发布资产的 GitHub artifact attestations。这个流程只使用 GitHub
+作为 attestation 来源，不依赖 PyPI：
+
+```bash
+gh auth status
+# 如果上面的命令提示未登录，先执行：gh auth login
+
+for artifact in \
+  "ainews_open-${VERSION}-py3-none-any.whl" \
+  "ainews_open-${VERSION}.tar.gz" \
+  "sha256sums.txt" \
+  "v${VERSION}-sbom.json"
+do
+  gh attestation verify "${artifact}" \
+    --repo "${REPO}" \
+    --signer-workflow "${REPO}/.github/workflows/release.yml" \
+    --source-ref "refs/tags/v${VERSION}"
+done
+```
+
+如果内部准入记录需要查看已经验证过的 provenance payload，可以先对一个
+artifact 打印 predicate type：
+
+```bash
+gh attestation verify "./ainews_open-${VERSION}-py3-none-any.whl" \
+  --repo "${REPO}" \
+  --signer-workflow "${REPO}/.github/workflows/release.yml" \
+  --source-ref "refs/tags/v${VERSION}" \
+  --format json \
+  --jq '.[0].verificationResult.statement.predicateType'
+```
+
+这三类校验应该配合使用：
+
+- `sha256sums.txt` 证明下载到的文件和已发布 checksum manifest 一致
+- `gh attestation verify` 证明 GitHub 为这个精确 artifact digest 签发了来自本仓库 release workflow 和 tag ref 的 provenance
+- CycloneDX SBOM 用来审查打包进去的依赖内容
+
 ## 下载并校验
 
 从 Release 页面下载 wheel、source archive 和 `sha256sums.txt`。
@@ -135,4 +173,5 @@ python -m ainews stats
 
 - SBOM 文件会作为 `vX.Y.Z-sbom.json` 发布
 - provenance 通过 GitHub release workflow 的 artifact attestations 生成
+- 使用 `gh attestation verify` 时应绑定到 `X-PG13/ainews-open`、`.github/workflows/release.yml` 和对应 release tag ref
 - 如果你要做内部制品准入或轻量供应链审计，可以直接使用这些文件

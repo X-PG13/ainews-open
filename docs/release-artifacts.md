@@ -93,6 +93,44 @@ if sbom.get("bomFormat") != "CycloneDX":
 PY
 ```
 
+Verify the GitHub artifact attestations for the published assets. This uses
+GitHub as the attestation source and does not depend on PyPI:
+
+```bash
+gh auth status
+# If the command above reports no authenticated account, run: gh auth login
+
+for artifact in \
+  "ainews_open-${VERSION}-py3-none-any.whl" \
+  "ainews_open-${VERSION}.tar.gz" \
+  "sha256sums.txt" \
+  "v${VERSION}-sbom.json"
+do
+  gh attestation verify "${artifact}" \
+    --repo "${REPO}" \
+    --signer-workflow "${REPO}/.github/workflows/release.yml" \
+    --source-ref "refs/tags/v${VERSION}"
+done
+```
+
+If you need to inspect the verified provenance payload for an intake record,
+start with one artifact and print the predicate type:
+
+```bash
+gh attestation verify "./ainews_open-${VERSION}-py3-none-any.whl" \
+  --repo "${REPO}" \
+  --signer-workflow "${REPO}/.github/workflows/release.yml" \
+  --source-ref "refs/tags/v${VERSION}" \
+  --format json \
+  --jq '.[0].verificationResult.statement.predicateType'
+```
+
+Use these checks together:
+
+- `sha256sums.txt` proves the downloaded files match the published checksum manifest.
+- `gh attestation verify` proves GitHub has signed provenance for the exact artifact digest from the repository release workflow and tag ref.
+- The CycloneDX SBOM describes the packaged dependency contents for review.
+
 ## Download And Verify
 
 From a release page, download the wheel, source archive, and `sha256sums.txt`.
@@ -135,4 +173,5 @@ For the GitHub-hosted equivalent, re-run the `Release Artifact Smoke` workflow a
 
 - The SBOM file is published as `vX.Y.Z-sbom.json`.
 - Provenance is attached through GitHub artifact attestations in the release workflow.
+- Verify attestations with `gh attestation verify` against `X-PG13/ainews-open`, `.github/workflows/release.yml`, and the release tag ref.
 - Use these assets when you need a lightweight supply-chain review or internal package intake evidence.
