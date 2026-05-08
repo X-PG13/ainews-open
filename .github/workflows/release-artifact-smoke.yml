@@ -43,7 +43,10 @@ jobs:
           cache: "pip"
 
       - name: Define expected release assets
+        id: define-assets
         run: |
+          set -euo pipefail
+
           case "${RELEASE_TAG}" in
             v*) ;;
             *)
@@ -62,28 +65,60 @@ jobs:
           } >> "${GITHUB_ENV}"
 
       - name: Download release assets
+        id: download-assets
         run: |
+          set -euo pipefail
+
           mkdir -p release-assets
+          echo "::group::Download release assets for ${RELEASE_TAG}"
           gh release download "${RELEASE_TAG}" \
             --dir release-assets \
             --pattern "${WHEEL_ASSET}" \
             --pattern "${SDIST_ASSET}" \
             --pattern "${CHECKSUMS_ASSET}" \
             --pattern "${SBOM_ASSET}"
+          echo "::endgroup::"
+
+          echo "::group::Downloaded release asset inventory"
           ls -la release-assets
+          echo "::endgroup::"
 
       - name: Verify expected release assets
+        id: verify-assets
         run: |
+          set -euo pipefail
+
+          missing=0
           for asset in "${WHEEL_ASSET}" "${SDIST_ASSET}" "${CHECKSUMS_ASSET}" "${SBOM_ASSET}"; do
-            test -f "release-assets/${asset}"
+            if [ -f "release-assets/${asset}" ]; then
+              echo "found release-assets/${asset}"
+            else
+              echo "::error title=Missing release asset::release-assets/${asset} was not downloaded"
+              missing=1
+            fi
           done
 
+          if [ "${missing}" -ne 0 ]; then
+            echo "Expected release assets:" >&2
+            printf ' - %s\n' "${WHEEL_ASSET}" "${SDIST_ASSET}" "${CHECKSUMS_ASSET}" "${SBOM_ASSET}" >&2
+            exit 1
+          fi
+
       - name: Verify release checksums
+        id: verify-checksums
         working-directory: release-assets
-        run: sha256sum -c "${CHECKSUMS_ASSET}"
+        run: |
+          set -euo pipefail
+
+          echo "::group::Verify release checksums"
+          sha256sum -c "${CHECKSUMS_ASSET}"
+          echo "::endgroup::"
 
       - name: Install artifact
+        id: install-artifact
         run: |
+          set -euo pipefail
+
           case "${{ matrix.artifact }}" in
             wheel)
               ARTIFACT_PATH="release-assets/${WHEEL_ASSET}"
@@ -91,32 +126,52 @@ jobs:
             sdist)
               ARTIFACT_PATH="release-assets/${SDIST_ASSET}"
               ;;
+            *)
+              echo "::error title=Unknown artifact matrix value::${{ matrix.artifact }}"
+              exit 1
+              ;;
           esac
+
+          echo "::group::Install ${{ matrix.artifact }} artifact"
           test -f "${ARTIFACT_PATH}"
           python -m pip install --upgrade pip
           python -m pip install "${ARTIFACT_PATH}"
+          echo "::endgroup::"
 
       - name: Run CLI smoke checks
+        id: cli-smoke
         run: |
+          set -euo pipefail
+
+          echo "::group::Run CLI smoke checks"
           mkdir -p "${AINEWS_HOME}"
           python -m ainews --help
           python -m ainews stats
+          echo "::endgroup::"
 
       - name: Start API and verify health
+        id: api-health
         run: |
+          set -euo pipefail
+
           python -m uvicorn ainews.api:create_app --factory --host 127.0.0.1 --port 8001 >/tmp/ainews-release-smoke.log 2>&1 &
           echo $! >/tmp/ainews-release-smoke.pid
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8001/health >/tmp/ainews-release-health.json; then
+              echo "API health endpoint became ready after ${attempt} attempt(s)"
               exit 0
             fi
             sleep 1
           done
+          echo "::error title=API health smoke failed::/health did not return within 30 seconds"
           cat /tmp/ainews-release-smoke.log
           exit 1
 
       - name: Validate health payload
+        id: health-payload
         run: |
+          set -euo pipefail
+
           python - <<'PY'
           import json
 
@@ -138,3 +193,24 @@ jobs:
           if [ -f /tmp/ainews-release-smoke.log ]; then
             tail -n 200 /tmp/ainews-release-smoke.log
           fi
+
+      - name: Summarize failure
+        if: failure()
+        run: |
+          {
+            echo "## Release Artifact Smoke failure"
+            echo ""
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Matrix artifact: \`${{ matrix.artifact }}\`"
+            echo ""
+            echo "| Phase | Outcome | What to check next |"
+            echo "| --- | --- | --- |"
+            echo "| Define expected release assets | ${{ steps.define-assets.outcome }} | Confirm the tag starts with \`v\` and package-derived asset names match the release. |"
+            echo "| Download release assets | ${{ steps.download-assets.outcome }} | Confirm the GitHub Release exists and contains the wheel, source archive, checksum manifest, and SBOM. |"
+            echo "| Verify expected release assets | ${{ steps.verify-assets.outcome }} | Check the exact asset filenames listed above; missing files are annotated in the failed step. |"
+            echo "| Verify release checksums | ${{ steps.verify-checksums.outcome }} | Re-download the assets and compare them with \`sha256sums.txt\`. |"
+            echo "| Install artifact | ${{ steps.install-artifact.outcome }} | Inspect pip output for wheel or source archive packaging errors. |"
+            echo "| CLI smoke checks | ${{ steps.cli-smoke.outcome }} | Confirm \`python -m ainews --help\` and \`python -m ainews stats\` run after install. |"
+            echo "| API health smoke | ${{ steps.api-health.outcome }} | Inspect the uvicorn log printed by the stop step and verify \`/health\` startup. |"
+            echo "| Validate health payload | ${{ steps.health-payload.outcome }} | Confirm the health JSON has ready=true, database ok, sources ok, and version metadata. |"
+          } >> "${GITHUB_STEP_SUMMARY}"
