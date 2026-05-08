@@ -6,13 +6,13 @@ Release notes are the historical record of shipped changes. Use them with [CHANG
 
 ## Latest
 
-- [v1.2.53](./v1.2.53.md)
+- [v1.2.54](./v1.2.54.md)
 
 ## Recent Releases
 
+- [v1.2.53](./v1.2.53.md)
 - [v1.2.52](./v1.2.52.md)
 - [v1.2.51](./v1.2.51.md)
-- [v1.2.50](./v1.2.50.md)
 
 ## Maintainer Release Docs
 

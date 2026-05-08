@@ -2,6 +2,21 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.54] - 2026-05-08
+
+### Added
+
+- Copy-pasteable GitHub artifact attestation verification flow for release wheel, source archive, checksum manifest, and SBOM assets
+- Release artifact smoke failure summary that maps download, checksum, install, CLI, and `/health` failures to the next maintainer check
+- Regression coverage that keeps README release-maintenance entry points and release smoke failure summaries discoverable
+
+### Changed
+
+- Package version is now `1.2.54`
+- README release-maintenance links now expose release recovery notes in both English and Simplified Chinese
+- Release artifact docs now explain how checksums, GitHub artifact attestations, and CycloneDX SBOMs fit together for supply-chain review
+- Release artifact smoke logs now group noisy operations while keeping successful runs quick to scan
+
 ## [1.2.53] - 2026-04-29
 
 ### Added
