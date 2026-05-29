@@ -7,11 +7,11 @@ This roadmap tracks current maintainer priorities. Release notes remain the hist
 ## Current Status
 
 - Stable line: `v1.2.x`
-- Latest release: `v1.2.49`
-- Current open milestone: `v1.2.50`
+- Latest patch release: see the [release notes index](docs/releases/README.md)
+- Current open milestone: see the active GitHub milestone for the next `v1.2.x` maintenance release
 - Deferred release-engineering item: trusted PyPI publishing bootstrap and the first package publish
 
-## In Progress: v1.2.50 Maintenance
+## In Progress: v1.2.x Maintenance
 
 - Improve release verification and post-release smoke documentation.
 - Keep roadmap, support lifecycle, and release notes easier to discover from primary docs entry points.

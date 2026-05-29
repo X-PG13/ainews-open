@@ -27,6 +27,7 @@ make check
 2. 更新 `src/ainews/__init__.py` 中的版本号。
 3. 在 `CHANGELOG.md` 中增加本次版本条目。
 4. 新增或更新 `docs/releases/vX.Y.Z.md`。
+5. 确认 `ROADMAP.md` 和 `ROADMAP.zh-CN.md` 仍然把最新 patch release 指向 release notes 索引，而不是硬编码一个容易过期的 patch 号。
 
 ## 发布自动化检查
 

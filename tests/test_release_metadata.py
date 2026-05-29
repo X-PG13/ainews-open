@@ -220,6 +220,26 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertLessEqual(expected_readme_links, _markdown_link_targets("README.md"))
         self.assertLessEqual(expected_readme_zh_links, _markdown_link_targets("README.zh-CN.md"))
 
+    def test_roadmap_status_defers_latest_patch_to_release_index(self) -> None:
+        roadmap = _read_text("ROADMAP.md")
+        roadmap_zh = _read_text("ROADMAP.zh-CN.md")
+        release_checklist = _read_text("docs/release-checklist.md")
+        release_checklist_zh = _read_text("docs/release-checklist.zh-CN.md")
+
+        self.assertIn("[release notes index](docs/releases/README.md)", roadmap)
+        self.assertIn("[release notes 索引](docs/releases/README.zh-CN.md)", roadmap_zh)
+        self.assertIn("In Progress: v1.2.x Maintenance", roadmap)
+        self.assertIn("进行中：v1.2.x 维护事项", roadmap_zh)
+        self.assertNotRegex(roadmap, r"Latest release:\s*`v\d+\.\d+\.\d+`")
+        self.assertNotRegex(roadmap, r"Current open milestone:\s*`v\d+\.\d+\.\d+`")
+        self.assertNotRegex(roadmap_zh, r"最新 release：\s*`v\d+\.\d+\.\d+`")
+        self.assertNotRegex(roadmap_zh, r"当前开启的 milestone：\s*`v\d+\.\d+\.\d+`")
+
+        self.assertIn("ROADMAP.md", release_checklist)
+        self.assertIn("hard-coding a stale patch number", release_checklist)
+        self.assertIn("ROADMAP.zh-CN.md", release_checklist_zh)
+        self.assertIn("硬编码一个容易过期的 patch 号", release_checklist_zh)
+
 
 if __name__ == "__main__":
     unittest.main()
