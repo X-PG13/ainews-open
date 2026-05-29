@@ -127,7 +127,11 @@ jobs:
           if [ -f "${NOTES_FILE}" ]; then
             cp "${NOTES_FILE}" /tmp/release-notes.md
           else
-            printf 'Release %s\n' "${TAG}" > /tmp/release-notes.md
+            {
+              printf 'Release %s\n\n' "${TAG}"
+              printf 'Release notes file missing: `%s`.\n' "${NOTES_FILE}"
+              printf 'Maintainers should add this file before publishing final release notes.\n'
+            } > /tmp/release-notes.md
           fi
 
       - name: Publish GitHub release

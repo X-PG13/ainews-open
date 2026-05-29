@@ -201,6 +201,21 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("Trigger artifact smoke", release_workflow)
         self.assertIn("Publish GitHub Release", release_workflow)
 
+    def test_release_workflow_documents_release_notes_fallback(self) -> None:
+        release_workflow = _read_text(".github/workflows/release.yml")
+
+        self.assertIn('TAG="${GITHUB_REF_NAME}"', release_workflow)
+        self.assertIn('NOTES_FILE="docs/releases/${TAG}.md"', release_workflow)
+        self.assertIn('if [ -f "${NOTES_FILE}" ]; then', release_workflow)
+        self.assertIn('cp "${NOTES_FILE}" /tmp/release-notes.md', release_workflow)
+        self.assertIn("Release notes file missing:", release_workflow)
+        self.assertIn("printf 'Release notes file missing: `%s`.", release_workflow)
+        self.assertIn('"${NOTES_FILE}"', release_workflow)
+        self.assertIn(
+            "Maintainers should add this file before publishing final release notes.",
+            release_workflow,
+        )
+
     def test_release_recovery_docs_include_quick_reference(self) -> None:
         release_recovery = _read_text("docs/release-recovery.md")
         release_recovery_zh = _read_text("docs/release-recovery.zh-CN.md")
