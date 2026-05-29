@@ -2,6 +2,24 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.56] - 2026-05-29
+
+### Added
+
+- Release recovery quick reference tables for interrupted PR merge, tag push, workflow, release asset, and issue or milestone update operations
+- Release notes fallback coverage so a missing release notes file produces actionable maintainer guidance instead of a bare placeholder
+- Release closeout sequence that ties release notes, roadmap status, milestone closure, next milestone creation, and deferred work movement together
+
+### Changed
+
+- Package version is now `1.2.56`
+- Release workflow fallback notes now identify the missing `docs/releases/vX.Y.Z.md` file and ask maintainers to add it before final release notes are published
+- Release checklist now clarifies that deferred work, including PyPI trusted publishing, must move to a separate deferred milestone or next maintenance milestone before closing a release milestone
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured
+
 ## [1.2.55] - 2026-05-29
 
 ### Added
