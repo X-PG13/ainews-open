@@ -201,6 +201,24 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("Trigger artifact smoke", release_workflow)
         self.assertIn("Publish GitHub Release", release_workflow)
 
+    def test_release_recovery_documents_tag_push_api_fallback(self) -> None:
+        recovery_docs = _read_text("docs/release-recovery.md")
+        recovery_docs_zh = _read_text("docs/release-recovery.zh-CN.md")
+
+        self.assertIn("Tag Push Timed Out Before Release Creation", recovery_docs)
+        self.assertIn("git ls-remote --tags origin \"refs/tags/${TAG}\"", recovery_docs)
+        self.assertIn("git/ref/tags/${TAG}", recovery_docs)
+        self.assertIn("refs/tags/${TAG}", recovery_docs)
+        self.assertIn("lightweight tag ref", recovery_docs)
+        self.assertIn("Never issue a second tag-creation request", recovery_docs)
+
+        self.assertIn("Tag 推送超时，但 Release 尚未创建", recovery_docs_zh)
+        self.assertIn("git ls-remote --tags origin \"refs/tags/${TAG}\"", recovery_docs_zh)
+        self.assertIn("git/ref/tags/${TAG}", recovery_docs_zh)
+        self.assertIn("refs/tags/${TAG}", recovery_docs_zh)
+        self.assertIn("lightweight tag ref", recovery_docs_zh)
+        self.assertIn("不要发第二次 tag 创建请求", recovery_docs_zh)
+
     def test_readmes_expose_release_maintenance_entry_points(self) -> None:
         expected_readme_links = {
             "docs/releases/README.md",

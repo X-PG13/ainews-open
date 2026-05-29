@@ -70,6 +70,47 @@ git rev-parse "${TAG}^{commit}"
 
 如果本地和远端 tag 目标不一致，立刻停下。没有明确维护者决策前，不要删除、移动或重建公开 tag。
 
+## Tag 推送超时，但 Release 尚未创建
+
+当 `git push origin "${TAG}"` 或 `git push origin "refs/tags/${TAG}"` 在创建 GitHub Release 之前超时时，使用这条流程。不要立刻重试 push；先证明远端 tag 是否已经存在。
+
+验证本地 tag 目标和远端状态：
+
+```bash
+TAG=vX.Y.Z
+EXPECTED_COMMIT=$(git rev-parse "${TAG}^{commit}")
+git show --no-patch --decorate "${TAG}"
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" \
+  --jq '{ref,object}'
+```
+
+按以下规则决策：
+
+- 如果远端 tag 存在且指向 `EXPECTED_COMMIT`，把这次 push 视为成功。fetch 该 tag，验证 release workflow，然后继续 release 产物检查。
+- 如果远端 tag 存在但指向其他 commit，立刻停下。没有明确维护者决策前，不要删除、移动或重建公开 tag。
+- 如果远端 tag 不存在，并且本地 tag 指向已经审过的 release commit，可以用 GitHub API 创建 lightweight tag ref；本仓库现有 release tag 就是 lightweight commit ref，因此这个 fallback 可接受。
+- 如果这次 release 要求 signed 或 annotated tag，停下，不要使用 lightweight-ref fallback。
+
+只有只读检查证明远端 tag 不存在后，才创建缺失的 lightweight tag ref：
+
+```bash
+gh api repos/X-PG13/ainews-open/git/refs \
+  -f "ref=refs/tags/${TAG}" \
+  -f "sha=${EXPECTED_COMMIT}"
+```
+
+创建或编辑 GitHub Release 前，再验证公开 tag：
+
+```bash
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" \
+  --jq '{ref,object}'
+gh release view "${TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,url
+```
+
+如果 API 调用也超时，先重复只读验证命令，再决定是否重试。除非已经证明远端 tag 仍不存在，否则不要发第二次 tag 创建请求。
+
 ## Release workflow 成功，但还需要验证 asset smoke
 
 确认 release workflow、artifact smoke workflow 和已发布资产：

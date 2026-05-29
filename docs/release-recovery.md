@@ -70,6 +70,47 @@ git rev-parse "${TAG}^{commit}"
 
 If the local and remote tag targets differ, stop. Do not delete, move, or recreate the public tag without an explicit maintainer decision.
 
+## Tag Push Timed Out Before Release Creation
+
+Use this flow when `git push origin "${TAG}"` or `git push origin "refs/tags/${TAG}"` times out before the GitHub Release is created. Do not retry the push immediately; first prove whether the remote tag already exists.
+
+Verify the local tag target and remote state:
+
+```bash
+TAG=vX.Y.Z
+EXPECTED_COMMIT=$(git rev-parse "${TAG}^{commit}")
+git show --no-patch --decorate "${TAG}"
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" \
+  --jq '{ref,object}'
+```
+
+Use these decisions:
+
+- If the remote tag exists and points to `EXPECTED_COMMIT`, treat the push as successful. Fetch the tag, verify the release workflow, and continue with release asset checks.
+- If the remote tag exists but points anywhere else, stop. Do not delete, move, or recreate the public tag without an explicit maintainer decision.
+- If the remote tag is missing and the local tag points to the reviewed release commit, an API-created lightweight tag ref is acceptable for this repository because existing release tags are lightweight commit refs.
+- If a signed or annotated tag is required for the release, stop instead of using the lightweight-ref fallback.
+
+Create the missing lightweight tag ref only after the read-only checks prove it is absent:
+
+```bash
+gh api repos/X-PG13/ainews-open/git/refs \
+  -f "ref=refs/tags/${TAG}" \
+  -f "sha=${EXPECTED_COMMIT}"
+```
+
+Then verify the public tag before creating or editing the GitHub Release:
+
+```bash
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" \
+  --jq '{ref,object}'
+gh release view "${TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,url
+```
+
+If the API call times out, repeat the read-only verification commands before retrying. Never issue a second tag-creation request until the remote tag is proven missing.
+
 ## Release Workflow Succeeded, Asset Smoke Needs Verification
 
 Confirm the release workflow, artifact smoke workflow, and published asset set:
