@@ -108,6 +108,23 @@ button {
   color: var(--muted);
 }
 
+.hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.hero-pills span {
+  border: 1px solid rgba(23, 23, 23, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--accent-deep);
+  font: 700 12px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.02em;
+  padding: 8px 11px;
+}
+
 .token-box,
 .form-grid label {
   display: grid;
@@ -185,6 +202,72 @@ textarea {
 .controls-grid,
 .content-grid {
   grid-template-columns: 1.25fr 0.95fr;
+}
+
+.workflow-map {
+  margin-bottom: 18px;
+  overflow: hidden;
+  position: relative;
+}
+
+.workflow-map::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(219, 61, 27, 0.11), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.65), transparent 52%);
+  pointer-events: none;
+}
+
+.workflow-map > * {
+  position: relative;
+}
+
+.workflow-note {
+  max-width: 420px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+  text-align: right;
+}
+
+.workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workflow-step {
+  min-height: 180px;
+  border: 1px solid rgba(23, 23, 23, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.54);
+  padding: 16px;
+}
+
+.workflow-step h3 {
+  margin-top: 18px;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.workflow-step p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff8ee;
+  font: 800 13px/1 "Space Grotesk", sans-serif;
 }
 
 .operations-panel {
@@ -492,11 +575,17 @@ textarea {
 
 @media (max-width: 1100px) {
   .hero,
+  .workflow-steps,
   .operations-grid,
   .controls-grid,
   .content-grid,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .workflow-note {
+    max-width: none;
+    text-align: left;
   }
 }
 

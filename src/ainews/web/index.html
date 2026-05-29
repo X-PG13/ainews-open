@@ -22,6 +22,11 @@
           <p class="hero-copy">
             采集、翻译、摘要、日报生成都在一个页面里完成。前端直接调用当前服务，不需要额外构建。
           </p>
+          <div class="hero-pills" aria-label="控制台能力">
+            <span>Zero-build admin</span>
+            <span>Runtime-aware</span>
+            <span>Publish-ready</span>
+          </div>
         </div>
         <div class="token-box">
           <label for="adminToken">Admin Token</label>
@@ -30,6 +35,38 @@
             <button id="saveTokenButton" class="button ghost">保存</button>
           </div>
           <p class="muted">所有管理操作都会自动带上 `X-Admin-Token`。</p>
+        </div>
+      </section>
+
+      <section class="workflow-map panel" aria-labelledby="workflowMapTitle">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Operator Workflow</p>
+            <h2 id="workflowMapTitle">从线索到发布的闭环</h2>
+          </div>
+          <p class="workflow-note">首屏先给维护者一张地图：哪里进稿、哪里清洗、哪里编辑、哪里发布、哪里恢复。</p>
+        </div>
+        <div class="workflow-steps">
+          <article class="workflow-step">
+            <span class="step-index">01</span>
+            <h3>采集线索</h3>
+            <p>按区域、时间窗口和单源上限抓取国内外 AI 新闻，快速确认新闻池规模。</p>
+          </article>
+          <article class="workflow-step">
+            <span class="step-index">02</span>
+            <h3>抽取与恢复</h3>
+            <p>跟踪正文抽取、来源冷却、重试窗口和来源级告警，避免坏来源拖慢整条流水线。</p>
+          </article>
+          <article class="workflow-step">
+            <span class="step-index">03</span>
+            <h3>选稿与编辑</h3>
+            <p>查看入选、压制、重复簇和 ranked-out 原因，冻结编辑稿后再发布。</p>
+          </article>
+          <article class="workflow-step">
+            <span class="step-index">04</span>
+            <h3>多渠道发布</h3>
+            <p>面向 Telegram、飞书、公众号草稿和静态站点发布，并在发布历史里跟踪失败。</p>
+          </article>
         </div>
       </section>
 
