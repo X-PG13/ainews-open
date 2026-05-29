@@ -2,6 +2,24 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.57] - 2026-05-30
+
+### Added
+
+- Release notes index ordering regression coverage so latest and recent release links stay aligned with the changelog during release prep
+- Maintainer status snapshot checklist for checking active milestones, deferred PyPI work, PR health, tags, releases, and local branch state before continuing maintenance
+- Admin console operator workflow map that explains the path from collection through extraction, editorial review, publishing, and recovery
+
+### Changed
+
+- Package version is now `1.2.57`
+- Release milestone rollover docs now clarify ownership for closing a release milestone, carrying deferred work forward, and opening the next maintenance milestone
+- Admin console first-screen hierarchy now exposes zero-build, runtime-aware, and publish-ready positioning before operators start a workflow
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured
+
 ## [1.2.56] - 2026-05-29
 
 ### Added
