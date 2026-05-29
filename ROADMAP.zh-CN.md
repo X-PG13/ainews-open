@@ -7,11 +7,11 @@
 ## 当前状态
 
 - 稳定版本线：`v1.2.x`
-- 最新 release：`v1.2.49`
-- 当前开启的 milestone：`v1.2.50`
+- 最新 patch release：见 [release notes 索引](docs/releases/README.zh-CN.md)
+- 当前开启的 milestone：见下一个 `v1.2.x` 维护版本对应的 GitHub milestone
 - 延期的 release engineering 项：PyPI trusted publishing 初始化和首次发包
 
-## 进行中：v1.2.50 维护事项
+## 进行中：v1.2.x 维护事项
 
 - 改进 release 校验和发版后 smoke 文档。
 - 让 roadmap、支持生命周期和 release notes 更容易从主要文档入口发现。

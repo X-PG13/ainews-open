@@ -27,6 +27,7 @@ make check
 2. Update the version in `src/ainews/__init__.py`.
 3. Add the release section to `CHANGELOG.md`.
 4. Add or update `docs/releases/vX.Y.Z.md`.
+5. Confirm `ROADMAP.md` and `ROADMAP.zh-CN.md` still point readers to the release notes index for the latest patch release instead of hard-coding a stale patch number.
 
 ## Release Automation Readiness
 
