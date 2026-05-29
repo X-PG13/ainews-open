@@ -201,6 +201,28 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("Trigger artifact smoke", release_workflow)
         self.assertIn("Publish GitHub Release", release_workflow)
 
+    def test_release_recovery_docs_include_quick_reference(self) -> None:
+        release_recovery = _read_text("docs/release-recovery.md")
+        release_recovery_zh = _read_text("docs/release-recovery.zh-CN.md")
+
+        for expected in (
+            "## Quick Reference",
+            "PR merge command timed out",
+            "Tag push timed out before Release creation",
+            "Release workflow finished but assets need confirmation",
+            "Network Timeout After A Remote Action",
+        ):
+            self.assertIn(expected, release_recovery)
+
+        for expected in (
+            "## 快速索引",
+            "PR 合并命令超时",
+            "创建 Release 前推送 tag 超时",
+            "Release workflow 已完成，但还要确认资产",
+            "远端操作后网络超时",
+        ):
+            self.assertIn(expected, release_recovery_zh)
+
     def test_readmes_expose_release_maintenance_entry_points(self) -> None:
         expected_readme_links = {
             "docs/releases/README.md",
