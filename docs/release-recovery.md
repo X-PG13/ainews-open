@@ -70,6 +70,41 @@ git rev-parse "${TAG}^{commit}"
 
 If the local and remote tag targets differ, stop. Do not delete, move, or recreate the public tag without an explicit maintainer decision.
 
+## Tag Push Timed Out Before Release Creation
+
+If `git push origin "${TAG}"` times out, do not push again until the remote tag state is known. Use this decision flow:
+
+```bash
+TAG=vX.Y.Z
+TARGET=$(git rev-parse "${TAG}^{commit}")
+REMOTE_TAG=$(git ls-remote --tags origin "refs/tags/${TAG}" | awk '{print $1}')
+```
+
+- If `REMOTE_TAG` is empty, the remote tag was not created. It is safe to retry `git push origin "${TAG}"`.
+- If `REMOTE_TAG` equals `TARGET`, the tag already exists on GitHub. Do not push it again; continue with release creation or release verification.
+- If `REMOTE_TAG` is present but differs from `TARGET`, stop. Do not force-push, delete, or recreate the public tag without an explicit maintainer decision.
+
+When SSH or HTTPS pushes keep timing out but the read-only check proves the tag is still missing, maintainers may create the tag ref through the GitHub Git API as a fallback. This fallback should only create a new lightweight tag ref that points at the same commit as the local tag:
+
+```bash
+TAG=vX.Y.Z
+TARGET=$(git rev-parse "${TAG}^{commit}")
+gh api \
+  --method POST \
+  "repos/X-PG13/ainews-open/git/refs" \
+  -f ref="refs/tags/${TAG}" \
+  -f sha="${TARGET}"
+```
+
+After the API call, verify the remote tag before creating or editing the release:
+
+```bash
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" --jq '{ref,object}'
+```
+
+API-created lightweight tag refs are acceptable when the release checklist only requires the tag name to point at the intended release commit. Stop and use the normal signed or annotated tag process instead if the release requires a signed tag object, annotated tag message, or provenance attached to the tag object itself.
+
 ## Release Workflow Succeeded, Asset Smoke Needs Verification
 
 Confirm the release workflow, artifact smoke workflow, and published asset set:

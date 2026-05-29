@@ -70,6 +70,41 @@ git rev-parse "${TAG}^{commit}"
 
 如果本地和远端 tag 目标不一致，立刻停下。没有明确维护者决策前，不要删除、移动或重建公开 tag。
 
+## 推送 tag 超时，但尚未创建 Release
+
+如果 `git push origin "${TAG}"` 超时，不要立刻再次推送。先按下面的流程确认远端 tag 状态：
+
+```bash
+TAG=vX.Y.Z
+TARGET=$(git rev-parse "${TAG}^{commit}")
+REMOTE_TAG=$(git ls-remote --tags origin "refs/tags/${TAG}" | awk '{print $1}')
+```
+
+- 如果 `REMOTE_TAG` 为空，说明远端 tag 没有创建成功。可以安全重试 `git push origin "${TAG}"`。
+- 如果 `REMOTE_TAG` 等于 `TARGET`，说明 GitHub 上已经有正确 tag。不要再次推送，继续创建 Release 或验证 Release 状态。
+- 如果 `REMOTE_TAG` 存在但不同于 `TARGET`，立刻停下。没有明确维护者决策前，不要 force-push、删除或重建公开 tag。
+
+如果 SSH 或 HTTPS 推送持续超时，但只读检查证明远端 tag 仍然缺失，维护者可以用 GitHub Git API 创建 tag ref 作为兜底方案。这个兜底方案只应该创建一个新的 lightweight tag ref，并且指向本地 tag 对应的同一个 commit：
+
+```bash
+TAG=vX.Y.Z
+TARGET=$(git rev-parse "${TAG}^{commit}")
+gh api \
+  --method POST \
+  "repos/X-PG13/ainews-open/git/refs" \
+  -f ref="refs/tags/${TAG}" \
+  -f sha="${TARGET}"
+```
+
+API 调用后，先验证远端 tag，再创建或编辑 Release：
+
+```bash
+git ls-remote --tags origin "refs/tags/${TAG}"
+gh api "repos/X-PG13/ainews-open/git/ref/tags/${TAG}" --jq '{ref,object}'
+```
+
+当 release checklist 只要求 tag 名称指向预期 release commit 时，API 创建的 lightweight tag ref 可以接受。如果 release 要求 signed tag object、annotated tag message，或 tag object 本身携带 provenance，就停下并改用正常的签名或 annotated tag 流程。
+
 ## Release workflow 成功，但还需要验证 asset smoke
 
 确认 release workflow、artifact smoke workflow 和已发布资产：
