@@ -2,6 +2,24 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.55] - 2026-05-29
+
+### Added
+
+- Release workflow failure summary that maps tag-release phases to their outcomes and next recovery checks
+- Tag-push timeout recovery guidance for verifying remote tags and using a GitHub Git API lightweight-tag fallback when normal push transport fails
+- Roadmap release-status regression coverage so the roadmap does not drift behind the release notes index again
+
+### Changed
+
+- Package version is now `1.2.55`
+- Roadmap status now points readers to the release notes index and active GitHub milestone instead of hard-coding stale patch release and milestone numbers
+- Release checklist now reminds maintainers to keep roadmap release status delegated to the release notes index during release prep
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured
+
 ## [1.2.54] - 2026-05-08
 
 ### Added
