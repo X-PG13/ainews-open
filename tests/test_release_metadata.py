@@ -280,6 +280,30 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         ):
             self.assertIn(expected, release_recovery_zh)
 
+    def test_release_recovery_docs_include_status_snapshot(self) -> None:
+        release_recovery = _read_text("docs/release-recovery.md")
+        release_recovery_zh = _read_text("docs/release-recovery.zh-CN.md")
+
+        for expected in (
+            "## Maintainer Status Snapshot",
+            "git status --short --branch",
+            "gh release view --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt",
+            "gh run list --limit 10",
+            "gh issue view 86 --json state,milestone,title",
+            "Deferred: PyPI",
+        ):
+            self.assertIn(expected, release_recovery)
+
+        for expected in (
+            "## 维护者状态快照",
+            "git status --short --branch",
+            "gh release view --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt",
+            "gh run list --limit 10",
+            "gh issue view 86 --json state,milestone,title",
+            "Deferred: PyPI",
+        ):
+            self.assertIn(expected, release_recovery_zh)
+
     def test_readmes_expose_release_maintenance_entry_points(self) -> None:
         expected_readme_links = {
             "docs/releases/README.md",

@@ -25,6 +25,29 @@ Start here when a release closeout step times out or leaves local state unclear.
 | Release workflow finished but assets need confirmation | `gh release view "${TAG}" --json assets,isDraft,isPrerelease,url` | [Release Workflow Succeeded, Asset Smoke Needs Verification](#release-workflow-succeeded-asset-smoke-needs-verification) |
 | Workflow dispatch, issue update, or branch deletion timed out | Re-run the matching read-only command from the timeout table | [Network Timeout After A Remote Action](#network-timeout-after-a-remote-action) |
 
+## Maintainer Status Snapshot
+
+Use this read-only snapshot when you need to report current repository progress after a release, PR merge, or interrupted network command:
+
+```bash
+git status --short --branch
+git rev-parse HEAD origin/main main
+gh release view --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt
+gh api repos/X-PG13/ainews-open/git/ref/tags/vX.Y.Z --jq '{ref,sha:.object.sha,type:.object.type}'
+gh run list --limit 10 --json databaseId,name,status,conclusion,headBranch,headSha,event,createdAt,updatedAt
+gh api repos/X-PG13/ainews-open/milestones --jq '.[] | {number,title,state,open_issues,closed_issues}'
+gh issue view 86 --json state,milestone,title
+```
+
+Read the snapshot in this order:
+
+1. Local `main`, `origin/main`, and `HEAD` should point to the same commit before starting new work.
+2. The latest GitHub Release should be published, not a draft, and not a prerelease unless that was intentional.
+3. The release tag should point to the same commit as the release prep merge commit.
+4. Release, artifact smoke, CI, Smoke, and CodeQL runs should be completed successfully for the release tag or commit.
+5. The completed release milestone should have `0` open issues before it is closed.
+6. Issue `#86` should remain in the `Deferred: PyPI` milestone unless the maintainer explicitly decides to work on PyPI.
+
 ## PR Merge Succeeded, Local Fast-Forward Failed
 
 First confirm whether the PR actually merged:
