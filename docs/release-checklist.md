@@ -74,6 +74,16 @@ python -m ainews --help
 
 Run the post-release smoke checklist before announcing the release or closing its milestone.
 
+### Release Closeout Sequence
+
+Use this order after the release page, assets, and smoke workflows are verified:
+
+1. Confirm `CHANGELOG.md`, `docs/releases/vX.Y.Z.md`, and the release notes index all describe the published tag.
+2. Confirm `ROADMAP.md` and `ROADMAP.zh-CN.md` still point readers to the release notes index for the latest patch release and to the active GitHub milestone for current work.
+3. Move deferred work, including PyPI trusted publishing, into a separate deferred milestone or the next maintenance milestone before closing the release milestone.
+4. Close the release milestone only after every remaining open item has either shipped, moved, or been explicitly deferred.
+5. Create the next `v1.2.x` milestone before opening follow-up maintenance issues, so new work does not accumulate against a closed release.
+
 ### Published Tag And Release Page
 
 - [ ] The release page is published, not a draft, and not marked as a prerelease unless that was intentional.
