@@ -12,6 +12,19 @@
 - 除非公开 tag 指向了错误 commit，并且维护者明确接受兼容性风险，否则不要移动或重建公开 tag。
 - PyPI 恢复不要混进这条流程。如果 PyPI 当前禁用或延期，继续把它留在独立 milestone。
 
+## 快速索引
+
+当 release 收尾步骤超时，或本地状态不确定时，先从这里判断该看哪条详细流程。
+
+| 症状 | 第一个安全检查 | 详细流程 |
+| --- | --- | --- |
+| PR 合并命令超时 | `gh pr view 123 --json state,merged,mergeCommit` | [PR 已合并，但本地快进失败](#pr-已合并但本地快进失败) |
+| PR 已合并，但本地 `main` 不能 fast-forward | `git status --short --branch` 和 `git ls-remote origin refs/heads/main` | [PR 已合并，但本地快进失败](#pr-已合并但本地快进失败) |
+| GitHub 上已有 tag，但本地 fetch 失败 | `git ls-remote --tags origin "refs/tags/${TAG}"` | [Tag 已创建，但本地 fetch 失败](#tag-已创建但本地-fetch-失败) |
+| 创建 Release 前推送 tag 超时 | `git ls-remote --tags origin "refs/tags/${TAG}"` | [推送 tag 超时，但尚未创建 Release](#推送-tag-超时但尚未创建-release) |
+| Release workflow 已完成，但还要确认资产 | `gh release view "${TAG}" --json assets,isDraft,isPrerelease,url` | [Release workflow 成功，但还需要验证 asset smoke](#release-workflow-成功但还需要验证-asset-smoke) |
+| 触发 workflow、更新 issue 或删除分支超时 | 重跑超时表中对应的只读命令 | [远端操作后网络超时](#远端操作后网络超时) |
+
 ## PR 已合并，但本地快进失败
 
 先确认 PR 是否真的已经合并：

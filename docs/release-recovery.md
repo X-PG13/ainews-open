@@ -12,6 +12,19 @@ Use these notes when a release or PR closeout action may have changed GitHub sta
 - Do not move or recreate a public tag unless the tag points to the wrong commit and the maintainer explicitly accepts the compatibility risk.
 - Keep PyPI recovery out of this flow. If PyPI is disabled or deferred, leave it in its own milestone.
 
+## Quick Reference
+
+Start here when a release closeout step times out or leaves local state unclear.
+
+| Symptom | First safe check | Detailed flow |
+| --- | --- | --- |
+| PR merge command timed out | `gh pr view 123 --json state,merged,mergeCommit` | [PR Merge Succeeded, Local Fast-Forward Failed](#pr-merge-succeeded-local-fast-forward-failed) |
+| Local `main` cannot fast-forward after a merged PR | `git status --short --branch` and `git ls-remote origin refs/heads/main` | [PR Merge Succeeded, Local Fast-Forward Failed](#pr-merge-succeeded-local-fast-forward-failed) |
+| Tag exists on GitHub but local fetch failed | `git ls-remote --tags origin "refs/tags/${TAG}"` | [Tag Created, Local Fetch Failed](#tag-created-local-fetch-failed) |
+| Tag push timed out before Release creation | `git ls-remote --tags origin "refs/tags/${TAG}"` | [Tag Push Timed Out Before Release Creation](#tag-push-timed-out-before-release-creation) |
+| Release workflow finished but assets need confirmation | `gh release view "${TAG}" --json assets,isDraft,isPrerelease,url` | [Release Workflow Succeeded, Asset Smoke Needs Verification](#release-workflow-succeeded-asset-smoke-needs-verification) |
+| Workflow dispatch, issue update, or branch deletion timed out | Re-run the matching read-only command from the timeout table | [Network Timeout After A Remote Action](#network-timeout-after-a-remote-action) |
+
 ## PR Merge Succeeded, Local Fast-Forward Failed
 
 First confirm whether the PR actually merged:
