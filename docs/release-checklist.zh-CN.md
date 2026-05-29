@@ -74,6 +74,16 @@ python -m ainews --help
 
 对外公告 release 或关闭 milestone 前，先完成这份发版后 smoke checklist。
 
+### Release 收尾顺序
+
+确认 Release 页面、制品和 smoke workflows 都通过后，按这个顺序收尾：
+
+1. 确认 `CHANGELOG.md`、`docs/releases/vX.Y.Z.md` 和 release notes 索引都描述的是已经发布的 tag。
+2. 确认 `ROADMAP.md` 和 `ROADMAP.zh-CN.md` 仍然把最新 patch release 指向 release notes 索引，并把当前工作指向活跃的 GitHub milestone。
+3. 关闭 release milestone 前，先把延期事项，包括 PyPI trusted publishing，移到单独的 deferred milestone 或下一个维护 milestone。
+4. 只有当所有剩余 open item 都已经发布、移动或明确延期后，才关闭 release milestone。
+5. 开始后续维护 issue 前，先创建下一个 `v1.2.x` milestone，避免新工作继续堆到已经关闭的 release 上。
+
 ### 已发布 tag 和 Release 页面
 
 - [ ] Release 页面已经发布，不是 draft；除非本次有意发 prerelease，否则不能标成 prerelease。

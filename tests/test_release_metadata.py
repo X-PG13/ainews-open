@@ -277,6 +277,28 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("ROADMAP.zh-CN.md", release_checklist_zh)
         self.assertIn("硬编码一个容易过期的 patch 号", release_checklist_zh)
 
+    def test_release_checklist_documents_milestone_closeout_sequence(self) -> None:
+        release_checklist = _read_text("docs/release-checklist.md")
+        release_checklist_zh = _read_text("docs/release-checklist.zh-CN.md")
+
+        for expected in (
+            "### Release Closeout Sequence",
+            "release notes index",
+            "active GitHub milestone",
+            "Move deferred work, including PyPI trusted publishing",
+            "Create the next `v1.2.x` milestone",
+        ):
+            self.assertIn(expected, release_checklist)
+
+        for expected in (
+            "### Release 收尾顺序",
+            "release notes 索引",
+            "活跃的 GitHub milestone",
+            "包括 PyPI trusted publishing",
+            "创建下一个 `v1.2.x` milestone",
+        ):
+            self.assertIn(expected, release_checklist_zh)
+
 
 if __name__ == "__main__":
     unittest.main()
