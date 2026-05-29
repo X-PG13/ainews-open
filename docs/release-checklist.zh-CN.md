@@ -84,6 +84,15 @@ python -m ainews --help
 4. 只有当所有剩余 open item 都已经发布、移动或明确延期后，才关闭 release milestone。
 5. 开始后续维护 issue 前，先创建下一个 `v1.2.x` milestone，避免新工作继续堆到已经关闭的 release 上。
 
+### Milestone rollover 责任
+
+除非另一位维护者明确接手，否则合并 release PR 或发布 tag 的维护者负责完成 milestone rollover。
+
+- 关闭 release milestone 前，确认它的 open issue 数为 `0`，并且所有延期事项都已经移出本次 release milestone。
+- 开始创建或移动后续维护 issue 前，先创建下一个 `v1.2.x` milestone。
+- 除非维护者明确决定开始处理 PyPI 发布，否则 issue `#86` 继续留在 `Deferred: PyPI`。
+- 如果 rollover 交给其他维护者，在 release PR 或 milestone closeout issue 里留下说明，写清下一位负责人和剩余检查。
+
 ### 已发布 tag 和 Release 页面
 
 - [ ] Release 页面已经发布，不是 draft；除非本次有意发 prerelease，否则不能标成 prerelease。

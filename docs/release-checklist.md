@@ -84,6 +84,15 @@ Use this order after the release page, assets, and smoke workflows are verified:
 4. Close the release milestone only after every remaining open item has either shipped, moved, or been explicitly deferred.
 5. Create the next `v1.2.x` milestone before opening follow-up maintenance issues, so new work does not accumulate against a closed release.
 
+### Milestone Rollover Ownership
+
+The maintainer who merges the release PR or publishes the tag owns milestone rollover unless another maintainer explicitly takes it over.
+
+- Before closing the release milestone, verify it has `0` open issues and that every deferred item has moved out of the release milestone.
+- Create the next `v1.2.x` milestone before opening or moving follow-up maintenance issues.
+- Keep issue `#86` in `Deferred: PyPI` unless the maintainer explicitly decides to start PyPI publishing work.
+- If rollover is handed off, leave a note in the release PR or milestone closeout issue naming the next owner and remaining checks.
+
 ### Published Tag And Release Page
 
 - [ ] The release page is published, not a draft, and not marked as a prerelease unless that was intentional.
