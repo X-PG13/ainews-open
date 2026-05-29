@@ -25,6 +25,29 @@
 | Release workflow 已完成，但还要确认资产 | `gh release view "${TAG}" --json assets,isDraft,isPrerelease,url` | [Release workflow 成功，但还需要验证 asset smoke](#release-workflow-成功但还需要验证-asset-smoke) |
 | 触发 workflow、更新 issue 或删除分支超时 | 重跑超时表中对应的只读命令 | [远端操作后网络超时](#远端操作后网络超时) |
 
+## 维护者状态快照
+
+当你需要在 release、PR 合并或网络命令中断后汇报仓库当前进度时，先跑这组只读检查：
+
+```bash
+git status --short --branch
+git rev-parse HEAD origin/main main
+gh release view --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt
+gh api repos/X-PG13/ainews-open/git/ref/tags/vX.Y.Z --jq '{ref,sha:.object.sha,type:.object.type}'
+gh run list --limit 10 --json databaseId,name,status,conclusion,headBranch,headSha,event,createdAt,updatedAt
+gh api repos/X-PG13/ainews-open/milestones --jq '.[] | {number,title,state,open_issues,closed_issues}'
+gh issue view 86 --json state,milestone,title
+```
+
+按这个顺序阅读快照：
+
+1. 开始新工作前，本地 `main`、`origin/main` 和 `HEAD` 应该指向同一个 commit。
+2. GitHub 最新 Release 应该已经发布；除非本次有意发 prerelease，否则不能是 draft 或 prerelease。
+3. release tag 应该指向 release prep merge commit。
+4. Release、artifact smoke、CI、Smoke 和 CodeQL 应该在 release tag 或 release commit 上成功完成。
+5. 关闭已完成的 release milestone 前，确认它的 open issue 数为 `0`。
+6. 除非维护者明确决定开始处理 PyPI，否则 issue `#86` 应该继续留在 `Deferred: PyPI` milestone。
+
 ## PR 已合并，但本地快进失败
 
 先确认 PR 是否真的已经合并：
