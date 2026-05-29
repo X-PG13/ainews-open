@@ -24,38 +24,77 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        id: checkout
 
       - uses: actions/setup-python@v6
+        id: setup-python
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install package
-        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+        id: install-package
+        run: |
+          set -euo pipefail
+
+          echo "::group::Install package and development dependencies"
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          echo "::endgroup::"
 
       - name: Run lint
-        run: python -m ruff check src tests
+        id: lint
+        run: |
+          set -euo pipefail
+
+          echo "::group::Run ruff"
+          python -m ruff check src tests
+          echo "::endgroup::"
 
       - name: Run coverage
-        run: python -m coverage run -m unittest discover -s tests -v
+        id: coverage
+        run: |
+          set -euo pipefail
+
+          echo "::group::Run unittest coverage"
+          python -m coverage run -m unittest discover -s tests -v
+          echo "::endgroup::"
 
       - name: Enforce coverage threshold
-        run: python -m coverage report
+        id: coverage-report
+        run: |
+          set -euo pipefail
+
+          python -m coverage report
 
       - name: Build package
-        run: python -m build
+        id: build-package
+        run: |
+          set -euo pipefail
+
+          echo "::group::Build release distributions"
+          python -m build
+          echo "::endgroup::"
 
       - name: Generate artifact checksums
+        id: checksums
         working-directory: dist
         run: |
           set -euo pipefail
+          echo "::group::Generate artifact checksums"
           : > sha256sums.txt
           for artifact in *.whl *.tar.gz; do
             sha256sum "${artifact}" >> sha256sums.txt
           done
+          cat sha256sums.txt
+          echo "::endgroup::"
 
       - name: Generate SBOM
+        id: sbom
         run: |
+          set -euo pipefail
+
+          echo "::group::Generate CycloneDX SBOM"
           PYTHON_BIN="$(python -c 'import sys; print(sys.executable)')"
           python -m cyclonedx_py environment "${PYTHON_BIN}" \
             --pyproject pyproject.toml \
@@ -63,20 +102,26 @@ jobs:
             --output-reproducible \
             --of JSON \
             -o "dist/${GITHUB_REF_NAME}-sbom.json"
+          echo "::endgroup::"
 
       - name: Upload release bundle artifact
+        id: upload-release-bundle
         uses: actions/upload-artifact@v7
         with:
           name: release-bundle
           path: dist/*
 
       - name: Attest build provenance
+        id: attest-provenance
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/*
 
       - name: Prepare release notes
+        id: release-notes
         run: |
+          set -euo pipefail
+
           TAG="${GITHUB_REF_NAME}"
           NOTES_FILE="docs/releases/${TAG}.md"
           if [ -f "${NOTES_FILE}" ]; then
@@ -86,7 +131,11 @@ jobs:
           fi
 
       - name: Publish GitHub release
+        id: publish-release
         run: |
+          set -euo pipefail
+
+          echo "::group::Publish GitHub Release"
           TAG="${GITHUB_REF_NAME}"
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release upload "${TAG}" dist/* --clobber
@@ -94,8 +143,39 @@ jobs:
           else
             gh release create "${TAG}" dist/* --title "${TAG}" --notes-file /tmp/release-notes.md
           fi
+          echo "::endgroup::"
 
       - name: Trigger release artifact smoke
+        id: trigger-artifact-smoke
         run: |
+          set -euo pipefail
+
           TAG="${GITHUB_REF_NAME}"
           gh workflow run release-artifact-smoke.yml --ref main -f tag="${TAG}"
+
+      - name: Summarize failure
+        if: failure()
+        run: |
+          {
+            echo "## Release workflow failure"
+            echo ""
+            echo "- Tag: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo ""
+            echo "| Phase | Outcome | What to check next |"
+            echo "| --- | --- | --- |"
+            echo "| Checkout | ${{ steps.checkout.outcome }} | Confirm the tag ref points to an existing commit. |"
+            echo "| Setup Python | ${{ steps.setup-python.outcome }} | Check runner setup and dependency cache behavior. |"
+            echo "| Install package | ${{ steps.install-package.outcome }} | Inspect pip output and project metadata. |"
+            echo "| Lint | ${{ steps.lint.outcome }} | Run \`python -m ruff check src tests\` locally. |"
+            echo "| Coverage tests | ${{ steps.coverage.outcome }} | Run \`python -m coverage run -m unittest discover -s tests -v\` locally. |"
+            echo "| Coverage threshold | ${{ steps.coverage-report.outcome }} | Inspect coverage report output. |"
+            echo "| Build package | ${{ steps.build-package.outcome }} | Run \`python -m build\` and inspect distribution output. |"
+            echo "| Checksums | ${{ steps.checksums.outcome }} | Confirm wheel and source archive names before publishing. |"
+            echo "| SBOM | ${{ steps.sbom.outcome }} | Inspect CycloneDX generation and package metadata. |"
+            echo "| Upload release bundle | ${{ steps.upload-release-bundle.outcome }} | Confirm Actions artifact upload permissions and bundle contents. |"
+            echo "| Provenance attestation | ${{ steps.attest-provenance.outcome }} | Confirm attestations and id-token permissions are available. |"
+            echo "| Release notes | ${{ steps.release-notes.outcome }} | Confirm \`docs/releases/${GITHUB_REF_NAME}.md\` exists or fallback notes are acceptable. |"
+            echo "| Publish GitHub Release | ${{ steps.publish-release.outcome }} | Check whether the release already exists and whether asset upload or edit failed. |"
+            echo "| Trigger artifact smoke | ${{ steps.trigger-artifact-smoke.outcome }} | Confirm \`actions: write\` permission and manually dispatch \`release-artifact-smoke.yml\` if needed. |"
+          } >> "${GITHUB_STEP_SUMMARY}"

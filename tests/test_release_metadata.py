@@ -174,6 +174,33 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("::error title=Missing release asset", smoke_workflow)
         self.assertIn("::error title=API health smoke failed", smoke_workflow)
 
+    def test_release_workflow_reports_failure_phases(self) -> None:
+        release_workflow = _read_text(".github/workflows/release.yml")
+
+        for step_id in (
+            "checkout",
+            "setup-python",
+            "install-package",
+            "lint",
+            "coverage",
+            "coverage-report",
+            "build-package",
+            "checksums",
+            "sbom",
+            "upload-release-bundle",
+            "attest-provenance",
+            "release-notes",
+            "publish-release",
+            "trigger-artifact-smoke",
+        ):
+            self.assertIn(f"id: {step_id}", release_workflow)
+            self.assertIn(f"${{{{ steps.{step_id}.outcome }}}}", release_workflow)
+
+        self.assertIn("GITHUB_STEP_SUMMARY", release_workflow)
+        self.assertIn("Release workflow failure", release_workflow)
+        self.assertIn("Trigger artifact smoke", release_workflow)
+        self.assertIn("Publish GitHub Release", release_workflow)
+
     def test_readmes_expose_release_maintenance_entry_points(self) -> None:
         expected_readme_links = {
             "docs/releases/README.md",
