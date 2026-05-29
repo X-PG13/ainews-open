@@ -12,8 +12,13 @@ CHANGELOG_RELEASE_RE = re.compile(
     re.MULTILINE,
 )
 MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]\n]+\]\(([^)\n]+)\)")
+RELEASE_INDEX_LINK_RE = re.compile(
+    r"^- \[v(?P<label>\d+\.\d+\.\d+)\]\(\./v(?P<target>\d+\.\d+\.\d+)\.md\)$",
+    re.MULTILINE,
+)
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 LATEST_HEADING_ZH = "\u6700\u65b0\u7248\u672c"
+RECENT_RELEASES_HEADING_ZH = "\u8fd1\u671f\u7248\u672c"
 
 
 def _read_text(relative_path: str) -> str:
@@ -71,6 +76,19 @@ def _markdown_link_targets(relative_path: str) -> set[str]:
     return targets
 
 
+def _release_index_versions(section: str) -> list[str]:
+    versions: list[str] = []
+    for match in RELEASE_INDEX_LINK_RE.finditer(section):
+        label_version = match.group("label")
+        target_version = match.group("target")
+        if label_version != target_version:
+            raise AssertionError(
+                f"Release index label v{label_version} points to v{target_version}"
+            )
+        versions.append(label_version)
+    return versions
+
+
 class ReleaseMetadataTestCase(unittest.TestCase):
     def test_project_and_runtime_versions_match(self) -> None:
         project_version = _project_version()
@@ -105,6 +123,30 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         release_index_zh = _read_text("docs/releases/README.zh-CN.md")
         self.assertIn(release_link, _markdown_section(release_index, "Latest"))
         self.assertIn(release_link, _markdown_section(release_index_zh, LATEST_HEADING_ZH))
+
+    def test_release_note_indexes_keep_latest_and_recent_releases_ordered(self) -> None:
+        changelog_versions = CHANGELOG_RELEASE_RE.findall(_read_text("CHANGELOG.md"))
+        current_version = _project_version()
+        expected_recent_versions = changelog_versions[1:4]
+
+        self.assertGreaterEqual(len(changelog_versions), 4)
+        self.assertEqual(changelog_versions[0], current_version)
+        self.assertEqual(len(expected_recent_versions), 3)
+
+        for release_index_path, latest_heading, recent_heading in (
+            ("docs/releases/README.md", "Latest", "Recent Releases"),
+            ("docs/releases/README.zh-CN.md", LATEST_HEADING_ZH, RECENT_RELEASES_HEADING_ZH),
+        ):
+            release_index = _read_text(release_index_path)
+
+            self.assertEqual(
+                [current_version],
+                _release_index_versions(_markdown_section(release_index, latest_heading)),
+            )
+            self.assertEqual(
+                expected_recent_versions,
+                _release_index_versions(_markdown_section(release_index, recent_heading)),
+            )
 
     def test_release_asset_names_match_current_package_version(self) -> None:
         version = _project_version()
