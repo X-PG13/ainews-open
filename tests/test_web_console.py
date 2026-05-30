@@ -35,6 +35,42 @@ class WebConsoleTestCase(unittest.TestCase):
         ):
             self.assertIn(expected, styles)
 
+    def test_console_exposes_actionable_empty_states(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+        app = _read_text("src/ainews/web/app.js")
+        styles = _read_text("src/ainews/web/styles.css")
+
+        for expected in (
+            'class="start-cues"',
+            "1 保存 Token",
+            "2 抓取新闻",
+            "3 选稿预览",
+        ):
+            self.assertIn(expected, index)
+
+        for expected in (
+            "function emptyState",
+            "当前没有文章",
+            "没有待处理抽取项",
+            "还没有选稿结果",
+            "还没有发布记录",
+            "暂无来源告警历史",
+            "来源运行正常",
+            "先跑一次流水线",
+            "renderDigest(null);",
+        ):
+            self.assertIn(expected, app)
+
+        for expected in (
+            ".empty-state",
+            ".empty-kicker",
+            ".empty-steps",
+            ".start-cues",
+            "width: calc(100vw - 20px);",
+            "flex-direction: column;",
+        ):
+            self.assertIn(expected, styles)
+
 
 if __name__ == "__main__":
     unittest.main()

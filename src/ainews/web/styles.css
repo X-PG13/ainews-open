@@ -65,6 +65,13 @@ body {
   margin-bottom: 18px;
 }
 
+.hero > *,
+.section-head > *,
+.token-row > *,
+.toolbar-row > * {
+  min-width: 0;
+}
+
 .eyebrow {
   margin: 0 0 10px;
   font: 600 12px/1 "JetBrains Mono", monospace;
@@ -125,6 +132,21 @@ button {
   padding: 8px 11px;
 }
 
+.start-cues {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.start-cues span {
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.46);
+  color: var(--ink);
+  font: 700 12px/1.2 "JetBrains Mono", monospace;
+  padding: 8px 10px;
+}
+
 .token-box,
 .form-grid label {
   display: grid;
@@ -136,6 +158,10 @@ button {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.token-row input {
+  flex: 1 1 220px;
 }
 
 input,
@@ -414,6 +440,46 @@ textarea {
   background: rgba(255, 255, 255, 0.52);
 }
 
+.empty-state {
+  border: 1px dashed rgba(142, 31, 10, 0.3);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 248, 238, 0.5)),
+    radial-gradient(circle at top right, rgba(219, 61, 27, 0.1), transparent 34%);
+  padding: 16px;
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.empty-state p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.empty-kicker {
+  margin: 0 0 8px !important;
+  color: var(--accent-deep) !important;
+  font: 700 11px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.empty-steps {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--ink);
+}
+
+.empty-steps li {
+  line-height: 1.55;
+}
+
 .source-ops-list {
   display: grid;
   gap: 8px;
@@ -591,13 +657,35 @@ textarea {
 
 @media (max-width: 700px) {
   .shell {
-    width: min(100vw - 20px, 100%);
+    width: calc(100vw - 20px);
     padding-top: 10px;
   }
 
   .panel {
     border-radius: 18px;
     padding: 18px;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-pills {
+    display: grid;
+    justify-items: start;
+  }
+
+  .hero-pills span {
+    max-width: 100%;
+  }
+
+  .token-row {
+    display: grid;
+  }
+
+  .token-row .button {
+    justify-self: start;
   }
 
   .form-grid {
