@@ -92,6 +92,20 @@ function logJob(title, payload) {
   refs.jobOutput.textContent = `${title}\n${JSON.stringify(payload, null, 2)}`;
 }
 
+function emptyState(title, body, steps = []) {
+  const renderedSteps = steps.length
+    ? `<ol class="empty-steps">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>`
+    : "";
+  return `
+    <article class="empty-state">
+      <p class="empty-kicker">Next step</p>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+      ${renderedSteps}
+    </article>
+  `;
+}
+
 function getFilters() {
   return {
     region: refs.regionSelect.value,
@@ -251,7 +265,10 @@ function renderOperationsPipelineRuns(runs) {
           `
         )
         .join("")
-    : '<p class="muted">最近还没有记录到 pipeline 运行。</p>';
+    : emptyState("先跑一次流水线", "这里会记录 ingest、extract、enrich、digest 和 publish 的最近运行结果。", [
+        "先点“抓取新闻”确认新闻池有数据。",
+        "再点“跑完整流水线”生成一条可审计的运行记录。",
+      ]);
 }
 
 function renderOperationsSources(sources) {
@@ -298,7 +315,10 @@ function renderOperationsSources(sources) {
           `
         )
         .join("")
-    : '<p class="muted">当前没有处于冷却、静默或维护中的来源。</p>';
+    : emptyState("来源运行正常", "当前没有冷却、静默或维护中的来源；如果刚接入新源，先刷新来源状态确认配置。", [
+        "点“刷新来源”查看每个来源的成功率和最近错误。",
+        "发现坏来源后再进入维护或静默，避免拖慢整条流水线。",
+      ]);
 }
 
 function renderOperationsAlerts(sourceAlerts) {
@@ -320,7 +340,10 @@ function renderOperationsAlerts(sourceAlerts) {
           `
         )
         .join("")
-    : '<p class="muted">最近没有来源级告警。</p>';
+    : emptyState("没有来源告警", "来源告警会在连续失败、冷却、恢复或通知投递异常时出现。", [
+        "先运行“抓正文”暴露抽取失败。",
+        "如果告警出现，回到来源状态面板确认或静默来源。",
+      ]);
 }
 
 function renderOperationsPublicationFailures(failures, pending) {
@@ -365,7 +388,10 @@ function renderOperationsPublicationFailures(failures, pending) {
   }
   refs.operationsPublicationFailures.innerHTML = cards.length
     ? cards.join("")
-    : '<p class="muted">最近没有发布失败或待完成记录。</p>';
+    : emptyState("发布队列干净", "最近没有发布失败或待完成记录。发布日报后，这里会显示 Telegram、飞书、公众号和静态站点结果。", [
+        "先冻结编辑稿，避免发布时实时重算。",
+        "再用“发布预览”检查各渠道最终内容。",
+      ]);
 }
 
 function renderOperations(payload) {
@@ -381,9 +407,10 @@ function renderOperations(payload) {
 }
 
 function renderSources(sources) {
-  refs.sourcesList.innerHTML = sources
-    .map(
-      (source) => `
+  refs.sourcesList.innerHTML = sources.length
+    ? sources
+        .map(
+          (source) => `
       <article class="source-item">
         <header class="publication-head">
           <strong>${source.name}</strong>
@@ -504,8 +531,12 @@ function renderSources(sources) {
         </div>
       </article>
     `
-    )
-    .join("");
+        )
+        .join("")
+    : emptyState("还没有来源状态", "来源列表会展示每个 feed 的区域、语言、成功率、冷却和维护状态。", [
+        "点“刷新来源”确认默认来源是否已加载。",
+        "如果这里仍为空，检查 sources 配置和服务启动日志。",
+      ]);
 }
 
 function renderDigest(payload) {
@@ -516,11 +547,27 @@ function renderDigest(payload) {
       : payload;
   const digest = digestPayload?.digest || digestPayload?.payload;
   if (!digest) {
-    refs.digestView.innerHTML = '<p class="muted">还没有生成日报。</p>';
-    refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
-    refs.digestEditorView.innerHTML = '<p class="muted">先生成预览或打开一份已保存的日报，编辑页才会出现。</p>';
-    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
-    refs.publishPreviewView.innerHTML = '<p class="muted">打开一份日报或冻结编辑稿后，这里会显示目标平台最终预览。</p>';
+    refs.digestView.innerHTML = emptyState("还没有日报", "生成日报前先完成抓取、正文抽取和选稿预览，避免空内容进入发布链路。", [
+      "点“抓取新闻”建立候选池。",
+      "点“抓正文”补齐正文与摘要。",
+      "点“生成中文日报”创建第一份日报。",
+    ]);
+    refs.digestPreviewView.innerHTML = emptyState("先做选稿预览", "这里会展示入选、suppress、重复副本和 ranked-out 原因。", [
+      "点“选稿预览”检查候选质量。",
+      "必要时在文章列表里置顶、必选或 suppress。",
+    ]);
+    refs.digestEditorView.innerHTML = emptyState("等待冻结编辑稿", "生成预览或打开存档日报后，编辑页会出现可保存的发布稿。", [
+      "先生成日报或打开一份存档。",
+      "再点“冻结为编辑稿”锁定发布前版本。",
+    ]);
+    refs.digestHistoryView.innerHTML = emptyState("还没有版本历史", "冻结或保存编辑稿后，这里会显示版本、变更摘要、发布记录和回滚入口。", [
+      "冻结编辑稿作为 v1。",
+      "每次保存编辑变更都会追加一个可回滚版本。",
+    ]);
+    refs.publishPreviewView.innerHTML = emptyState("等待发布预览", "打开日报或冻结编辑稿后，这里会展示目标平台的最终输出形态。", [
+      "先选择发布目标。",
+      "再点“刷新预览”确认内容和冻结稿一致。",
+    ]);
     return;
   }
   state.currentDigest = digest;
@@ -569,7 +616,10 @@ function renderDigest(payload) {
   if (digestId) {
     loadDigestHistory(digestId).catch((error) => logJob("load digest history failed", { error: error.message, digestId }));
   } else {
-    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
+    refs.digestHistoryView.innerHTML = emptyState("还没有版本历史", "冻结为编辑稿后，这里会显示版本历史和回滚入口。", [
+      "点“冻结为编辑稿”保存当前候选。",
+      "保存编辑稿后再回到这里审版本差异。",
+    ]);
   }
   loadPublishPreview(digestId).catch((error) => logJob("load publish preview failed", { error: error.message, digestId }));
 }
@@ -611,7 +661,10 @@ function renderDigestPreview(payload) {
   const decisions = payload?.selection_decisions || [];
   const summary = payload?.selection_summary || null;
   if (!decisions.length) {
-    refs.digestPreviewView.innerHTML = '<p class="muted">还没有预览结果。点击“选稿预览”或生成日报后会显示这里。</p>';
+    refs.digestPreviewView.innerHTML = emptyState("还没有选稿结果", "选稿预览会解释每篇文章为什么入选、被压制、成为重复副本或排在条数外。", [
+      "先抓取新闻并抽取正文。",
+      "点“选稿预览”查看候选决策。",
+    ]);
     return;
   }
   const summaryLine = summary
@@ -645,7 +698,10 @@ function renderDigestEditor(payload) {
   const snapshot = payload?.editor_snapshot || null;
   const items = snapshot?.items || [];
   if (!items.length) {
-    refs.digestEditorView.innerHTML = '<p class="muted">先生成预览或打开一份已保存的日报，编辑页才会出现。</p>';
+    refs.digestEditorView.innerHTML = emptyState("编辑稿还没准备好", "发布前编辑页只会在有日报候选或已保存快照后出现。", [
+      "先生成中文日报或打开存档日报。",
+      "再冻结为编辑稿并调整顺序、分组和发布摘要。",
+    ]);
     return;
   }
   const summary = payload?.selection_summary || {};
@@ -713,7 +769,10 @@ function renderDigestHistory(payload) {
   const versions = payload?.versions || [];
   const currentVersion = payload?.current_version || 0;
   if (!versions.length) {
-    refs.digestHistoryView.innerHTML = '<p class="muted">当前还没有可用的编辑版本历史。</p>';
+    refs.digestHistoryView.innerHTML = emptyState("暂无可回滚版本", "当前日报还没有可用的编辑版本历史。", [
+      "保存一次编辑稿生成新版本。",
+      "发布前确认版本历史里有清晰的变更摘要。",
+    ]);
     return;
   }
   refs.digestHistoryView.innerHTML = versions
@@ -761,7 +820,10 @@ function renderDigestHistory(payload) {
 function renderPublishPreview(payload) {
   const targets = payload?.preview_targets?.targets || [];
   if (!targets.length) {
-    refs.publishPreviewView.innerHTML = '<p class="muted">选择一份日报后，这里会显示目标平台最终预览。</p>';
+    refs.publishPreviewView.innerHTML = emptyState("选择日报后再预览", "发布预览需要一份已生成或已冻结的日报，以及至少一个发布目标。", [
+      "先打开最新日报或冻结编辑稿。",
+      "选择 Telegram、飞书、公众号草稿或静态站点后刷新预览。",
+    ]);
     return;
   }
   refs.publishPreviewView.innerHTML = targets
@@ -849,7 +911,10 @@ function renderArchive(digests) {
         `
         )
         .join("")
-    : '<p class="muted">还没有存档日报。</p>';
+    : emptyState("还没有存档日报", "生成或冻结日报后，最近的存档会出现在这里，便于回看和重新发布。", [
+        "先生成中文日报。",
+        "冻结编辑稿后再查看版本和发布记录。",
+      ]);
 }
 
 function publicationTargetLabel(target) {
@@ -932,7 +997,10 @@ function renderPublications(publications) {
           `;
         })
         .join("")
-    : '<p class="muted">当前筛选下还没有发布记录。</p>';
+    : emptyState("还没有发布记录", "发布历史会显示目标、状态、外部 ID、失败原因和发布后是否过期。", [
+        "先打开一份日报并检查发布预览。",
+        "发布后回到这里确认每个渠道的状态。",
+      ]);
 }
 
 function articleChips(article) {
@@ -1012,7 +1080,10 @@ function renderArticles(articles) {
         `
         )
         .join("")
-    : '<p class="muted">当前筛选下没有文章。</p>';
+    : emptyState("当前没有文章", "文章池为空通常表示还没抓取，或筛选条件太窄。", [
+        "点“抓取新闻”拉取最新候选。",
+        "放宽区域、时间窗口或条数上限后刷新文章列表。",
+      ]);
 }
 
 function escapeHtml(value) {
@@ -1166,7 +1237,10 @@ function renderExtractionOps(articles) {
           `
         )
         .join("")
-    : '<p class="muted">当前筛选下没有需要关注的抽取记录。</p>';
+    : emptyState("没有待处理抽取项", "抽取队列当前没有被筛选出来的 blocked、throttled 或待重试记录。", [
+        "点“抓正文”启动正文抽取。",
+        "取消 due-only 或切换状态筛选，查看全部抽取结果。",
+      ]);
 }
 
 function renderSourceAlerts(sourceAlerts) {
@@ -1200,7 +1274,10 @@ function renderSourceAlerts(sourceAlerts) {
           `
         )
         .join("")
-    : '<p class="muted">最近还没有来源级告警历史。</p>';
+    : emptyState("暂无来源告警历史", "来源连续失败、恢复或告警投递异常后，历史记录会出现在这里。", [
+        "先运行抓取和抽取暴露异常来源。",
+        "有告警后可在来源状态面板确认、静默或进入维护。",
+      ]);
 }
 
 async function loadStats() {
@@ -1238,22 +1315,28 @@ async function loadDigests() {
   const payload = await fetchJson("/admin/digests?limit=12", {
     headers: adminHeaders(),
   });
-  renderArchive(payload.digests || []);
-  if (payload.digests && payload.digests[0]) {
-    if (state.selectedDigestId) {
-      const selected = payload.digests.find((item) => item.id === state.selectedDigestId);
-      renderDigest(selected || payload.digests[0]);
-      return;
-    }
-    renderDigest(payload.digests[0]);
+  const digests = payload.digests || [];
+  renderArchive(digests);
+  if (!digests[0]) {
+    renderDigest(null);
+    return;
   }
+  if (state.selectedDigestId) {
+    const selected = digests.find((item) => item.id === state.selectedDigestId);
+    renderDigest(selected || digests[0]);
+    return;
+  }
+  renderDigest(digests[0]);
 }
 
 async function loadDigestHistory(digestId = null) {
   const resolvedDigestId =
     digestId || state.currentDigestPayload?.stored_digest?.id || state.selectedDigestId || null;
   if (!resolvedDigestId) {
-    refs.digestHistoryView.innerHTML = '<p class="muted">冻结为编辑稿后，这里会显示版本历史和回滚入口。</p>';
+    refs.digestHistoryView.innerHTML = emptyState("还没有版本历史", "冻结为编辑稿后，这里会显示版本历史和回滚入口。", [
+      "先生成日报。",
+      "再冻结编辑稿建立第一个可回滚版本。",
+    ]);
     return;
   }
   const payload = await fetchJson(`/admin/digests/${resolvedDigestId}/history?limit=20`, {
