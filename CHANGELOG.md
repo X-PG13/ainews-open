@@ -2,6 +2,24 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.58] - 2026-05-30
+
+### Added
+
+- Web console asset packaging regression coverage so the packaged wheel and source archive must include `index.html`, `styles.css`, and `app.js`
+- Actionable admin console empty states and first-run cues for ingest, extraction, digest review, publishing, and source health
+- Operator console walkthrough that starts from a local checkout and follows the safe path through serve, ingest, extraction, digest review, frozen editor snapshots, and publication preview
+
+### Changed
+
+- Package version is now `1.2.58`
+- Admin console narrow-view layout now avoids horizontal overflow and keeps first-run guidance readable on mobile-width screens
+- README operator documentation links now expose the console walkthrough from both English and Simplified Chinese entry points
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured
+
 ## [1.2.57] - 2026-05-30
 
 ### Added
