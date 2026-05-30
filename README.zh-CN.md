@@ -92,6 +92,7 @@ make check
 - [兼容性约定](docs/compatibility.md)
 - [配置矩阵](docs/configuration.zh-CN.md)
 - [首次部署指南](docs/first-deploy.zh-CN.md)
+- [控制台 Walkthrough](docs/operator-console-walkthrough.md)
 - [部署指南](docs/deployment.zh-CN.md)
 - [数据库迁移](docs/database-migrations.md)
 - [故障排查](docs/troubleshooting.zh-CN.md)

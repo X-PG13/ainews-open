@@ -92,6 +92,7 @@ make check
 - [Compatibility Contract](docs/compatibility.md)
 - [Configuration Matrix](docs/configuration.md)
 - [First Deploy Guide](docs/first-deploy.md)
+- [Operator Console Walkthrough](docs/operator-console-walkthrough.md)
 - [Deployment Guide](docs/deployment.md)
 - [Database Migrations](docs/database-migrations.md)
 - [Troubleshooting](docs/troubleshooting.md)
