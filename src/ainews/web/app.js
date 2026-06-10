@@ -7,6 +7,7 @@ const state = {
   editorActor: localStorage.getItem("ainews_digest_editor_actor") || "",
   autoRefreshEnabled: localStorage.getItem("ainews_auto_refresh") === "1",
   nextAutoRefreshAt: null,
+  lastSyncAt: null,
 };
 
 let autoRefreshTimer = null;
@@ -95,6 +96,7 @@ const refs = {
   autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
   heroAutoRefreshCountdown: document.getElementById("heroAutoRefreshCountdown"),
+  heroLastSync: document.getElementById("heroLastSync"),
 };
 
 refs.adminToken.value = state.token;
@@ -231,6 +233,32 @@ function formatDataAge(value) {
   }
   const day = Math.floor(hour / 24);
   return `${day} 天前`;
+}
+
+function formatLastSyncTime(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未同步";
+  }
+  return parsed.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function updateLastSyncStatus() {
+  if (!refs.heroLastSync) {
+    return;
+  }
+
+  if (!state.lastSyncAt) {
+    refs.heroLastSync.textContent = "上次同步：未同步";
+    return;
+  }
+
+  refs.heroLastSync.textContent = `上次同步：${formatLastSyncTime(state.lastSyncAt)}`;
 }
 
 function describeDataWindow(value) {
@@ -1694,6 +1722,7 @@ function startAutoRefresh(enabled) {
 }
 
 async function refreshAll() {
+  let success = true;
   try {
     await Promise.all([
       loadOperations(),
@@ -1707,7 +1736,12 @@ async function refreshAll() {
     ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
+    success = false;
   } finally {
+    if (success) {
+      state.lastSyncAt = Date.now();
+    }
+    updateLastSyncStatus();
     if (state.autoRefreshEnabled) {
       state.nextAutoRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
       updateAutoRefreshCountdown();
@@ -2162,5 +2196,6 @@ refs.extractionOpsList.addEventListener("click", async (event) => {
 
 setSelectedDigestId(null);
 setAutoRefreshStatus(state.autoRefreshEnabled);
+updateLastSyncStatus();
 startAutoRefresh(state.autoRefreshEnabled);
 refreshAll();
