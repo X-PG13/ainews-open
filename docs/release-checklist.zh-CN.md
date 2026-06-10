@@ -117,6 +117,18 @@ python -m ainews --help
 - [ ] 在干净安装环境里 `python -m ainews stats` 可以运行。
 - [ ] 如果本次 release 启用了 PyPI 发布，确认 GitHub 和 PyPI 上的包元信息都正确。
 
+### 维护者贡献可见性检查
+
+- [ ] 在关闭 milestone 前，补充一次人工维护者贡献检查：
+
+```bash
+git log --format="%an <%ae>" "${PREVIOUS_TAG}..${TAG}" \
+  | sort -u \
+  | grep -Ev 'dependabot\\[bot\\]|github-actions\\[bot\\]|renovate\\[bot\\]|actions-user'
+```
+
+- [ ] 如果结果里有 bot 账号噪音，在交付简报里说明并标注本次依赖/动作升级是否走了人工 PR 流程（原 Dependabot PR 在合并后已闭环）。
+
 ### 收尾
 
 - [ ] 只有在 Release 页面、制品和 smoke workflows 都确认后，才关闭 release milestone。
