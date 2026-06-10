@@ -473,6 +473,21 @@ textarea {
   margin: 0;
 }
 
+.compact-toggle {
+  width: auto;
+  padding: 8px 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.compact-toggle input {
+  accent-color: var(--accent-deep);
+}
+
+#autoRefreshStatus {
+  font-size: 12px;
+}
+
 .terminal {
   margin: 14px 0 0;
   min-height: 140px;
