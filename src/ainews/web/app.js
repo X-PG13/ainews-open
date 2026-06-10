@@ -5,7 +5,11 @@ const state = {
   currentArticles: [],
   selectedDigestId: null,
   editorActor: localStorage.getItem("ainews_digest_editor_actor") || "",
+  autoRefreshEnabled: localStorage.getItem("ainews_auto_refresh") === "1",
 };
+
+let autoRefreshTimer = null;
+const AUTO_REFRESH_INTERVAL_MS = 30000;
 
 const refs = {
   adminToken: document.getElementById("adminToken"),
@@ -71,6 +75,8 @@ const refs = {
   heroBuildVersion: document.getElementById("heroBuildVersion"),
   heroGeneratedAt: document.getElementById("heroGeneratedAt"),
   heroDataAge: document.getElementById("heroDataAge"),
+  autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
+  autoRefreshStatus: document.getElementById("autoRefreshStatus"),
 };
 
 refs.adminToken.value = state.token;
@@ -1526,6 +1532,33 @@ async function refreshPublications() {
   await loadStats();
 }
 
+function setAutoRefreshStatus(enabled) {
+  if (!refs.autoRefreshStatus) return;
+  refs.autoRefreshStatus.textContent = enabled ? "自动刷新开启" : "自动刷新关闭";
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+}
+
+function startAutoRefresh(enabled) {
+  state.autoRefreshEnabled = Boolean(enabled);
+  localStorage.setItem("ainews_auto_refresh", state.autoRefreshEnabled ? "1" : "0");
+  if (!state.autoRefreshEnabled) {
+    stopAutoRefresh();
+    setAutoRefreshStatus(false);
+    return;
+  }
+  setAutoRefreshStatus(true);
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(() => {
+    refreshAll().catch((error) => logJob("auto refresh failed", { error: error.message }));
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
 async function refreshAll() {
   try {
     await Promise.all([
@@ -1875,6 +1908,12 @@ refs.extractionErrorCategoryFilter.addEventListener("change", () =>
 refs.extractionDueOnlyCheckbox.addEventListener("change", () =>
   loadExtractionOps().catch((error) => logJob("load extraction ops failed", { error: error.message }))
 );
+if (refs.autoRefreshCheckbox) {
+  refs.autoRefreshCheckbox.checked = state.autoRefreshEnabled;
+  refs.autoRefreshCheckbox.addEventListener("change", () =>
+    startAutoRefresh(refs.autoRefreshCheckbox.checked)
+  );
+}
 
 refs.articlesList.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
@@ -1983,4 +2022,6 @@ refs.extractionOpsList.addEventListener("click", async (event) => {
 });
 
 setSelectedDigestId(null);
+setAutoRefreshStatus(state.autoRefreshEnabled);
+startAutoRefresh(state.autoRefreshEnabled);
 refreshAll();

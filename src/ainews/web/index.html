@@ -90,6 +90,13 @@
             <p class="eyebrow">Operations</p>
             <h2>运维总览</h2>
           </div>
+          <div class="toolbar-row">
+            <label class="check-label compact-toggle">
+              <input id="autoRefreshCheckbox" type="checkbox" />
+              自动刷新（30s）
+            </label>
+            <span id="autoRefreshStatus" class="muted">自动刷新关闭</span>
+          </div>
         </div>
         <p class="muted">
           把 `/health`、最近 pipeline、冷却来源、来源告警和发布失败收成一屏。细节操作仍保留在下方来源与抽取面板里。
