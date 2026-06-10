@@ -194,6 +194,18 @@ class WebConsoleTestCase(unittest.TestCase):
         for expected in expected_app_snippets:
             self.assertIn(expected, app)
 
+    def test_console_includes_inline_fallback_styles_for_static_views(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+
+        for expected in (
+            '<style id="consoleFallbackStyles">',
+            ".hero-status-rail",
+            ".toolbar-row",
+            ".publication-list",
+            "background:",
+        ):
+            self.assertIn(expected, index)
+
 
 if __name__ == "__main__":
     unittest.main()

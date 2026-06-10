@@ -4,6 +4,81 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI News Open Console</title>
+    <style id="consoleFallbackStyles">
+      :root {
+        --bg: #f7f0e5;
+        --ink: #171717;
+        --muted: #6f665b;
+        --line: rgba(23, 23, 23, 0.12);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100%;
+        font-family: "Noto Sans SC", Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(219, 61, 27, 0.08), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(184, 140, 50, 0.12), transparent 32%),
+          linear-gradient(180deg, #fbf5eb 0%, #f3ead8 100%);
+      }
+      .shell {
+        width: min(1400px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 56px;
+      }
+      .panel {
+        background: rgba(255, 252, 245, 0.86);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: 0 24px 70px rgba(81, 51, 17, 0.08);
+        padding: 22px;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 24px;
+        margin-bottom: 18px;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .toolbar-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .button {
+        border: 1px solid rgba(23, 23, 23, 0.16);
+        border-radius: 999px;
+        padding: 8px 12px;
+      }
+      .muted {
+        color: var(--muted);
+        margin: 4px 0 0;
+      }
+      .hero-status-rail,
+      .workflow-steps,
+      .form-grid,
+      .action-row,
+      .publish-grid,
+      .publication-list {
+        display: grid;
+        gap: 10px;
+      }
+      .hero-status-rail {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
