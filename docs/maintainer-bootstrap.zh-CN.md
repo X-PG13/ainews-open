@@ -90,6 +90,19 @@ Dependabot PR 只作为升级通知，不视为可以直接合并的维护者提
 
 这样可以保留依赖升级的可审查性，同时避免默认分支出现 bot-authored commits。
 
+## 网络超时与恢复操作
+
+在初始化、release 收口、依赖审核时如果命令超时，先跑只读校验再决定是否重试写操作。
+
+若本地网络出口不稳定，可在重试前临时给 GitHub 命令加上本地代理：
+
+```bash
+HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
+  gh pr view --state all --limit 10
+```
+
+该代理前缀仅作过渡兜底。网络恢复后立即去掉代理，按 [Release 恢复说明](./release-recovery.zh-CN.md)走正常流程。
+
 ## 维护者快速自检
 
 - `Settings` -> `Pages` 的 `Source` 已经是 `GitHub Actions`
