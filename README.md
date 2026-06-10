@@ -16,6 +16,13 @@
   </p>
 </div>
 
+## Maintainer Status Snapshot
+
+- Latest release and release notes: [Release Notes](docs/releases/README.md)
+- Current planning: [Roadmap](ROADMAP.md)
+- Current open maintenance milestone: [v1.2.61](https://github.com/X-PG13/ainews-open/milestone/15)
+- Deferred engineering work: [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 ![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
 
