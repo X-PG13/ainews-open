@@ -12,6 +12,17 @@ Use these notes when a release or PR closeout action may have changed GitHub sta
 - Do not move or recreate a public tag unless the tag points to the wrong commit and the maintainer explicitly accepts the compatibility risk.
 - Keep PyPI recovery out of this flow. If PyPI is disabled or deferred, leave it in its own milestone.
 
+## Network Access and Proxy Fallback (Optional)
+
+- If GitHub API or git commands repeatedly time out because the local network path is unstable, maintainers can temporarily use the local HTTP proxy for the command first.
+- Example:
+
+```bash
+https_proxy=http://127.0.0.1:7897 http_proxy=http://127.0.0.1:7897 gh pr view --state all --limit 10
+```
+
+Once the command succeeds, continue with the normal read-only verification flow and remove the proxy once the network is stable again.
+
 ## Quick Reference
 
 Start here when a release closeout step times out or leaves local state unclear.
