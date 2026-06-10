@@ -18,11 +18,17 @@
 
 ## Maintainer Status Snapshot
 
-- Latest release and release notes: [Release Notes](docs/releases/README.md)
-- Current planning: [Roadmap](ROADMAP.md)
-- Current open maintenance milestone list: [open milestones](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
-- Latest patch target from docs: [release notes index](docs/releases/README.md)
-- Deferred engineering work: [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+### Current Signals
+
+- **Release status**: read from [release notes index](docs/releases/README.md) (source of truth for latest patch level)
+- **Current planning**: [Roadmap](ROADMAP.md)
+- **Open maintenance milestones**: [open milestones](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
+- **Deferred engineering**: [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+
+### Maintainer Rhythm
+
+- Before opening follow-up work, confirm the latest release notes entry and align updates to the active milestone.
+- Before each milestone closeout, verify release assets and release docs using [release checklist](docs/release-checklist.md).
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 ![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
