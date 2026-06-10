@@ -12,6 +12,7 @@
 
 - [ ] `python -m unittest discover -s tests -v`
 - [ ] `python -m ruff check src tests`
+- [ ] `make contributors` output attached for release-attribution checks when this PR is release-adjacent
 - [ ] Relevant manual verification completed
 
 ## Checklist
