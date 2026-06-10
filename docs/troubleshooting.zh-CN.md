@@ -253,6 +253,18 @@ python -m ainews publish --digest-id 1 --target static_site --force-republish
 - commit email 是否与 GitHub 已验证邮箱一致
 - force push 或历史重写后，GitHub 统计是否还在重算
 
+如果出现了 Bot 账号（如 Dependabot、CI）导致统计异常：
+
+- GitHub 的 contributor 统计是异步计算的，并且可能会把自动化账号列出来。
+- 只看人工贡献者可用本地命令：
+
+```bash
+git shortlog -sne --all --no-merges |
+  grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+```
+
+- 如果某次发布说明里不希望出现 bot 归属，建议在发布 PR 的作者说明里补充人类归属备注。
+
 ## 如何确认数据库迁移状态
 
 执行：
