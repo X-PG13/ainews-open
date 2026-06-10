@@ -147,6 +147,59 @@ button {
   padding: 8px 10px;
 }
 
+.operations-status-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px dashed rgba(23, 23, 23, 0.22);
+  background: rgba(255, 255, 255, 0.56);
+  align-items: center;
+  opacity: 0.9;
+}
+
+.operations-status-strip .status-chip {
+  justify-self: start;
+}
+
+.operations-status-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  color: var(--muted);
+  font: 600 12px/1.3 "JetBrains Mono", monospace;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.operations-status-strip span:first-child {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.operations-status-strip.loaded {
+  opacity: 1;
+}
+
+.status-chip.good {
+  background: rgba(58, 132, 77, 0.16);
+  color: #1f6b34;
+}
+
+.status-chip.pending {
+  background: rgba(184, 140, 50, 0.16);
+  color: #7b5a14;
+}
+
+.status-chip.warn {
+  background: rgba(219, 61, 27, 0.16);
+  color: var(--accent-deep);
+}
+
 .token-box,
 .form-grid label {
   display: grid;
@@ -688,6 +741,10 @@ textarea {
 
   .hero-pills span {
     max-width: 100%;
+  }
+
+  .operations-status-strip {
+    grid-template-columns: 1fr;
   }
 
   .token-row {
