@@ -20,7 +20,8 @@
 
 - Latest release and release notes: [Release Notes](docs/releases/README.md)
 - Current planning: [Roadmap](ROADMAP.md)
-- Current open maintenance milestone: [v1.2.61](https://github.com/X-PG13/ainews-open/milestone/15)
+- Current open maintenance milestone list: [open milestones](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
+- Latest patch target from docs: [release notes index](docs/releases/README.md)
 - Deferred engineering work: [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
