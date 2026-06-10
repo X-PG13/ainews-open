@@ -261,6 +261,7 @@ python -m ainews publish --digest-id 1 --target static_site --force-republish
 ```bash
 git shortlog -sne --all --no-merges |
   grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+make contributors
 ```
 
 - 如果某次发布说明里不希望出现 bot 归属，建议在发布 PR 的作者说明里补充人类归属备注。

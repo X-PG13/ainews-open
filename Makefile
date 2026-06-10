@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping monitoring-up monitoring-down lint build sbom check serve test coverage smoke
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping monitoring-up monitoring-down lint build sbom contributors check serve test coverage smoke
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -44,6 +44,12 @@ build:
 sbom:
 	PYTHON_BIN="$$( $(PYTHON) -c 'import sys; print(sys.executable)' )"; \
 	$(PYTHON) -m cyclonedx_py environment "$$PYTHON_BIN" --pyproject pyproject.toml --mc-type application --output-reproducible --of JSON -o sbom.json
+
+contributors:
+	@echo "# Human-visible contributors (excluding bot noise):"
+	@git shortlog -sne --all --no-merges \
+		| grep -Ev '(bot|dependabot\\[bot\\]|github-actions\\[bot\\]|renovate\\[bot\\]|actions-user)' \
+		| sed -n '1,200p'
 
 check: lint coverage build smoke
 
