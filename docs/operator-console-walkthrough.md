@@ -103,6 +103,24 @@ You can also enable `自动刷新（30s）` in the `Operations` header:
 - Turn it off anytime to stop background polling when operators prefer manual
   checks.
 
+### 3.1 Status Rail Quick Read
+
+At the top of `Operations`, below the strip, the console now shows a compact status
+rail with four cards:
+
+- `运行健康`: current operations health (`正常`, `降级`, `异常`, `未采样`).
+- `Schema`: schema contract marker from backend health/stats.
+- `构建版本`: backend build metadata label.
+- `数据时效`: freshness of the latest operations payload.
+
+For triage:
+
+- If `运行健康` is `异常`, open the `健康` section for degraded checks and reasons.
+- If `数据时效` reports an unknown state, reload once and verify backend token and
+  `/admin/operations` permission.
+- If `构建版本` stays at `未知` for multiple refresh cycles, open a debug run and
+  confirm the pipeline metadata is being reported.
+
 ## 4. Ingest A Small Candidate Pool
 
 In the console:
