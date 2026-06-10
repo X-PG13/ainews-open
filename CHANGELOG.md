@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.68] - 2026-06-10
+
+### Added
+
+- Allowed the web console UI to load correctly from `file:///.../index.html` previews by switching local asset references to relative paths.
+- Added console troubleshooting guidance for plain-text-only rendering and asset-loading failures in both English and Chinese operator docs.
+
+### Changed
+
+- Package version is now `1.2.68`.
+- Added README guidance for local file-mode console preview and documented the expected visual/rendering checks.
+
+### Fixed
+
+- Added `heroLastSync` display in the console status strip so operators can see the latest successful data refresh.
+
 ## [1.2.59] - 2026-06-10
 
 ### Added
