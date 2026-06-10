@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping monitoring-up monitoring-down lint build sbom contributors check serve test coverage smoke
+.PHONY: ingest extract enrich digest pipeline publish publications refresh-publications housekeeping monitoring-up monitoring-down lint build sbom contributors check serve test test-local coverage smoke
 
 ingest:
 	$(PYTHON) -m ainews ingest
@@ -58,6 +58,9 @@ serve:
 
 test:
 	$(PYTHON) -m unittest discover -s tests -v
+
+test-local:
+	PYTHONPATH="$(CURDIR)/src:$$PYTHONPATH" $(PYTHON) -m unittest discover -s tests -v
 
 coverage:
 	$(PYTHON) -m coverage run -m unittest discover -s tests -v
