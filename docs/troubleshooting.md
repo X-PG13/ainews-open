@@ -46,6 +46,26 @@ Default retry behavior:
 Use these checks:
 
 - `python -m ainews stats`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/stats`
+
+## Web console only shows plain text in the browser
+
+This usually means static assets were not loaded.
+
+Checks:
+
+- Open the page via one of the supported paths:
+  - `http://127.0.0.1:8000/` (served app)
+  - direct `src/ainews/web/index.html` for quick static preview
+- In DevTools, confirm CSS/JS requests for assets under `assets/` return 200 and no 404.
+- If opening directly as `file:///.../index.html`, refresh once after changing files and confirm there are no asset loading errors.
+
+Expected outcome:
+
+- Hero status chips, toolbar buttons, and sections render as styled cards (no raw HTML tags).
+- The page can execute refresh controls without immediate JS errors in the browser console.
+
+## Health is degraded
 - `curl http://127.0.0.1:8000/health`
 - `curl -H "X-Admin-Token: your-secret-token" "http://127.0.0.1:8000/admin/articles?extraction_status=throttled&due_only=true"`
 
