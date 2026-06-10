@@ -65,6 +65,12 @@ const refs = {
   operationsPublicationFailures: document.getElementById("operationsPublicationFailures"),
   publishTargetInputs: Array.from(document.querySelectorAll(".publish-target")),
   wechatSubmitCheckbox: document.getElementById("wechatSubmitCheckbox"),
+  operationsStatusStrip: document.getElementById("operationsStatusStrip"),
+  heroHealthBadge: document.getElementById("heroHealthBadge"),
+  heroSchemaVersion: document.getElementById("heroSchemaVersion"),
+  heroBuildVersion: document.getElementById("heroBuildVersion"),
+  heroGeneratedAt: document.getElementById("heroGeneratedAt"),
+  heroDataAge: document.getElementById("heroDataAge"),
 };
 
 refs.adminToken.value = state.token;
@@ -154,6 +160,83 @@ function operationStatusClass(status) {
   if (status === "degraded" || status === "pending" || status === "partial_error") return "pending";
   if (status === "error" || status === "blocked") return "warn";
   return "";
+}
+
+function operationStatusLabelAndClass(status) {
+  const normalized = String(status || "unknown");
+  if (normalized === "ok" || normalized === "ready") {
+    return ["正常", "good"];
+  }
+  if (normalized === "degraded" || normalized === "pending" || normalized === "partial_error") {
+    return ["降级", "pending"];
+  }
+  if (normalized === "error" || normalized === "blocked") {
+    return ["异常", "warn"];
+  }
+  return ["未采样", ""];
+}
+
+function formatDisplayTime(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未记录";
+  }
+  return parsed.toLocaleString("zh-CN");
+}
+
+function formatDataAge(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未知";
+  }
+  const delta = Date.now() - parsed.getTime();
+  if (delta < 0) {
+    return "刚刚";
+  }
+  const second = Math.floor(delta / 1000);
+  if (second < 60) {
+    return "小于 1 分钟";
+  }
+  const minute = Math.floor(second / 60);
+  if (minute < 60) {
+    return `${minute} 分钟前`;
+  }
+  const hour = Math.floor(minute / 60);
+  if (hour < 24) {
+    return `${hour} 小时前`;
+  }
+  const day = Math.floor(hour / 24);
+  return `${day} 天前`;
+}
+
+function updateHeroOperationStatus(payload) {
+  const health = payload.health || {};
+  const stats = payload.stats || {};
+  const metrics = payload.metrics || {};
+  const status = health.status || "unknown";
+  const [statusText, statusClass] = operationStatusLabelAndClass(status);
+  const schemaVersion = health.schema_version || stats.schema_version || "unknown";
+  const buildVersion = metrics.build_version || "unknown";
+  const generatedAt = payload.generated_at || null;
+  if (refs.heroHealthBadge) {
+    refs.heroHealthBadge.textContent = `系统状态：${statusText}`;
+    refs.heroHealthBadge.className = `chip status-chip ${statusClass}`.trim();
+  }
+  if (refs.heroSchemaVersion) {
+    refs.heroSchemaVersion.textContent = `schema：${schemaVersion}`;
+  }
+  if (refs.heroBuildVersion) {
+    refs.heroBuildVersion.textContent = `build：v${buildVersion}`;
+  }
+  if (refs.heroGeneratedAt) {
+    refs.heroGeneratedAt.textContent = `最后数据：${formatDisplayTime(generatedAt)}`;
+  }
+  if (refs.heroDataAge) {
+    refs.heroDataAge.textContent = `数据时效：${formatDataAge(generatedAt)}`;
+  }
+  if (refs.operationsStatusStrip) {
+    refs.operationsStatusStrip.classList.add("loaded");
+  }
 }
 
 function summarizePairs(payload) {
@@ -395,6 +478,7 @@ function renderOperationsPublicationFailures(failures, pending) {
 }
 
 function renderOperations(payload) {
+  updateHeroOperationStatus(payload);
   renderOperationsSummary(payload);
   renderOperationsHealth(payload);
   renderOperationsPipelineRuns(payload.pipeline_runs || []);
