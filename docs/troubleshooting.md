@@ -56,9 +56,9 @@ Checks:
 
 - Open the page via one of the supported paths:
   - `http://127.0.0.1:8000/` (served app)
-  - direct `src/ainews/web/index.html` for quick static preview
-- In DevTools, confirm CSS/JS requests for assets under `assets/` return 200 and no 404.
-- If opening directly as `file:///.../index.html`, refresh once after changing files and confirm there are no asset loading errors.
+  - `src/ainews/web/index.html` for quick static preview
+- In DevTools, confirm CSS/JS requests for `assets/styles.css` and `assets/app.js` return 200.
+- If you open by file protocol, fallback to same-folder `styles.css` / `app.js` is built in, so it should still render after one refresh.
 
 Expected outcome:
 
