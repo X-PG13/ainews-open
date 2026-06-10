@@ -2,6 +2,18 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.59] - 2026-06-10
+
+### Added
+
+- Added explicit keyboard focus visuals for console form controls and check label groups.
+- Added reduced-motion handling to console UI interactions so transition-heavy behaviors are minimized when users request it.
+- Improved release artifact validation docs with version-agnostic placeholders for release verification commands in both English and Chinese.
+
+### Changed
+
+- Package version is now `1.2.59`.
+
 ## [1.2.58] - 2026-05-30
 
 ### Added
