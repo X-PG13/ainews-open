@@ -52,12 +52,14 @@ class WebConsoleTestCase(unittest.TestCase):
             'id="heroRailAgeHint"',
             'id="heroReleaseVersion"',
             'id="heroDataWindow"',
+            'id="heroAutoRefreshCountdown"',
             'id="heroVersionPulse"',
             "status-rail-item",
             "heroRailHealth",
             "heroRailSchema",
             "heroRailBuild",
             "heroRailAge",
+            "heroAutoRefreshCountdown",
             'role="list"',
             'role="listitem"',
         ):
@@ -80,10 +82,15 @@ class WebConsoleTestCase(unittest.TestCase):
             "refs.heroRailSchemaHint",
             "refs.heroRailBuildHint",
             "refs.heroRailAgeHint",
+            "refs.heroAutoRefreshCountdown",
             "refs.heroReleaseVersion",
             "refs.heroDataWindow",
             "heroReleaseVersion",
             "heroDataWindow",
+            "updateAutoRefreshCountdown",
+            "formatCountdown",
+            "autoRefreshCountdownTimer",
+            "AUTO_REFRESH_TICK_MS",
             "describeDataWindow",
             "statusClass",
             "refs.heroRailHealthCard.className",
@@ -113,6 +120,7 @@ class WebConsoleTestCase(unittest.TestCase):
             ".version-kicker",
             ".sr-only",
             "grid-template-columns: repeat(2, minmax(0, 1fr));",
+            "grid-template-columns: repeat(3, minmax(0, 1fr));",
         ):
             self.assertIn(expected, styles)
 
