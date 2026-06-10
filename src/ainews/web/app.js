@@ -73,8 +73,10 @@ const refs = {
   heroHealthBadge: document.getElementById("heroHealthBadge"),
   heroSchemaVersion: document.getElementById("heroSchemaVersion"),
   heroBuildVersion: document.getElementById("heroBuildVersion"),
+  heroReleaseVersion: document.getElementById("heroReleaseVersion"),
   heroGeneratedAt: document.getElementById("heroGeneratedAt"),
   heroDataAge: document.getElementById("heroDataAge"),
+  heroDataWindow: document.getElementById("heroDataWindow"),
   heroRailHealthCard: document.getElementById("heroRailHealthCard"),
   heroRailSchemaCard: document.getElementById("heroRailSchemaCard"),
   heroRailBuildCard: document.getElementById("heroRailBuildCard"),
@@ -227,6 +229,24 @@ function formatDataAge(value) {
   return `${day} 天前`;
 }
 
+function describeDataWindow(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未采样";
+  }
+  const deltaMinutes = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 60000));
+  if (deltaMinutes < 15) {
+    return "近 15 分钟";
+  }
+  if (deltaMinutes < 60) {
+    return `近 ${Math.floor(deltaMinutes / 5) * 5} 分钟`;
+  }
+  if (deltaMinutes < 180) {
+    return `近 ${Math.floor(deltaMinutes / 60)} 小时`;
+  }
+  return `近 ${Math.floor(deltaMinutes / 60 / 24)} 天`;
+}
+
 function updateHeroOperationStatus(payload) {
   const health = payload.health || {};
   const stats = payload.stats || {};
@@ -239,6 +259,7 @@ function updateHeroOperationStatus(payload) {
   const buildDisplay = buildVersion === "unknown" ? "未知" : `v${buildVersion}`;
   const schemaDisplay = schemaVersion === "unknown" ? "未知" : schemaVersion;
   const ageDisplay = formatDataAge(generatedAt);
+  const windowDisplay = describeDataWindow(generatedAt);
   const ageClass = generatedAt ? "good" : "status-unknown";
   const schemaClass = schemaVersion === "unknown" ? "status-unknown" : "good";
   const buildClass = buildVersion === "unknown" ? "status-unknown" : "good";
@@ -256,11 +277,17 @@ function updateHeroOperationStatus(payload) {
   if (refs.heroBuildVersion) {
     refs.heroBuildVersion.textContent = `build：${buildDisplay}`;
   }
+  if (refs.heroReleaseVersion) {
+    refs.heroReleaseVersion.textContent = `${buildDisplay} / ${schemaDisplay}`;
+  }
   if (refs.heroGeneratedAt) {
     refs.heroGeneratedAt.textContent = `最后数据：${formatDisplayTime(generatedAt)}`;
   }
   if (refs.heroDataAge) {
     refs.heroDataAge.textContent = `数据时效：${ageDisplay}`;
+  }
+  if (refs.heroDataWindow) {
+    refs.heroDataWindow.textContent = windowDisplay;
   }
   if (refs.heroRailHealthCard) {
     refs.heroRailHealthCard.className = `status-rail-item ${statusClass || "status-unknown"}`;
