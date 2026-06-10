@@ -50,7 +50,7 @@ Use these checks:
 
 ## Web console only shows plain text in the browser
 
-This usually means static assets were not loaded.
+This usually means static assets or JavaScript were not loaded.
 
 Checks:
 
@@ -60,6 +60,8 @@ Checks:
 - In DevTools, confirm CSS/JS requests return 200:
   - For service mode (`http://127.0.0.1:8000/`): `assets/styles.css`, `assets/app.js`.
   - For local file mode (`file://.../src/ainews/web/index.html`): `styles.css`, `app.js`.
+- If the page still renders as plain text, verify JavaScript is enabled and not blocked by the browser/security container.
+- In `file://` mode, re-open the exact page URL after a hard refresh, because some WebViews cache a partial HTML snapshot.
 - If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
 - Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
 

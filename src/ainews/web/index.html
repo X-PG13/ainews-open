@@ -4,6 +4,34 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI News Open Console</title>
+    <link rel="stylesheet" href="styles.css" />
+    <noscript>
+      <style>
+        body {
+          margin: 0;
+          padding: 24px;
+          font-family: "Noto Sans SC", sans-serif;
+          background: #f7f0e5;
+          color: #171717;
+        }
+
+        .shell {
+          width: min(1400px, calc(100vw - 48px));
+          margin: 0 auto;
+        }
+
+        .panel,
+        .hero,
+        .workflow-map,
+        .operations-panel,
+        .panel h1,
+        .panel h2,
+        .panel h3,
+        .panel p {
+          margin-top: 0;
+        }
+      </style>
+    </noscript>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -77,6 +105,9 @@
     </script>
   </head>
   <body>
+    <noscript>
+      <p>JavaScript is disabled. The console requires JavaScript to show live data and interactive controls.</p>
+    </noscript>
     <div class="background-grid" aria-hidden="true"></div>
     <main class="shell">
       <section class="hero panel">
