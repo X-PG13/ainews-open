@@ -57,8 +57,9 @@ Checks:
 - Open the page via one of the supported paths:
   - `http://127.0.0.1:8000/` (served app)
   - `src/ainews/web/index.html` for quick static preview
-- In DevTools, confirm CSS/JS requests for `assets/styles.css` and `assets/app.js` return 200.
-- If you open by file protocol, fallback to same-folder `styles.css` / `app.js` is built in, so it should still render after one refresh.
+- In DevTools, confirm CSS/JS requests return 200:
+  - For service mode (`http://127.0.0.1:8000/`): `assets/styles.css`, `assets/app.js`.
+  - For local file mode (`file://.../src/ainews/web/index.html`): `styles.css`, `app.js`.
 - If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
 - Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
 
