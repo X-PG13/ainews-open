@@ -38,6 +38,19 @@ Dependabot PRs are notifications only. Do not directly merge a Dependabot PR int
 
 For the full maintainer checklist, see [Maintainer Bootstrap](./maintainer-bootstrap.md#dependency-update-policy).
 
+## Network Timeout Recovery
+
+When GitHub commands time out during branch review or merge closeout, always check read-only state before retrying write actions.
+
+If you need a temporary workaround for unstable outbound access, use your local proxy for the retried command:
+
+```bash
+HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
+  gh pr view --state all --limit 10
+```
+
+Remove the proxy prefix once the network stabilizes and continue with the normal recovery flow in [Release Recovery Notes](./release-recovery.md).
+
 ## Validate Before Opening A PR
 
 - `make lint`
