@@ -81,6 +81,28 @@ Before running anything, confirm the first-screen operator map is visible:
 The `Operations` panel is the best place to check whether the stack is healthy
 before changing data.
 
+At the top of `Operations`, the new status strip summarizes the current service
+state in one glance:
+
+- `系统状态`: health summary (`健康`, `降级`, or `异常`) from `/admin/operations`.
+- `schema`: schema migration/version marker used by the backend data contract.
+- `build`: backend build version.
+- `最后数据`: timestamp of the last successful operations payload.
+- `数据时效`: how old the latest operations snapshot is.
+
+Use this strip for a quick operational triage (is the stack healthy and fresh).
+When you need root-cause detail or to act on source/pipeline issues, open the
+expanded sections inside the `Operations` panel (`健康`, `指标`, `流水线`, `来源状态`,
+`告警`, `发布失败`).
+
+You can also enable `自动刷新（30s）` in the `Operations` header:
+
+- It reloads all dashboard cards automatically every 30 seconds.
+- The setting is stored in browser localStorage (`ainews_auto_refresh`), so it is
+  preserved for this browser profile across refreshes.
+- Turn it off anytime to stop background polling when operators prefer manual
+  checks.
+
 ## 4. Ingest A Small Candidate Pool
 
 In the console:
