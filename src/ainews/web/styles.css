@@ -248,6 +248,15 @@ textarea {
   transform: translateY(-1px);
 }
 
+.button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(23, 23, 23, 0.86);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(219, 61, 27, 0.18);
+}
+
 .button.primary {
   background: var(--ink);
   color: #fff8ee;
@@ -462,6 +471,13 @@ textarea {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.52);
   padding: 12px 14px;
+}
+
+.check-label:focus-within {
+  outline: 2px solid rgba(23, 23, 23, 0.86);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(219, 61, 27, 0.18);
+  border-color: rgba(23, 23, 23, 0.28);
 }
 
 .check-label.wide {
