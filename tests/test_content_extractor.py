@@ -2299,6 +2299,22 @@ class ContentExtractorTestCase(unittest.TestCase):
         self.assertNotIn("Back to Articles", content.text)
         self.assertNotIn("Follow", content.text)
 
+    def test_host_drop_tokens_ignores_generic_group_selector_tokens(self) -> None:
+        extractor = ArticleContentExtractor(timeout=10, user_agent="test-agent", text_limit=5000)
+        with patch("ainews.content_extractor.BeautifulSoup", None):
+            content = extractor.extract_from_html(
+                _fixture("cnbc-article.html"),
+                url="https://www.cnbc.com/2026/04/09/ai-operating-discipline-becomes-board-topic.html",
+            )
+
+        self.assertIn("AI operating discipline is becoming a board-level topic", content.text)
+        self.assertIn("Technology leaders are being asked", content.text)
+        self.assertIn("kill switches", content.text)
+        self.assertNotIn("Subscribe to CNBC PRO", content.text)
+        self.assertNotIn("Related Tags", content.text)
+        self.assertNotIn("Watch: Why AI spending is accelerating again", content.text)
+        self.assertNotIn("group", extractor._host_drop_tokens("cnbc.com"))
+
 
 if __name__ == "__main__":
     unittest.main()
