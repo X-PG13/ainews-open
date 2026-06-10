@@ -6,10 +6,13 @@ const state = {
   selectedDigestId: null,
   editorActor: localStorage.getItem("ainews_digest_editor_actor") || "",
   autoRefreshEnabled: localStorage.getItem("ainews_auto_refresh") === "1",
+  nextAutoRefreshAt: null,
 };
 
 let autoRefreshTimer = null;
+let autoRefreshCountdownTimer = null;
 const AUTO_REFRESH_INTERVAL_MS = 30000;
+const AUTO_REFRESH_TICK_MS = 1000;
 
 const refs = {
   adminToken: document.getElementById("adminToken"),
@@ -91,6 +94,7 @@ const refs = {
   heroRailAgeHint: document.getElementById("heroRailAgeHint"),
   autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
+  heroAutoRefreshCountdown: document.getElementById("heroAutoRefreshCountdown"),
 };
 
 refs.adminToken.value = state.token;
@@ -1626,11 +1630,47 @@ function setAutoRefreshStatus(enabled) {
   refs.autoRefreshStatus.textContent = enabled ? "自动刷新开启" : "自动刷新关闭";
 }
 
+function formatCountdown(seconds) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  if (safeSeconds <= 5) {
+    return "即将刷新";
+  }
+  if (safeSeconds < 60) {
+    return `${safeSeconds} 秒`;
+  }
+  const minute = Math.floor(safeSeconds / 60);
+  const second = safeSeconds % 60;
+  return `${minute} 分 ${String(second).padStart(2, "0")} 秒`;
+}
+
+function updateAutoRefreshCountdown() {
+  if (!refs.heroAutoRefreshCountdown) {
+    return;
+  }
+
+  if (!state.autoRefreshEnabled || !state.nextAutoRefreshAt) {
+    refs.heroAutoRefreshCountdown.textContent = "自动刷新：未开启";
+    return;
+  }
+
+  const now = Date.now();
+  const remainingMs = Math.max(0, state.nextAutoRefreshAt - now);
+  refs.heroAutoRefreshCountdown.textContent = `自动刷新：${formatCountdown(
+    Math.floor(remainingMs / 1000),
+  )}`;
+}
+
 function stopAutoRefresh() {
   if (autoRefreshTimer) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
   }
+  if (autoRefreshCountdownTimer) {
+    clearInterval(autoRefreshCountdownTimer);
+    autoRefreshCountdownTimer = null;
+  }
+  state.nextAutoRefreshAt = null;
+  updateAutoRefreshCountdown();
 }
 
 function startAutoRefresh(enabled) {
@@ -1643,9 +1683,14 @@ function startAutoRefresh(enabled) {
   }
   setAutoRefreshStatus(true);
   stopAutoRefresh();
+  state.nextAutoRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
   autoRefreshTimer = setInterval(() => {
     refreshAll().catch((error) => logJob("auto refresh failed", { error: error.message }));
   }, AUTO_REFRESH_INTERVAL_MS);
+  autoRefreshCountdownTimer = setInterval(() => {
+    updateAutoRefreshCountdown();
+  }, AUTO_REFRESH_TICK_MS);
+  updateAutoRefreshCountdown();
 }
 
 async function refreshAll() {
@@ -1662,6 +1707,11 @@ async function refreshAll() {
     ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
+  } finally {
+    if (state.autoRefreshEnabled) {
+      state.nextAutoRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
+      updateAutoRefreshCountdown();
+    }
   }
 }
 
