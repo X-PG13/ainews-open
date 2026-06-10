@@ -35,6 +35,45 @@ class WebConsoleTestCase(unittest.TestCase):
         ):
             self.assertIn(expected, styles)
 
+    def test_console_exposes_operator_status_rail(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+        app = _read_text("src/ainews/web/app.js")
+        styles = _read_text("src/ainews/web/styles.css")
+
+        for expected in (
+            'id="heroStatusRail"',
+            "status-rail-item",
+            "heroRailHealth",
+            "heroRailSchema",
+            "heroRailBuild",
+            "heroRailAge",
+        ):
+            self.assertIn(expected, index)
+
+        for expected in (
+            "heroRailHealth",
+            "heroRailSchema",
+            "heroRailBuild",
+            "heroRailAge",
+            "refs.heroRailHealth",
+            "refs.heroRailSchema",
+            "refs.heroRailBuild",
+            "refs.heroRailAge",
+            "refs.heroRailHealth.textContent = statusText",
+            "refs.heroRailBuild.textContent = `v${buildVersion}`",
+            "formatDataAge(generatedAt)",
+        ):
+            self.assertIn(expected, app)
+
+        for expected in (
+            ".hero-status-rail",
+            ".status-rail-item",
+            ".status-rail-item p",
+            ".status-rail-item h3",
+            "grid-template-columns: repeat(2, minmax(0, 1fr));",
+        ):
+            self.assertIn(expected, styles)
+
     def test_console_exposes_actionable_empty_states(self) -> None:
         index = _read_text("src/ainews/web/index.html")
         app = _read_text("src/ainews/web/app.js")
