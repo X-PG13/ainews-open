@@ -99,8 +99,14 @@ When maintainer commands timeout during setup, release closeout, or dependency r
 For intermittent HTTPS blocking, you can temporarily retry GitHub commands with your local proxy:
 
 ```bash
-HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
-  gh pr view --state all --limit 10
+export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:7897
+export https_proxy=$HTTPS_PROXY
+export http_proxy=$HTTP_PROXY
+
+gh pr view --state all --limit 10
+
+unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy
 ```
 
 Use this only as a temporary workaround. Once network is stable, remove the proxy prefix and continue with the normal recovery flow in [Release Recovery Notes](./release-recovery.md).

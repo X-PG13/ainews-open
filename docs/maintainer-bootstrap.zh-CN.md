@@ -97,8 +97,14 @@ Dependabot PR 只作为升级通知，不视为可以直接合并的维护者提
 若本地网络出口不稳定，可在重试前临时给 GitHub 命令加上本地代理：
 
 ```bash
-HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
-  gh pr view --state all --limit 10
+export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:7897
+export https_proxy=$HTTPS_PROXY
+export http_proxy=$HTTP_PROXY
+
+gh pr view --state all --limit 10
+
+unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy
 ```
 
 该代理前缀仅作过渡兜底。网络恢复后立即去掉代理，按 [Release 恢复说明](./release-recovery.zh-CN.md)走正常流程。

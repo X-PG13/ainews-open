@@ -45,8 +45,14 @@ When GitHub commands time out during branch review or merge closeout, always che
 If you need a temporary workaround for unstable outbound access, use your local proxy for the retried command:
 
 ```bash
-HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
-  gh pr view --state all --limit 10
+export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:7897
+export https_proxy=$HTTPS_PROXY
+export http_proxy=$HTTP_PROXY
+
+gh pr view --state all --limit 10
+
+unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy
 ```
 
 Remove the proxy prefix once the network stabilizes and continue with the normal recovery flow in [Release Recovery Notes](./release-recovery.md).
