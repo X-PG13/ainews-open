@@ -24,7 +24,7 @@ For tags created through `.github/workflows/release.yml`, the smoke workflow is 
 Set `VERSION` to the release tag without the leading `v`, then download the release assets into a clean directory:
 
 ```bash
-export VERSION=1.2.49
+export VERSION=<your-release-tag-without-v>
 export REPO=X-PG13/ainews-open
 mkdir -p "ainews-open-${VERSION}-release"
 cd "ainews-open-${VERSION}-release"
