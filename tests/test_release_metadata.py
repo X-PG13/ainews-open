@@ -216,6 +216,35 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         self.assertIn("::error title=Missing release asset", smoke_workflow)
         self.assertIn("::error title=API health smoke failed", smoke_workflow)
 
+    def test_roadmap_points_to_release_notes_index(self) -> None:
+        roadmap = _read_text("ROADMAP.md")
+        roadmap_zh = _read_text("ROADMAP.zh-CN.md")
+
+        self.assertRegex(roadmap, r"\[release notes index\]\(docs/releases/README\.md\)")
+        self.assertIn("docs/releases/README.zh-CN.md", roadmap_zh)
+        self.assertTrue(
+            "release notes" in roadmap_zh and "索引" in roadmap_zh
+            or "发布说明" in roadmap_zh
+        )
+
+        # Keep roadmap status language reference-based, not hard-coded to a stale patch number.
+        self.assertIn("Latest patch release", roadmap)
+        self.assertNotIn("Latest patch release: v", roadmap)
+        self.assertIn("最新 patch release", roadmap_zh)
+        self.assertNotIn("最新 patch release： v", roadmap_zh)
+
+    def test_release_checklist_includes_roadmap_and_release_index_sync(self) -> None:
+        release_checklist = _read_text("docs/release-checklist.md")
+        release_checklist_zh = _read_text("docs/release-checklist.zh-CN.md")
+
+        self.assertIn("ROADMAP.md", release_checklist)
+        self.assertIn("ROADMAP.zh-CN.md", release_checklist_zh)
+        self.assertIn("release notes index", release_checklist)
+        self.assertTrue(
+            ("release notes" in release_checklist_zh and "索引" in release_checklist_zh)
+            or "发布说明" in release_checklist_zh
+        )
+
     def test_release_workflow_reports_failure_phases(self) -> None:
         release_workflow = _read_text(".github/workflows/release.yml")
 
