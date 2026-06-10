@@ -18,7 +18,16 @@ Use these notes when a release or PR closeout action may have changed GitHub sta
 - Example:
 
 ```bash
-https_proxy=http://127.0.0.1:7897 http_proxy=http://127.0.0.1:7897 gh pr view --state all --limit 10
+export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:7897
+
+# Compatibility aliases for tools that only honor lowercase env vars
+export https_proxy=$HTTPS_PROXY
+export http_proxy=$HTTP_PROXY
+
+gh pr view --state all --limit 10
+
+unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy
 ```
 
 Once the command succeeds, continue with the normal read-only verification flow and remove the proxy once the network is stable again.

@@ -18,7 +18,16 @@
 - 示例：
 
 ```bash
-https_proxy=http://127.0.0.1:7897 http_proxy=http://127.0.0.1:7897 gh pr view --state all --limit 10
+export HTTPS_PROXY=http://127.0.0.1:7897
+export HTTP_PROXY=http://127.0.0.1:7897
+
+# 某些工具仍旧只识别小写环境变量，保留兼容别名
+export https_proxy=$HTTPS_PROXY
+export http_proxy=$HTTP_PROXY
+
+gh pr view --state all --limit 10
+
+unset HTTPS_PROXY HTTP_PROXY https_proxy http_proxy
 ```
 
 命令在代理下成功后，继续按原有只读核对流程走完整链路，并在网络恢复后移除代理参数。
