@@ -59,6 +59,8 @@ Checks:
   - `src/ainews/web/index.html` for quick static preview
 - In DevTools, confirm CSS/JS requests for `assets/styles.css` and `assets/app.js` return 200.
 - If you open by file protocol, fallback to same-folder `styles.css` / `app.js` is built in, so it should still render after one refresh.
+- If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
+- Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
 
 Expected outcome:
 
