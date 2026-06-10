@@ -176,6 +176,9 @@
             <label class="check-label wide"><input id="wechatSubmitCheckbox" type="checkbox" /> 公众号草稿创建后直接提交发布</label>
           </div>
           <p class="muted">如果这里不勾选，系统会回退到服务端配置的 `AINEWS_PUBLISH_TARGETS` 默认发布目标。</p>
+          <p id="publishSafetyHint" class="publish-safety-note">
+            先通过“选稿预览”和“发布预览”确认内容。默认是“发送”型发布流程，只有静态站点输出属于本地预览产物，真实外发需手动勾选 Telegram、飞书或公众号并确认发布凭据已正确配置。
+          </p>
           <div class="action-row">
             <button id="ingestButton" class="button primary">抓取新闻</button>
             <button id="extractButton" class="button ghost">抓正文</button>

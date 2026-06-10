@@ -258,6 +258,16 @@ textarea {
   text-align: right;
 }
 
+.publish-safety-note {
+  border-left: 3px solid rgba(23, 23, 23, 0.26);
+  border-radius: 0 14px 14px 0;
+  padding: 10px 12px;
+  margin: 8px 0 14px;
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .workflow-steps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
