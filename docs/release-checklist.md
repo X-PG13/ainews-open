@@ -117,6 +117,18 @@ The maintainer who merges the release PR or publishes the tag owns milestone rol
 - [ ] `python -m ainews stats` runs from the clean install.
 - [ ] Package metadata on GitHub and PyPI looks correct if PyPI publication is enabled for this release.
 
+### Release Attribution Hygiene
+
+- [ ] Run a human-visible contributor summary before closing the release:
+
+```bash
+git log --format="%an <%ae>" "${PREVIOUS_TAG}..${TAG}" \
+  | sort -u \
+  | grep -Ev 'dependabot\\[bot\\]|github-actions\\[bot\\]|renovate\\[bot\\]|actions-user'
+```
+
+- [ ] Keep any bot noise out of the handoff summary you send to maintainers; if bot accounts appear, note that the human-authored PRs for dependency/workflow upgrades are tracked in the release PR body and close comments.
+
 ### Closeout
 
 - [ ] Close the release milestone only after the release page, assets, and smoke workflows are verified.
