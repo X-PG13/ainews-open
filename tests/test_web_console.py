@@ -171,19 +171,14 @@ class WebConsoleTestCase(unittest.TestCase):
         app = _read_text("src/ainews/web/app.js")
 
         expected_snippets = (
-            'const isFileProtocol = window.location.protocol === "file:";',
-            '"/assets/styles.css"',
-            '"assets/styles.css"',
             '"styles.css"',
-            '"/assets/app.js"',
-            '"assets/app.js"',
             '"app.js"',
-            "loadWithFallback(",
-            "dedup(candidates);",
-            "const loadAssets = () => {",
-            'document.readyState === "loading"',
-            "document.addEventListener(\"DOMContentLoaded\", loadAssets, { once: true })",
-            "loadAssets();",
+            "/assets/styles.css",
+            "/assets/app.js",
+            "consoleStylesheet",
+            "consoleAppScript",
+            "this.dataset.fallback",
+            "window.__ainewsAppScriptFallback",
         )
         for expected in expected_snippets:
             self.assertIn(expected, index)

@@ -10,71 +10,18 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
-    <script>
-      (function () {
-        const isFileProtocol = window.location.protocol === "file:";
-        const cssCandidates = isFileProtocol
-          ? ["styles.css", "assets/styles.css"]
-          : ["/assets/styles.css", "assets/styles.css", "styles.css"];
-        const jsCandidates = isFileProtocol
-          ? ["app.js", "assets/app.js"]
-          : ["/assets/app.js", "assets/app.js", "app.js"];
-
-        const dedup = (items) =>
-          Array.from(new Set(items.filter((item) => typeof item === "string" && item)));
-
-        const loadWithFallback = (createElement, candidates, onCreated) => {
-          const normalizedCandidates = dedup(candidates);
-          const element = createElement(normalizedCandidates[0]);
-          if (!element) {
-            return;
-          }
-          let index = 0;
-          element.onerror = () => {
-            index += 1;
-            if (index >= normalizedCandidates.length) {
-              return;
-            }
-            const fallbackElement = createElement(normalizedCandidates[index]);
-            if (!fallbackElement) {
-              return;
-            }
-            document.head.appendChild(fallbackElement);
-          };
-          if (onCreated) {
-            onCreated(element);
-          }
-          document.head.appendChild(element);
-        };
-
-        const loadAssets = () => {
-          loadWithFallback(
-            (href) => {
-              const link = document.createElement("link");
-              link.rel = "stylesheet";
-              link.href = href;
-              return link;
-            },
-            cssCandidates,
-          );
-          loadWithFallback(
-            (src) => {
-              const script = document.createElement("script");
-              script.defer = true;
-              script.src = src;
-              return script;
-            },
-            jsCandidates,
-          );
-        };
-
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", loadAssets, { once: true });
-        } else {
-          loadAssets();
-        }
-      })();
-    </script>
+    <link
+      rel="stylesheet"
+      id="consoleStylesheet"
+      href="styles.css"
+      onerror="if (!this.dataset.fallback) { this.dataset.fallback='1'; this.href='/assets/styles.css'; }"
+    />
+    <script
+      defer
+      id="consoleAppScript"
+      src="app.js"
+      onerror="if (!window.__ainewsAppScriptFallback) { window.__ainewsAppScriptFallback=true; const s=document.createElement('script'); s.defer=true; s.src='/assets/app.js'; document.head.appendChild(s); }"
+    ></script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
