@@ -166,6 +166,23 @@ class WebConsoleTestCase(unittest.TestCase):
         ):
             self.assertIn(expected, styles)
 
+    def test_console_asset_loading_paths_cover_file_and_http_modes(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+
+        expected_snippets = (
+            'const isFileProtocol = window.location.protocol === "file:";',
+            '"/assets/styles.css"',
+            '"assets/styles.css"',
+            '"styles.css"',
+            '"/assets/app.js"',
+            '"assets/app.js"',
+            '"app.js"',
+            "loadWithFallback(",
+            "dedup(candidates);",
+        )
+        for expected in expected_snippets:
+            self.assertIn(expected, index)
+
 
 if __name__ == "__main__":
     unittest.main()
