@@ -60,13 +60,15 @@ Checks:
 - In DevTools, confirm CSS/JS requests return 200:
   - For service mode (`http://127.0.0.1:8000/`): `assets/styles.css`, `assets/app.js`.
   - For local file mode (`file://.../src/ainews/web/index.html`): `styles.css`, `app.js`.
+- If you open `src/ainews/web/index.html` directly as file, you should use it as a static preview only. Backend interactions (buttons that fetch `/admin/*`) are intentionally read-only in this mode and will show a file-mode message.
 - If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
 - Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
 
 Expected outcome:
 
 - Hero status chips, toolbar buttons, and sections render as styled cards (no raw HTML tags).
-- The page can execute refresh controls without immediate JS errors in the browser console.
+- In served mode (`http://127.0.0.1:8000/`), the page can execute refresh controls without immediate JS errors in the browser console.
+- In file mode, actions are intentionally disabled and a clear read-only guidance message is shown.
 
 ## Health is degraded
 - `curl http://127.0.0.1:8000/health`

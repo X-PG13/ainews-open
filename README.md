@@ -208,7 +208,7 @@ Open the console at:
 http://127.0.0.1:8000/
 ```
 
-For local visual checks, you can also open `src/ainews/web/index.html` directly as a file. The console now uses relative asset paths so style and behavior render correctly in `file:///` mode.
+For local visual checks, you can also open `src/ainews/web/index.html` directly as a file. In `file:///` mode the page renders styling, but backend-dependent actions are read-only and should be validated from `http://127.0.0.1:8000/`.
 
 If you prefer to start the API directly:
 

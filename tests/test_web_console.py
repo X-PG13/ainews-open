@@ -168,24 +168,31 @@ class WebConsoleTestCase(unittest.TestCase):
 
     def test_console_asset_loading_paths_cover_file_and_http_modes(self) -> None:
         index = _read_text("src/ainews/web/index.html")
+        app = _read_text("src/ainews/web/app.js")
 
         expected_snippets = (
-            'const isFileProtocol = window.location.protocol === "file:";',
-            '"/assets/styles.css"',
-            '"assets/styles.css"',
             '"styles.css"',
-            '"/assets/app.js"',
-            '"assets/app.js"',
             '"app.js"',
-            "loadWithFallback(",
-            "dedup(candidates);",
-            "const loadAssets = () => {",
-            'document.readyState === "loading"',
-            "document.addEventListener(\"DOMContentLoaded\", loadAssets, { once: true })",
-            "loadAssets();",
+            "/assets/styles.css",
+            "/assets/app.js",
+            "consoleStylesheet",
+            "consoleAppScript",
+            "this.dataset.fallback",
+            "window.__ainewsAppScriptFallback",
         )
         for expected in expected_snippets:
             self.assertIn(expected, index)
+
+        expected_app_snippets = (
+            "const IS_FILE_PROTOCOL = window.location.protocol === \"file:\";",
+            "const CAN_USE_BACKEND = !IS_FILE_PROTOCOL;",
+            "const FILE_MODE_MESSAGE =",
+            "function setFileModeReadOnly()",
+            "if (!CAN_USE_BACKEND)",
+            "setFileModeReadOnly();",
+        )
+        for expected in expected_app_snippets:
+            self.assertIn(expected, app)
 
 
 if __name__ == "__main__":

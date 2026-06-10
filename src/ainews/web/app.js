@@ -10,6 +10,12 @@ const state = {
   lastSyncAt: null,
 };
 
+const IS_FILE_PROTOCOL = window.location.protocol === "file:";
+const CAN_USE_BACKEND = !IS_FILE_PROTOCOL;
+const FILE_MODE_MESSAGE =
+  "当前为 file:/// 预览：样式与结构可见，但控制台需要运行中的后端服务才能拉取真实运维数据。" +
+  "请改用 http://127.0.0.1:8000/ 打开并确保服务已启动。";
+
 let autoRefreshTimer = null;
 let autoRefreshCountdownTimer = null;
 const AUTO_REFRESH_INTERVAL_MS = 30000;
@@ -111,6 +117,10 @@ function adminHeaders() {
 }
 
 async function fetchJson(url, options = {}) {
+  if (!CAN_USE_BACKEND) {
+    throw new Error(FILE_MODE_MESSAGE);
+  }
+
   const response = await fetch(url, options);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -233,6 +243,75 @@ function formatDataAge(value) {
   }
   const day = Math.floor(hour / 24);
   return `${day} 天前`;
+}
+
+function setFileModeReadOnly() {
+  refs.jobOutput.textContent = FILE_MODE_MESSAGE;
+
+  if (refs.refreshAllButton) {
+    refs.refreshAllButton.disabled = true;
+  }
+  if (refs.refreshSourcesButton) {
+    refs.refreshSourcesButton.disabled = true;
+  }
+  if (refs.resetSourceCooldownsButton) {
+    refs.resetSourceCooldownsButton.disabled = true;
+  }
+  if (refs.ingestButton) {
+    refs.ingestButton.disabled = true;
+  }
+  if (refs.extractButton) {
+    refs.extractButton.disabled = true;
+  }
+  if (refs.enrichButton) {
+    refs.enrichButton.disabled = true;
+  }
+  if (refs.digestPreviewButton) {
+    refs.digestPreviewButton.disabled = true;
+  }
+  if (refs.freezeDigestButton) {
+    refs.freezeDigestButton.disabled = true;
+  }
+  if (refs.saveDigestEditorButton) {
+    refs.saveDigestEditorButton.disabled = true;
+  }
+  if (refs.refreshDigestHistoryButton) {
+    refs.refreshDigestHistoryButton.disabled = true;
+  }
+  if (refs.refreshPublishPreviewButton) {
+    refs.refreshPublishPreviewButton.disabled = true;
+  }
+  if (refs.digestButton) {
+    refs.digestButton.disabled = true;
+  }
+  if (refs.pipelineButton) {
+    refs.pipelineButton.disabled = true;
+  }
+  if (refs.publishButton) {
+    refs.publishButton.disabled = true;
+  }
+  if (refs.refreshPublicationsButton) {
+    refs.refreshPublicationsButton.disabled = true;
+  }
+  if (refs.clearPublicationDigestFilterButton) {
+    refs.clearPublicationDigestFilterButton.disabled = true;
+  }
+  if (refs.refreshExtractionOpsButton) {
+    refs.refreshExtractionOpsButton.disabled = true;
+  }
+  if (refs.retryExtractionSelectionButton) {
+    refs.retryExtractionSelectionButton.disabled = true;
+  }
+  if (refs.refreshSourceAlertsButton) {
+    refs.refreshSourceAlertsButton.disabled = true;
+  }
+  if (refs.autoRefreshCheckbox) {
+    refs.autoRefreshCheckbox.disabled = true;
+  }
+
+  if (refs.heroHealthBadge) {
+    refs.heroHealthBadge.textContent = "系统状态：文件模式（只读提示）";
+  }
 }
 
 function formatLastSyncTime(value) {
@@ -2197,5 +2276,9 @@ refs.extractionOpsList.addEventListener("click", async (event) => {
 setSelectedDigestId(null);
 setAutoRefreshStatus(state.autoRefreshEnabled);
 updateLastSyncStatus();
-startAutoRefresh(state.autoRefreshEnabled);
-refreshAll();
+if (!CAN_USE_BACKEND) {
+  setFileModeReadOnly();
+} else {
+  startAutoRefresh(state.autoRefreshEnabled);
+  refreshAll();
+}
