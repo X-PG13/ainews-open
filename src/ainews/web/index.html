@@ -10,7 +10,63 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/styles.css" />
+    <script>
+      (function () {
+        const isFileProtocol = window.location.protocol === "file:";
+        const cssCandidates = isFileProtocol
+          ? ["assets/styles.css", "styles.css"]
+          : ["/assets/styles.css", "assets/styles.css", "styles.css"];
+        const jsCandidates = isFileProtocol
+          ? ["assets/app.js", "app.js"]
+          : ["/assets/app.js", "assets/app.js", "app.js"];
+
+        const dedup = (items) =>
+          Array.from(new Set(items.filter((item) => typeof item === "string" && item)));
+
+        const loadWithFallback = (createElement, candidates, onCreated) => {
+          const normalizedCandidates = dedup(candidates);
+          const element = createElement(normalizedCandidates[0]);
+          if (!element) {
+            return;
+          }
+          let index = 0;
+          element.onerror = () => {
+            index += 1;
+            if (index >= normalizedCandidates.length) {
+              return;
+            }
+            const fallbackElement = createElement(normalizedCandidates[index]);
+            if (!fallbackElement) {
+              return;
+            }
+            document.head.appendChild(fallbackElement);
+          };
+          if (onCreated) {
+            onCreated(element);
+          }
+          document.head.appendChild(element);
+        };
+
+        loadWithFallback(
+          (href) => {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = href;
+            return link;
+          },
+          cssCandidates,
+        );
+        loadWithFallback(
+          (src) => {
+            const script = document.createElement("script");
+            script.defer = true;
+            script.src = src;
+            return script;
+          },
+          jsCandidates,
+        );
+      })();
+    </script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -460,6 +516,5 @@
         <div id="articlesList" class="articles-list"></div>
       </section>
     </main>
-    <script src="assets/app.js" defer></script>
   </body>
 </html>
