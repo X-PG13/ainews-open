@@ -118,12 +118,26 @@ button {
 }
 
 .status-rail-item {
+  position: relative;
   display: grid;
   gap: 4px;
   border: 1px solid rgba(23, 23, 23, 0.16);
   border-radius: 12px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.55);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .status-rail-item p {

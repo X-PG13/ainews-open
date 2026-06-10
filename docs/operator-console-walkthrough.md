@@ -121,6 +121,16 @@ For triage:
 - If `构建版本` stays at `未知` for multiple refresh cycles, open a debug run and
   confirm the pipeline metadata is being reported.
 
+The card content also exposes localized status hints for assistive tools, so the
+first read should answer:
+
+- Can we trust system health right now?
+- Is the schema/build pair aligned with the currently deployed backend?
+- Is the data snapshot fresh enough for safe manual action?
+
+If these hints stay unknown for several refresh cycles, pause non-essential
+operator actions and open a service-side health dump before running ingest/extract.
+
 ## 4. Ingest A Small Candidate Pool
 
 In the console:

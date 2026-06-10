@@ -46,11 +46,17 @@ class WebConsoleTestCase(unittest.TestCase):
             'id="heroRailSchemaCard"',
             'id="heroRailBuildCard"',
             'id="heroRailAgeCard"',
+            'id="heroRailHealthHint"',
+            'id="heroRailSchemaHint"',
+            'id="heroRailBuildHint"',
+            'id="heroRailAgeHint"',
             "status-rail-item",
             "heroRailHealth",
             "heroRailSchema",
             "heroRailBuild",
             "heroRailAge",
+            'role="list"',
+            'role="listitem"',
         ):
             self.assertIn(expected, index)
 
@@ -67,13 +73,20 @@ class WebConsoleTestCase(unittest.TestCase):
             "refs.heroRailSchema",
             "refs.heroRailBuild",
             "refs.heroRailAge",
+            "refs.heroRailHealthHint",
+            "refs.heroRailSchemaHint",
+            "refs.heroRailBuildHint",
+            "refs.heroRailAgeHint",
             "statusClass",
             "refs.heroRailHealthCard.className",
+            "refs.heroRailHealthCard.setAttribute",
+            "refs.heroRailAgeCard.setAttribute",
             "schemaDisplay",
             "buildDisplay",
             "ageDisplay",
             "refs.heroRailAgeCard.className",
             "formatDataAge(generatedAt)",
+            "operationStatusLabelAndClass",
         ):
             self.assertIn(expected, app)
 
@@ -86,6 +99,7 @@ class WebConsoleTestCase(unittest.TestCase):
             ".status-rail-item.status-pending",
             ".status-rail-item.status-warn",
             ".status-rail-item.status-unknown",
+            ".sr-only",
             "grid-template-columns: repeat(2, minmax(0, 1fr));",
         ):
             self.assertIn(expected, styles)
