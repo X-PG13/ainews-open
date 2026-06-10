@@ -18,6 +18,13 @@ See `docs/support-lifecycle.md` for the full minor-release support window and de
 - Feature requests: use the feature request template once the request is concrete enough to track as implementation work.
 - Usage questions, early ideas, showcase posts, and design discussion: use GitHub Discussions. See `docs/community-triage.md` for the issue-vs-discussion split.
 
+## Maintainer Status Snapshot
+
+- Current release and release notes: [Release Notes](docs/releases/README.md)
+- Current roadmap priorities: [Roadmap](ROADMAP.md)
+- Current open maintenance milestones: [open milestones](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
+- Deferred release engineering work: [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+
 ## Discussions Categories
 
 - `Q&A`: installation, configuration, publishing, and upgrade help.
