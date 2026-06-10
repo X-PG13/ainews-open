@@ -83,6 +83,10 @@ const refs = {
   heroRailSchema: document.getElementById("heroRailSchema"),
   heroRailBuild: document.getElementById("heroRailBuild"),
   heroRailAge: document.getElementById("heroRailAge"),
+  heroRailHealthHint: document.getElementById("heroRailHealthHint"),
+  heroRailSchemaHint: document.getElementById("heroRailSchemaHint"),
+  heroRailBuildHint: document.getElementById("heroRailBuildHint"),
+  heroRailAgeHint: document.getElementById("heroRailAgeHint"),
   autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
 };
@@ -179,15 +183,15 @@ function operationStatusClass(status) {
 function operationStatusLabelAndClass(status) {
   const normalized = String(status || "unknown");
   if (normalized === "ok" || normalized === "ready") {
-    return ["正常", "good"];
+    return ["正常", "good", "健康检查通过，后台主要链路可继续执行。"];
   }
   if (normalized === "degraded" || normalized === "pending" || normalized === "partial_error") {
-    return ["降级", "pending"];
+    return ["降级", "pending", "出现部分退化，建议查看 Operations 健康检查的 degraded reasons。"];
   }
   if (normalized === "error" || normalized === "blocked") {
-    return ["异常", "warn"];
+    return ["异常", "warn", "检测到异常状态，建议暂停发布动作并先排查告警与失败队列。"];
   }
-  return ["未采样", ""];
+  return ["未采样", "unknown", "尚未拉取到最新状态，建议刷新运维面板确认 /admin/operations 可访问。"];
 }
 
 function formatDisplayTime(value) {
@@ -228,7 +232,7 @@ function updateHeroOperationStatus(payload) {
   const stats = payload.stats || {};
   const metrics = payload.metrics || {};
   const status = health.status || "unknown";
-  const [statusText, statusClass] = operationStatusLabelAndClass(status);
+  const [statusText, statusClass, statusHint] = operationStatusLabelAndClass(status);
   const schemaVersion = health.schema_version || stats.schema_version || "unknown";
   const buildVersion = metrics.build_version || "unknown";
   const generatedAt = payload.generated_at || null;
@@ -238,6 +242,10 @@ function updateHeroOperationStatus(payload) {
   const ageClass = generatedAt ? "good" : "status-unknown";
   const schemaClass = schemaVersion === "unknown" ? "status-unknown" : "good";
   const buildClass = buildVersion === "unknown" ? "status-unknown" : "good";
+  const ageHint = generatedAt ? "数据时效正常，继续观察发布链路波动。" : "未拿到时间戳时请先检查 /admin/operations 与服务访问权限。";
+  const healthHint = statusHint || "尚未拿到运行健康状态。";
+  const schemaHint = `Schema ${schemaDisplay}`;
+  const buildHint = `构建 ${buildDisplay}`;
   if (refs.heroHealthBadge) {
     refs.heroHealthBadge.textContent = `系统状态：${statusText}`;
     refs.heroHealthBadge.className = `chip status-chip ${statusClass}`.trim();
@@ -254,29 +262,45 @@ function updateHeroOperationStatus(payload) {
   if (refs.heroDataAge) {
     refs.heroDataAge.textContent = `数据时效：${ageDisplay}`;
   }
+  if (refs.heroRailHealthCard) {
+    refs.heroRailHealthCard.className = `status-rail-item ${statusClass || "status-unknown"}`;
+    refs.heroRailHealthCard.setAttribute("aria-label", `运行健康状态 ${statusText}。${healthHint}`);
+  }
   if (refs.heroRailHealth) {
     refs.heroRailHealth.textContent = statusText;
   }
-  if (refs.heroRailHealthCard) {
-    refs.heroRailHealthCard.className = `status-rail-item ${statusClass || "status-unknown"}`;
+  if (refs.heroRailHealthHint) {
+    refs.heroRailHealthHint.textContent = healthHint;
   }
   if (refs.heroRailSchema) {
     refs.heroRailSchema.textContent = schemaDisplay;
   }
   if (refs.heroRailSchemaCard) {
     refs.heroRailSchemaCard.className = `status-rail-item ${schemaClass}`;
+    refs.heroRailSchemaCard.setAttribute("aria-label", `Schema 状态 ${schemaDisplay}。${schemaHint}`);
   }
   if (refs.heroRailBuild) {
     refs.heroRailBuild.textContent = buildDisplay;
   }
   if (refs.heroRailBuildCard) {
     refs.heroRailBuildCard.className = `status-rail-item ${buildClass}`;
+    refs.heroRailBuildCard.setAttribute("aria-label", `构建版本 ${buildDisplay}。${buildHint}`);
   }
   if (refs.heroRailAge) {
     refs.heroRailAge.textContent = ageDisplay;
   }
   if (refs.heroRailAgeCard) {
     refs.heroRailAgeCard.className = `status-rail-item ${ageClass}`;
+    refs.heroRailAgeCard.setAttribute("aria-label", `数据时效 ${ageDisplay}。${ageHint}`);
+  }
+  if (refs.heroRailSchemaHint) {
+    refs.heroRailSchemaHint.textContent = schemaHint;
+  }
+  if (refs.heroRailBuildHint) {
+    refs.heroRailBuildHint.textContent = buildHint;
+  }
+  if (refs.heroRailAgeHint) {
+    refs.heroRailAgeHint.textContent = ageHint;
   }
   if (refs.operationsStatusStrip) {
     refs.operationsStatusStrip.classList.add("loaded");

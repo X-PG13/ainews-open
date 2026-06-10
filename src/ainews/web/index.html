@@ -42,22 +42,26 @@
             <span id="heroGeneratedAt">最后数据：--</span>
             <span id="heroDataAge">数据时效：--</span>
           </div>
-          <div id="heroStatusRail" class="hero-status-rail" aria-live="polite">
-            <article id="heroRailHealthCard" class="status-rail-item">
+          <div id="heroStatusRail" class="hero-status-rail" role="list" aria-label="运营状态速览" aria-live="polite">
+            <article id="heroRailHealthCard" class="status-rail-item" role="listitem" aria-describedby="heroRailHealthHint">
               <p>运行健康</p>
               <h3 id="heroRailHealth">未采样</h3>
+              <p id="heroRailHealthHint" class="sr-only">运行健康状态用于快速判断，异常时先看 Operations 面板里的健康检查列表。</p>
             </article>
-            <article id="heroRailSchemaCard" class="status-rail-item">
+            <article id="heroRailSchemaCard" class="status-rail-item" role="listitem" aria-describedby="heroRailSchemaHint">
               <p>Schema</p>
               <h3 id="heroRailSchema">--</h3>
+              <p id="heroRailSchemaHint" class="sr-only">Schema 用于确认后台与前端约定未发生版本漂移。</p>
             </article>
-            <article id="heroRailBuildCard" class="status-rail-item">
+            <article id="heroRailBuildCard" class="status-rail-item" role="listitem" aria-describedby="heroRailBuildHint">
               <p>构建版本</p>
               <h3 id="heroRailBuild">--</h3>
+              <p id="heroRailBuildHint" class="sr-only">构建版本用于核对发布件与服务实例是否匹配。</p>
             </article>
-            <article id="heroRailAgeCard" class="status-rail-item">
+            <article id="heroRailAgeCard" class="status-rail-item" role="listitem" aria-describedby="heroRailAgeHint">
               <p>数据时效</p>
               <h3 id="heroRailAge">--</h3>
+              <p id="heroRailAgeHint" class="sr-only">数据时效超过 1 小时通常表示运维层采集或 pipeline 刷新异常。</p>
             </article>
           </div>
           <div class="start-cues" aria-label="首次运行建议">
