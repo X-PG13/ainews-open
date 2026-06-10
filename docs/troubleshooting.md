@@ -251,6 +251,19 @@ Checks:
 - confirm commit email matches a verified GitHub email
 - wait for GitHub contributor stats to finish recomputing after force-push or history rewrite
 
+If bot accounts (for example, Dependabot or CI users) are showing unexpectedly:
+
+- GitHub contributor badges and charts are recomputed asynchronously and can include automated accounts.
+- For a human-only local view, run:
+
+```bash
+git shortlog -sne --all --no-merges |
+  grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+```
+
+- If a bot commit should be excluded from release notes or maintainer attribution,
+  keep that context in the human authorship notes section of the release PR.
+
 ## How to verify database migration state
 
 Run:
