@@ -18,11 +18,17 @@
 
 ## 维护状态快照
 
-- 最新发布与发布说明： [发布说明索引](docs/releases/README.zh-CN.md)
-- 当前规划入口： [路线图](ROADMAP.zh-CN.md)
-- 当前开放里程碑列表： [进行中的里程碑](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
-- 最新 patch 以发布说明索引为准：[发布说明索引](docs/releases/README.zh-CN.md)
-- 延期工程项： [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+### 当前运维信号
+
+- **发布状态**：以 [发布说明索引](docs/releases/README.zh-CN.md) 为准（最新补丁版本来源）
+- **当前规划**：[路线图](ROADMAP.zh-CN.md)
+- **开放中的维护里程碑**：[进行中的里程碑](https://github.com/X-PG13/ainews-open/milestones?q=is%3Aopen+is%3Amilestone)
+- **延期项**：[Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+
+### 维护节奏
+
+- 在提交新后续项之前，先确认发布说明索引里的最新补丁版本，并对齐到当前开放里程碑。
+- 在里程碑收口前，按[发版清单](docs/release-checklist.md)核对发布产物与相关文档齐备性。
 
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 ![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
