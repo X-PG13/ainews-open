@@ -54,6 +54,9 @@ This usually means static assets were not loaded.
 
 Checks:
 
+- Some in-app/embedded browsers render `file://` URLs as source text. If you see only raw text, try a local HTTP URL first:
+  - `cd "$PWD" && python -m http.server 8000`
+  - then open `http://127.0.0.1:8000/src/ainews/web/index.html` in a normal browser.
 - Open the page via one of the supported paths:
   - `http://127.0.0.1:8000/` (served app)
   - `src/ainews/web/index.html` for quick static preview
