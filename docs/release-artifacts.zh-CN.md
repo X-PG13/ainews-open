@@ -24,7 +24,7 @@
 把 `VERSION` 设置为不带前导 `v` 的 release tag，然后把 release 资产下载到一个干净目录：
 
 ```bash
-export VERSION=1.2.49
+export VERSION=<your-release-tag-without-v>
 export REPO=X-PG13/ainews-open
 mkdir -p "ainews-open-${VERSION}-release"
 cd "ainews-open-${VERSION}-release"
