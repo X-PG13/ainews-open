@@ -92,6 +92,19 @@ Use this checklist when a dependency or GitHub Actions update is desired:
 
 This keeps dependency upgrades reviewable while avoiding bot-authored commits on the default branch.
 
+## Network Timeout and Recovery Commanding
+
+When maintainer commands timeout during setup, release closeout, or dependency review, first run read-only checks before rerunning writes.
+
+For intermittent HTTPS blocking, you can temporarily retry GitHub commands with your local proxy:
+
+```bash
+HTTPS_PROXY=http://127.0.0.1:7897 HTTP_PROXY=http://127.0.0.1:7897 \
+  gh pr view --state all --limit 10
+```
+
+Use this only as a temporary workaround. Once network is stable, remove the proxy prefix and continue with the normal recovery flow in [Release Recovery Notes](./release-recovery.md).
+
 ## Maintainer Audit Checklist
 
 - `Settings` -> `Pages` uses `GitHub Actions` as the source.
