@@ -42,6 +42,10 @@ class WebConsoleTestCase(unittest.TestCase):
 
         for expected in (
             'id="heroStatusRail"',
+            'id="heroRailHealthCard"',
+            'id="heroRailSchemaCard"',
+            'id="heroRailBuildCard"',
+            'id="heroRailAgeCard"',
             "status-rail-item",
             "heroRailHealth",
             "heroRailSchema",
@@ -56,11 +60,19 @@ class WebConsoleTestCase(unittest.TestCase):
             "heroRailBuild",
             "heroRailAge",
             "refs.heroRailHealth",
+            "heroRailHealthCard",
+            "heroRailSchemaCard",
+            "heroRailBuildCard",
+            "heroRailAgeCard",
             "refs.heroRailSchema",
             "refs.heroRailBuild",
             "refs.heroRailAge",
-            "refs.heroRailHealth.textContent = statusText",
-            "refs.heroRailBuild.textContent = `v${buildVersion}`",
+            "statusClass",
+            "refs.heroRailHealthCard.className",
+            "schemaDisplay",
+            "buildDisplay",
+            "ageDisplay",
+            "refs.heroRailAgeCard.className",
             "formatDataAge(generatedAt)",
         ):
             self.assertIn(expected, app)
@@ -70,6 +82,10 @@ class WebConsoleTestCase(unittest.TestCase):
             ".status-rail-item",
             ".status-rail-item p",
             ".status-rail-item h3",
+            ".status-rail-item.status-good",
+            ".status-rail-item.status-pending",
+            ".status-rail-item.status-warn",
+            ".status-rail-item.status-unknown",
             "grid-template-columns: repeat(2, minmax(0, 1fr));",
         ):
             self.assertIn(expected, styles)

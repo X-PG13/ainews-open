@@ -141,6 +141,26 @@ button {
   line-height: 1.2;
 }
 
+.status-rail-item.status-good {
+  border-left: 4px solid rgba(46, 110, 61, 0.6);
+  box-shadow: 0 10px 22px rgba(58, 132, 77, 0.14);
+}
+
+.status-rail-item.status-pending {
+  border-left: 4px solid rgba(184, 140, 50, 0.72);
+  box-shadow: 0 10px 22px rgba(184, 140, 50, 0.14);
+}
+
+.status-rail-item.status-warn {
+  border-left: 4px solid rgba(219, 61, 27, 0.76);
+  box-shadow: 0 10px 22px rgba(219, 61, 27, 0.16);
+}
+
+.status-rail-item.status-unknown {
+  border-left: 4px solid rgba(23, 23, 23, 0.2);
+  opacity: 0.83;
+}
+
 .hero-copy,
 .muted {
   color: var(--muted);

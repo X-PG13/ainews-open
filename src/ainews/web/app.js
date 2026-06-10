@@ -75,6 +75,10 @@ const refs = {
   heroBuildVersion: document.getElementById("heroBuildVersion"),
   heroGeneratedAt: document.getElementById("heroGeneratedAt"),
   heroDataAge: document.getElementById("heroDataAge"),
+  heroRailHealthCard: document.getElementById("heroRailHealthCard"),
+  heroRailSchemaCard: document.getElementById("heroRailSchemaCard"),
+  heroRailBuildCard: document.getElementById("heroRailBuildCard"),
+  heroRailAgeCard: document.getElementById("heroRailAgeCard"),
   heroRailHealth: document.getElementById("heroRailHealth"),
   heroRailSchema: document.getElementById("heroRailSchema"),
   heroRailBuild: document.getElementById("heroRailBuild"),
@@ -228,33 +232,51 @@ function updateHeroOperationStatus(payload) {
   const schemaVersion = health.schema_version || stats.schema_version || "unknown";
   const buildVersion = metrics.build_version || "unknown";
   const generatedAt = payload.generated_at || null;
+  const buildDisplay = buildVersion === "unknown" ? "未知" : `v${buildVersion}`;
+  const schemaDisplay = schemaVersion === "unknown" ? "未知" : schemaVersion;
+  const ageDisplay = formatDataAge(generatedAt);
+  const ageClass = generatedAt ? "good" : "status-unknown";
+  const schemaClass = schemaVersion === "unknown" ? "status-unknown" : "good";
+  const buildClass = buildVersion === "unknown" ? "status-unknown" : "good";
   if (refs.heroHealthBadge) {
     refs.heroHealthBadge.textContent = `系统状态：${statusText}`;
     refs.heroHealthBadge.className = `chip status-chip ${statusClass}`.trim();
   }
   if (refs.heroSchemaVersion) {
-    refs.heroSchemaVersion.textContent = `schema：${schemaVersion}`;
+    refs.heroSchemaVersion.textContent = `schema：${schemaDisplay}`;
   }
   if (refs.heroBuildVersion) {
-    refs.heroBuildVersion.textContent = `build：v${buildVersion}`;
+    refs.heroBuildVersion.textContent = `build：${buildDisplay}`;
   }
   if (refs.heroGeneratedAt) {
     refs.heroGeneratedAt.textContent = `最后数据：${formatDisplayTime(generatedAt)}`;
   }
   if (refs.heroDataAge) {
-    refs.heroDataAge.textContent = `数据时效：${formatDataAge(generatedAt)}`;
+    refs.heroDataAge.textContent = `数据时效：${ageDisplay}`;
   }
   if (refs.heroRailHealth) {
     refs.heroRailHealth.textContent = statusText;
   }
+  if (refs.heroRailHealthCard) {
+    refs.heroRailHealthCard.className = `status-rail-item ${statusClass || "status-unknown"}`;
+  }
   if (refs.heroRailSchema) {
-    refs.heroRailSchema.textContent = schemaVersion;
+    refs.heroRailSchema.textContent = schemaDisplay;
+  }
+  if (refs.heroRailSchemaCard) {
+    refs.heroRailSchemaCard.className = `status-rail-item ${schemaClass}`;
   }
   if (refs.heroRailBuild) {
-    refs.heroRailBuild.textContent = `v${buildVersion}`;
+    refs.heroRailBuild.textContent = buildDisplay;
+  }
+  if (refs.heroRailBuildCard) {
+    refs.heroRailBuildCard.className = `status-rail-item ${buildClass}`;
   }
   if (refs.heroRailAge) {
-    refs.heroRailAge.textContent = formatDataAge(generatedAt);
+    refs.heroRailAge.textContent = ageDisplay;
+  }
+  if (refs.heroRailAgeCard) {
+    refs.heroRailAgeCard.className = `status-rail-item ${ageClass}`;
   }
   if (refs.operationsStatusStrip) {
     refs.operationsStatusStrip.classList.add("loaded");
