@@ -208,7 +208,9 @@ Open the console at:
 http://127.0.0.1:8000/
 ```
 
-For local visual checks, you can also open `src/ainews/web/index.html` directly as a file. In `file:///` mode the page renders styling, but backend-dependent actions are read-only and should be validated from `http://127.0.0.1:8000/`.
+For local visual checks, you can also open `src/ainews/web/index.html` directly as a file. In `file:///` mode the page is a static preview (backend actions are read-only).
+If the page appears as raw text in an embedded/in-app browser, open it through HTTP instead:
+`cd "$PWD" && python -m http.server 8000` then visit `http://127.0.0.1:8000/src/ainews/web/index.html`.
 
 If you prefer to start the API directly:
 

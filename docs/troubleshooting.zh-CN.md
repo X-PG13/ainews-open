@@ -19,6 +19,9 @@
 
 排查步骤：
 
+- 某些内置/嵌入式浏览器会把 `file://` 页面按源码文本方式展示。如果看到的是裸文本，请先改用本地 HTTP 预览：
+  - `cd "$PWD" && python -m http.server 8000`
+  - 然后用普通浏览器打开 `http://127.0.0.1:8000/src/ainews/web/index.html`。
 - 使用以下任一方式打开：
   - `http://127.0.0.1:8000/`（服务方式）
   - 直接打开 `src/ainews/web/index.html`（本地静态快速查看）

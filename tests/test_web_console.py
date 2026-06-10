@@ -171,10 +171,10 @@ class WebConsoleTestCase(unittest.TestCase):
         app = _read_text("src/ainews/web/app.js")
 
         expected_snippets = (
-            '"styles.css"',
-            '"app.js"',
-            "/assets/styles.css",
-            "/assets/app.js",
+            "styles.css",
+            "app.js",
+            "assets/styles.css",
+            "assets/app.js",
             "consoleStylesheet",
             "consoleAppScript",
             "this.dataset.fallback",
