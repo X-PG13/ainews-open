@@ -179,6 +179,10 @@ class WebConsoleTestCase(unittest.TestCase):
             '"app.js"',
             "loadWithFallback(",
             "dedup(candidates);",
+            "const loadAssets = () => {",
+            'document.readyState === "loading"',
+            "document.addEventListener(\"DOMContentLoaded\", loadAssets, { once: true })",
+            "loadAssets();",
         )
         for expected in expected_snippets:
             self.assertIn(expected, index)
