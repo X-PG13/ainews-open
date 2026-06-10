@@ -16,6 +16,13 @@
   </p>
 </div>
 
+## 维护状态快照
+
+- 最新发布与发布说明： [发布说明索引](docs/releases/README.zh-CN.md)
+- 当前规划入口： [路线图](ROADMAP.zh-CN.md)
+- 当前开放维护里程碑： [v1.2.61](https://github.com/X-PG13/ainews-open/milestone/15)
+- 延期工程项： [Deferred: PyPI](https://github.com/X-PG13/ainews-open/milestone/3)
+
 ![AI News Open Real Console Screenshot](docs/assets/console-real.png)
 ![AI News Open Operations Overview](docs/assets/operations-panel-preview.svg)
 
