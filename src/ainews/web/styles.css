@@ -110,6 +110,37 @@ button {
   font-size: 14px;
 }
 
+.hero-status-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.status-rail-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(23, 23, 23, 0.16);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.status-rail-item p {
+  margin: 0;
+  font: 700 11px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.status-rail-item h3 {
+  margin: 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
 .hero-copy,
 .muted {
   color: var(--muted);
@@ -776,6 +807,10 @@ textarea:focus-visible {
 
   .operations-status-strip {
     grid-template-columns: 1fr;
+  }
+
+  .hero-status-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .token-row {

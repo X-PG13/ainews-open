@@ -35,12 +35,30 @@
             <button id="saveTokenButton" class="button ghost">保存</button>
           </div>
           <p class="muted">所有管理操作都会自动带上 `X-Admin-Token`。</p>
-          <div id="operationsStatusStrip" class="operations-status-strip" aria-live="polite">
+        <div id="operationsStatusStrip" class="operations-status-strip" aria-live="polite">
             <span id="heroHealthBadge" class="chip status-chip">系统状态：加载中</span>
             <span id="heroSchemaVersion">schema：未同步</span>
             <span id="heroBuildVersion">build：未同步</span>
             <span id="heroGeneratedAt">最后数据：--</span>
             <span id="heroDataAge">数据时效：--</span>
+          </div>
+          <div id="heroStatusRail" class="hero-status-rail" aria-live="polite">
+            <article class="status-rail-item">
+              <p>运行健康</p>
+              <h3 id="heroRailHealth">未采样</h3>
+            </article>
+            <article class="status-rail-item">
+              <p>Schema</p>
+              <h3 id="heroRailSchema">--</h3>
+            </article>
+            <article class="status-rail-item">
+              <p>构建版本</p>
+              <h3 id="heroRailBuild">--</h3>
+            </article>
+            <article class="status-rail-item">
+              <p>数据时效</p>
+              <h3 id="heroRailAge">--</h3>
+            </article>
           </div>
           <div class="start-cues" aria-label="首次运行建议">
             <span>1 保存 Token</span>

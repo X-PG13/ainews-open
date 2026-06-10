@@ -75,6 +75,10 @@ const refs = {
   heroBuildVersion: document.getElementById("heroBuildVersion"),
   heroGeneratedAt: document.getElementById("heroGeneratedAt"),
   heroDataAge: document.getElementById("heroDataAge"),
+  heroRailHealth: document.getElementById("heroRailHealth"),
+  heroRailSchema: document.getElementById("heroRailSchema"),
+  heroRailBuild: document.getElementById("heroRailBuild"),
+  heroRailAge: document.getElementById("heroRailAge"),
   autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
 };
@@ -239,6 +243,18 @@ function updateHeroOperationStatus(payload) {
   }
   if (refs.heroDataAge) {
     refs.heroDataAge.textContent = `数据时效：${formatDataAge(generatedAt)}`;
+  }
+  if (refs.heroRailHealth) {
+    refs.heroRailHealth.textContent = statusText;
+  }
+  if (refs.heroRailSchema) {
+    refs.heroRailSchema.textContent = schemaVersion;
+  }
+  if (refs.heroRailBuild) {
+    refs.heroRailBuild.textContent = `v${buildVersion}`;
+  }
+  if (refs.heroRailAge) {
+    refs.heroRailAge.textContent = formatDataAge(generatedAt);
   }
   if (refs.operationsStatusStrip) {
     refs.operationsStatusStrip.classList.add("loaded");
