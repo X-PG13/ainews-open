@@ -259,6 +259,7 @@ If bot accounts (for example, Dependabot or CI users) are showing unexpectedly:
 ```bash
 git shortlog -sne --all --no-merges |
   grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+make contributors
 ```
 
 - If a bot commit should be excluded from release notes or maintainer attribution,
