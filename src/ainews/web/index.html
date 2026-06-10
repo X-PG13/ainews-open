@@ -10,7 +10,63 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/assets/styles.css" />
+    <script>
+      (function () {
+        const isFileProtocol = window.location.protocol === "file:";
+        const cssCandidates = isFileProtocol
+          ? ["assets/styles.css", "styles.css"]
+          : ["/assets/styles.css", "assets/styles.css", "styles.css"];
+        const jsCandidates = isFileProtocol
+          ? ["assets/app.js", "app.js"]
+          : ["/assets/app.js", "assets/app.js", "app.js"];
+
+        const dedup = (items) =>
+          Array.from(new Set(items.filter((item) => typeof item === "string" && item)));
+
+        const loadWithFallback = (createElement, candidates, onCreated) => {
+          const normalizedCandidates = dedup(candidates);
+          const element = createElement(normalizedCandidates[0]);
+          if (!element) {
+            return;
+          }
+          let index = 0;
+          element.onerror = () => {
+            index += 1;
+            if (index >= normalizedCandidates.length) {
+              return;
+            }
+            const fallbackElement = createElement(normalizedCandidates[index]);
+            if (!fallbackElement) {
+              return;
+            }
+            document.head.appendChild(fallbackElement);
+          };
+          if (onCreated) {
+            onCreated(element);
+          }
+          document.head.appendChild(element);
+        };
+
+        loadWithFallback(
+          (href) => {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = href;
+            return link;
+          },
+          cssCandidates,
+        );
+        loadWithFallback(
+          (src) => {
+            const script = document.createElement("script");
+            script.defer = true;
+            script.src = src;
+            return script;
+          },
+          jsCandidates,
+        );
+      })();
+    </script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -35,12 +91,27 @@
             <button id="saveTokenButton" class="button ghost">保存</button>
           </div>
           <p class="muted">所有管理操作都会自动带上 `X-Admin-Token`。</p>
-        <div id="operationsStatusStrip" class="operations-status-strip" aria-live="polite">
+          <div id="operationsStatusStrip" class="operations-status-strip" aria-live="polite">
             <span id="heroHealthBadge" class="chip status-chip">系统状态：加载中</span>
             <span id="heroSchemaVersion">schema：未同步</span>
             <span id="heroBuildVersion">build：未同步</span>
             <span id="heroGeneratedAt">最后数据：--</span>
             <span id="heroDataAge">数据时效：--</span>
+            <span id="heroAutoRefreshCountdown">自动刷新：--</span>
+            <span id="heroLastSync">上次同步：--</span>
+          </div>
+          <div id="heroVersionPulse" class="hero-version-pulse" aria-live="polite">
+            <p class="version-kicker">版本脉搏</p>
+            <div class="version-pulse-grid">
+              <article class="version-pulse-item">
+                <p>发布版本</p>
+                <h3 id="heroReleaseVersion">--</h3>
+              </article>
+              <article class="version-pulse-item">
+                <p>数据窗口</p>
+                <h3 id="heroDataWindow">--</h3>
+              </article>
+            </div>
           </div>
           <div id="heroStatusRail" class="hero-status-rail" role="list" aria-label="运营状态速览" aria-live="polite">
             <article id="heroRailHealthCard" class="status-rail-item" role="listitem" aria-describedby="heroRailHealthHint">
@@ -445,6 +516,5 @@
         <div id="articlesList" class="articles-list"></div>
       </section>
     </main>
-    <script src="/assets/app.js" defer></script>
   </body>
 </html>

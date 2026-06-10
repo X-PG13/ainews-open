@@ -214,7 +214,7 @@ button {
 
 .operations-status-strip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
   padding: 10px;
@@ -244,6 +244,52 @@ button {
 .operations-status-strip span:first-child {
   color: var(--ink);
   font-weight: 700;
+}
+
+.hero-version-pulse {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+  border: 1px dashed rgba(23, 23, 23, 0.24);
+  border-radius: 16px;
+  padding: 10px;
+  background: linear-gradient(140deg, rgba(219, 61, 27, 0.12), rgba(255, 255, 255, 0.45));
+}
+
+.version-kicker {
+  margin: 0;
+  color: var(--accent-deep);
+  font: 700 11px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.version-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.version-pulse-item {
+  border: 1px solid rgba(23, 23, 23, 0.15);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.version-pulse-item p {
+  margin: 0;
+  font: 700 11px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.05em;
+  color: var(--accent-deep);
+  text-transform: uppercase;
+}
+
+.version-pulse-item h3 {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-family: "JetBrains Mono", monospace;
+  line-height: 1.2;
 }
 
 .operations-status-strip.loaded {

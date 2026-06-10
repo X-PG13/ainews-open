@@ -6,10 +6,14 @@ const state = {
   selectedDigestId: null,
   editorActor: localStorage.getItem("ainews_digest_editor_actor") || "",
   autoRefreshEnabled: localStorage.getItem("ainews_auto_refresh") === "1",
+  nextAutoRefreshAt: null,
+  lastSyncAt: null,
 };
 
 let autoRefreshTimer = null;
+let autoRefreshCountdownTimer = null;
 const AUTO_REFRESH_INTERVAL_MS = 30000;
+const AUTO_REFRESH_TICK_MS = 1000;
 
 const refs = {
   adminToken: document.getElementById("adminToken"),
@@ -73,8 +77,10 @@ const refs = {
   heroHealthBadge: document.getElementById("heroHealthBadge"),
   heroSchemaVersion: document.getElementById("heroSchemaVersion"),
   heroBuildVersion: document.getElementById("heroBuildVersion"),
+  heroReleaseVersion: document.getElementById("heroReleaseVersion"),
   heroGeneratedAt: document.getElementById("heroGeneratedAt"),
   heroDataAge: document.getElementById("heroDataAge"),
+  heroDataWindow: document.getElementById("heroDataWindow"),
   heroRailHealthCard: document.getElementById("heroRailHealthCard"),
   heroRailSchemaCard: document.getElementById("heroRailSchemaCard"),
   heroRailBuildCard: document.getElementById("heroRailBuildCard"),
@@ -89,6 +95,8 @@ const refs = {
   heroRailAgeHint: document.getElementById("heroRailAgeHint"),
   autoRefreshCheckbox: document.getElementById("autoRefreshCheckbox"),
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
+  heroAutoRefreshCountdown: document.getElementById("heroAutoRefreshCountdown"),
+  heroLastSync: document.getElementById("heroLastSync"),
 };
 
 refs.adminToken.value = state.token;
@@ -227,6 +235,50 @@ function formatDataAge(value) {
   return `${day} 天前`;
 }
 
+function formatLastSyncTime(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未同步";
+  }
+  return parsed.toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
+function updateLastSyncStatus() {
+  if (!refs.heroLastSync) {
+    return;
+  }
+
+  if (!state.lastSyncAt) {
+    refs.heroLastSync.textContent = "上次同步：未同步";
+    return;
+  }
+
+  refs.heroLastSync.textContent = `上次同步：${formatLastSyncTime(state.lastSyncAt)}`;
+}
+
+function describeDataWindow(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未采样";
+  }
+  const deltaMinutes = Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 60000));
+  if (deltaMinutes < 15) {
+    return "近 15 分钟";
+  }
+  if (deltaMinutes < 60) {
+    return `近 ${Math.floor(deltaMinutes / 5) * 5} 分钟`;
+  }
+  if (deltaMinutes < 180) {
+    return `近 ${Math.floor(deltaMinutes / 60)} 小时`;
+  }
+  return `近 ${Math.floor(deltaMinutes / 60 / 24)} 天`;
+}
+
 function updateHeroOperationStatus(payload) {
   const health = payload.health || {};
   const stats = payload.stats || {};
@@ -239,6 +291,7 @@ function updateHeroOperationStatus(payload) {
   const buildDisplay = buildVersion === "unknown" ? "未知" : `v${buildVersion}`;
   const schemaDisplay = schemaVersion === "unknown" ? "未知" : schemaVersion;
   const ageDisplay = formatDataAge(generatedAt);
+  const windowDisplay = describeDataWindow(generatedAt);
   const ageClass = generatedAt ? "good" : "status-unknown";
   const schemaClass = schemaVersion === "unknown" ? "status-unknown" : "good";
   const buildClass = buildVersion === "unknown" ? "status-unknown" : "good";
@@ -256,11 +309,17 @@ function updateHeroOperationStatus(payload) {
   if (refs.heroBuildVersion) {
     refs.heroBuildVersion.textContent = `build：${buildDisplay}`;
   }
+  if (refs.heroReleaseVersion) {
+    refs.heroReleaseVersion.textContent = `${buildDisplay} / ${schemaDisplay}`;
+  }
   if (refs.heroGeneratedAt) {
     refs.heroGeneratedAt.textContent = `最后数据：${formatDisplayTime(generatedAt)}`;
   }
   if (refs.heroDataAge) {
     refs.heroDataAge.textContent = `数据时效：${ageDisplay}`;
+  }
+  if (refs.heroDataWindow) {
+    refs.heroDataWindow.textContent = windowDisplay;
   }
   if (refs.heroRailHealthCard) {
     refs.heroRailHealthCard.className = `status-rail-item ${statusClass || "status-unknown"}`;
@@ -1599,11 +1658,47 @@ function setAutoRefreshStatus(enabled) {
   refs.autoRefreshStatus.textContent = enabled ? "自动刷新开启" : "自动刷新关闭";
 }
 
+function formatCountdown(seconds) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  if (safeSeconds <= 5) {
+    return "即将刷新";
+  }
+  if (safeSeconds < 60) {
+    return `${safeSeconds} 秒`;
+  }
+  const minute = Math.floor(safeSeconds / 60);
+  const second = safeSeconds % 60;
+  return `${minute} 分 ${String(second).padStart(2, "0")} 秒`;
+}
+
+function updateAutoRefreshCountdown() {
+  if (!refs.heroAutoRefreshCountdown) {
+    return;
+  }
+
+  if (!state.autoRefreshEnabled || !state.nextAutoRefreshAt) {
+    refs.heroAutoRefreshCountdown.textContent = "自动刷新：未开启";
+    return;
+  }
+
+  const now = Date.now();
+  const remainingMs = Math.max(0, state.nextAutoRefreshAt - now);
+  refs.heroAutoRefreshCountdown.textContent = `自动刷新：${formatCountdown(
+    Math.floor(remainingMs / 1000),
+  )}`;
+}
+
 function stopAutoRefresh() {
   if (autoRefreshTimer) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
   }
+  if (autoRefreshCountdownTimer) {
+    clearInterval(autoRefreshCountdownTimer);
+    autoRefreshCountdownTimer = null;
+  }
+  state.nextAutoRefreshAt = null;
+  updateAutoRefreshCountdown();
 }
 
 function startAutoRefresh(enabled) {
@@ -1616,12 +1711,18 @@ function startAutoRefresh(enabled) {
   }
   setAutoRefreshStatus(true);
   stopAutoRefresh();
+  state.nextAutoRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
   autoRefreshTimer = setInterval(() => {
     refreshAll().catch((error) => logJob("auto refresh failed", { error: error.message }));
   }, AUTO_REFRESH_INTERVAL_MS);
+  autoRefreshCountdownTimer = setInterval(() => {
+    updateAutoRefreshCountdown();
+  }, AUTO_REFRESH_TICK_MS);
+  updateAutoRefreshCountdown();
 }
 
 async function refreshAll() {
+  let success = true;
   try {
     await Promise.all([
       loadOperations(),
@@ -1635,6 +1736,16 @@ async function refreshAll() {
     ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
+    success = false;
+  } finally {
+    if (success) {
+      state.lastSyncAt = Date.now();
+    }
+    updateLastSyncStatus();
+    if (state.autoRefreshEnabled) {
+      state.nextAutoRefreshAt = Date.now() + AUTO_REFRESH_INTERVAL_MS;
+      updateAutoRefreshCountdown();
+    }
   }
 }
 
@@ -2085,5 +2196,6 @@ refs.extractionOpsList.addEventListener("click", async (event) => {
 
 setSelectedDigestId(null);
 setAutoRefreshStatus(state.autoRefreshEnabled);
+updateLastSyncStatus();
 startAutoRefresh(state.autoRefreshEnabled);
 refreshAll();

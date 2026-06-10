@@ -400,6 +400,20 @@ class ReleaseMetadataTestCase(unittest.TestCase):
         ):
             self.assertIn(expected, release_checklist_zh)
 
+    def test_contributor_summary_target_is_documented(self) -> None:
+        makefile = _read_text("Makefile")
+        release_checklist = _read_text("docs/release-checklist.md")
+        release_checklist_zh = _read_text("docs/release-checklist.zh-CN.md")
+        troubleshooting = _read_text("docs/troubleshooting.md")
+        troubleshooting_zh = _read_text("docs/troubleshooting.zh-CN.md")
+
+        self.assertIn("contributors:", makefile)
+        self.assertIn("dependabot\\\\[bot\\\\]", makefile)
+        self.assertIn("make contributors", release_checklist)
+        self.assertIn("make contributors", release_checklist_zh)
+        self.assertIn("make contributors", troubleshooting)
+        self.assertIn("make contributors", troubleshooting_zh)
+
 
 if __name__ == "__main__":
     unittest.main()

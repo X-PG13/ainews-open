@@ -2510,12 +2510,24 @@ class ArticleContentExtractor:
 
     def _host_drop_tokens(self, host: str) -> tuple[str, ...]:
         tokens: List[str] = []
+        ignored_tokens = {"group", "data", "module"}
         for selector in self._host_values(host, HOST_DROP_SELECTORS):
             selector_text = str(selector).lower().strip()
             tail = re.split(r"\s*[>+~]\s*|\s+", selector_text)[-1]
-            cleaned = re.sub(r"[^a-z0-9_-]+", " ", tail).split()
-            tokens.extend(cleaned)
-        return tuple(tokens)
+            selector_tokens: List[str] = []
+            selector_tokens.extend(re.findall(r"\.([a-z0-9_-]+)", tail))
+            selector_tokens.extend(re.findall(r"#([a-z0-9_-]+)", tail))
+            selector_tokens.extend(
+                re.findall(r"\[[^\]=]+\s*=\s*['\"]?([a-z0-9_-]+)['\"]?\]", tail)
+            )
+            if selector_tokens:
+                tokens.extend(selector_tokens)
+                continue
+            tokens.extend(re.sub(r"[^a-z0-9_-]+", " ", tail).split())
+
+        return tuple(
+            token for token in tokens if token and token not in ignored_tokens and len(token) > 1
+        )
 
     def _fallback_extract_from_html(self, raw_html: str, *, url: str = "") -> ExtractedContent:
         host = self._normalize_host(url)

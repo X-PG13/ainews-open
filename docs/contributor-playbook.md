@@ -60,7 +60,7 @@ Remove the proxy prefix once the network stabilizes and continue with the normal
 ## Validate Before Opening A PR
 
 - `make lint`
-- `make test`
+- `make test` (or `make test-local` for no-install local runs)
 - `make coverage`
 - `make build`
 

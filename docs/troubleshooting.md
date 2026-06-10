@@ -46,6 +46,26 @@ Default retry behavior:
 Use these checks:
 
 - `python -m ainews stats`
+- `curl -H "X-Admin-Token: your-secret-token" http://127.0.0.1:8000/admin/stats`
+
+## Web console only shows plain text in the browser
+
+This usually means static assets were not loaded.
+
+Checks:
+
+- Open the page via one of the supported paths:
+  - `http://127.0.0.1:8000/` (served app)
+  - `src/ainews/web/index.html` for quick static preview
+- In DevTools, confirm CSS/JS requests for `assets/styles.css` and `assets/app.js` return 200.
+- If you open by file protocol, fallback to same-folder `styles.css` / `app.js` is built in, so it should still render after one refresh.
+
+Expected outcome:
+
+- Hero status chips, toolbar buttons, and sections render as styled cards (no raw HTML tags).
+- The page can execute refresh controls without immediate JS errors in the browser console.
+
+## Health is degraded
 - `curl http://127.0.0.1:8000/health`
 - `curl -H "X-Admin-Token: your-secret-token" "http://127.0.0.1:8000/admin/articles?extraction_status=throttled&due_only=true"`
 
@@ -259,6 +279,7 @@ If bot accounts (for example, Dependabot or CI users) are showing unexpectedly:
 ```bash
 git shortlog -sne --all --no-merges |
   grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+make contributors
 ```
 
 - If a bot commit should be excluded from release notes or maintainer attribution,

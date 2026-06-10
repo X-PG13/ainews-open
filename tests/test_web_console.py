@@ -50,11 +50,18 @@ class WebConsoleTestCase(unittest.TestCase):
             'id="heroRailSchemaHint"',
             'id="heroRailBuildHint"',
             'id="heroRailAgeHint"',
+            'id="heroReleaseVersion"',
+            'id="heroDataWindow"',
+            'id="heroAutoRefreshCountdown"',
+            'id="heroLastSync"',
+            'id="heroVersionPulse"',
             "status-rail-item",
             "heroRailHealth",
             "heroRailSchema",
             "heroRailBuild",
             "heroRailAge",
+            "heroAutoRefreshCountdown",
+            "heroLastSync",
             'role="list"',
             'role="listitem"',
         ):
@@ -77,6 +84,20 @@ class WebConsoleTestCase(unittest.TestCase):
             "refs.heroRailSchemaHint",
             "refs.heroRailBuildHint",
             "refs.heroRailAgeHint",
+            "refs.heroAutoRefreshCountdown",
+            "refs.heroLastSync",
+            "refs.heroReleaseVersion",
+            "refs.heroDataWindow",
+            "heroReleaseVersion",
+            "heroDataWindow",
+            "updateLastSyncStatus",
+            "formatLastSyncTime",
+            "state.lastSyncAt",
+            "updateAutoRefreshCountdown",
+            "formatCountdown",
+            "autoRefreshCountdownTimer",
+            "AUTO_REFRESH_TICK_MS",
+            "describeDataWindow",
             "statusClass",
             "refs.heroRailHealthCard.className",
             "refs.heroRailHealthCard.setAttribute",
@@ -99,8 +120,13 @@ class WebConsoleTestCase(unittest.TestCase):
             ".status-rail-item.status-pending",
             ".status-rail-item.status-warn",
             ".status-rail-item.status-unknown",
+            ".hero-version-pulse",
+            ".version-pulse-grid",
+            ".version-pulse-item",
+            ".version-kicker",
             ".sr-only",
             "grid-template-columns: repeat(2, minmax(0, 1fr));",
+            "grid-template-columns: repeat(3, minmax(0, 1fr));",
         ):
             self.assertIn(expected, styles)
 
@@ -139,6 +165,23 @@ class WebConsoleTestCase(unittest.TestCase):
             "flex-direction: column;",
         ):
             self.assertIn(expected, styles)
+
+    def test_console_asset_loading_paths_cover_file_and_http_modes(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+
+        expected_snippets = (
+            'const isFileProtocol = window.location.protocol === "file:";',
+            '"/assets/styles.css"',
+            '"assets/styles.css"',
+            '"styles.css"',
+            '"/assets/app.js"',
+            '"assets/app.js"',
+            '"app.js"',
+            "loadWithFallback(",
+            "dedup(candidates);",
+        )
+        for expected in expected_snippets:
+            self.assertIn(expected, index)
 
 
 if __name__ == "__main__":

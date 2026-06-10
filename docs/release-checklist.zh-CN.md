@@ -125,6 +125,7 @@ python -m ainews --help
 git log --format="%an <%ae>" "${PREVIOUS_TAG}..${TAG}" \
   | sort -u \
   | grep -Ev 'dependabot\\[bot\\]|github-actions\\[bot\\]|renovate\\[bot\\]|actions-user'
+make contributors
 ```
 
 - [ ] 如果结果里有 bot 账号噪音，在交付简报里说明并标注本次依赖/动作升级是否走了人工 PR 流程（原 Dependabot PR 在合并后已闭环）。

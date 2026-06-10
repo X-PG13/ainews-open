@@ -13,6 +13,23 @@
 - 检查当前环境是否有外网访问能力
 - 检查 `include_keywords` / `exclude_keywords` 是否把文章过滤掉了
 
+## 控制台打开后只有文字，没有样式
+
+这通常是前端静态资源未正确加载。
+
+排查步骤：
+
+- 使用以下任一方式打开：
+  - `http://127.0.0.1:8000/`（服务方式）
+  - 直接打开 `src/ainews/web/index.html`（本地静态快速查看）
+- 在浏览器控制台确认 `assets/styles.css` 与 `assets/app.js` 的资源请求返回 200，且未出现 404。
+- file 协议打开时会自动回退到当前目录下 `styles.css` / `app.js`，通常能直接恢复样式与交互。
+
+期望结果：
+
+- 控制台会显示样式化卡片（而不是裸露的 HTML 文本）
+- `刷新面板` 等按钮可点击，且控制台无明显 JS 错误
+
 ## 正文抽取提示 “extracted article text is too short”
 
 这通常意味着：
@@ -261,6 +278,7 @@ python -m ainews publish --digest-id 1 --target static_site --force-republish
 ```bash
 git shortlog -sne --all --no-merges |
   grep -Ev "(bot|dependabot\[bot\]|github-actions\[bot\])" | sed -n '1,30p'
+make contributors
 ```
 
 - 如果某次发布说明里不希望出现 bot 归属，建议在发布 PR 的作者说明里补充人类归属备注。

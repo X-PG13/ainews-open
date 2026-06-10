@@ -208,6 +208,8 @@ Open the console at:
 http://127.0.0.1:8000/
 ```
 
+For local visual checks, you can also open `src/ainews/web/index.html` directly as a file. The console now uses relative asset paths so style and behavior render correctly in `file:///` mode.
+
 If you prefer to start the API directly:
 
 ```bash

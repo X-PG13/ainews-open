@@ -125,6 +125,7 @@ The maintainer who merges the release PR or publishes the tag owns milestone rol
 git log --format="%an <%ae>" "${PREVIOUS_TAG}..${TAG}" \
   | sort -u \
   | grep -Ev 'dependabot\\[bot\\]|github-actions\\[bot\\]|renovate\\[bot\\]|actions-user'
+make contributors
 ```
 
 - [ ] Keep any bot noise out of the handoff summary you send to maintainers; if bot accounts appear, note that the human-authored PRs for dependency/workflow upgrades are tracked in the release PR body and close comments.
