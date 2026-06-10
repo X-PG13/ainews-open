@@ -14,10 +14,10 @@
       (function () {
         const isFileProtocol = window.location.protocol === "file:";
         const cssCandidates = isFileProtocol
-          ? ["assets/styles.css", "styles.css"]
+          ? ["styles.css", "assets/styles.css"]
           : ["/assets/styles.css", "assets/styles.css", "styles.css"];
         const jsCandidates = isFileProtocol
-          ? ["assets/app.js", "app.js"]
+          ? ["app.js", "assets/app.js"]
           : ["/assets/app.js", "assets/app.js", "app.js"];
 
         const dedup = (items) =>
@@ -47,24 +47,32 @@
           document.head.appendChild(element);
         };
 
-        loadWithFallback(
-          (href) => {
-            const link = document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = href;
-            return link;
-          },
-          cssCandidates,
-        );
-        loadWithFallback(
-          (src) => {
-            const script = document.createElement("script");
-            script.defer = true;
-            script.src = src;
-            return script;
-          },
-          jsCandidates,
-        );
+        const loadAssets = () => {
+          loadWithFallback(
+            (href) => {
+              const link = document.createElement("link");
+              link.rel = "stylesheet";
+              link.href = href;
+              return link;
+            },
+            cssCandidates,
+          );
+          loadWithFallback(
+            (src) => {
+              const script = document.createElement("script");
+              script.defer = true;
+              script.src = src;
+              return script;
+            },
+            jsCandidates,
+          );
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", loadAssets, { once: true });
+        } else {
+          loadAssets();
+        }
       })();
     </script>
   </head>

@@ -22,8 +22,9 @@
 - 使用以下任一方式打开：
   - `http://127.0.0.1:8000/`（服务方式）
   - 直接打开 `src/ainews/web/index.html`（本地静态快速查看）
-- 在浏览器控制台确认 `assets/styles.css` 与 `assets/app.js` 的资源请求返回 200，且未出现 404。
-- file 协议打开时会自动回退到当前目录下 `styles.css` / `app.js`，通常能直接恢复样式与交互。
+- 在浏览器控制台确认 `styles.css` / `app.js` 与 `assets/styles.css` / `assets/app.js` 资源请求返回 200（按打开方式对照）：
+  - 服务方式（`http://127.0.0.1:8000/`）：优先检查 `assets/styles.css`、`assets/app.js`。
+  - file 协议（`file://.../src/ainews/web/index.html`）：优先检查同目录的 `styles.css`、`app.js`。
 - 若仍然只有裸文本，请检查页面源码里是否存在未清理的 `<<<<<<< HEAD` `=======` `>>>>>>>` 合并标记。
 - 若已合并冲突且仍无样式，清理缓存或无痕窗口后强制刷新一次。
 
