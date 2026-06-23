@@ -19,7 +19,7 @@ jobs:
       AINEWS_SOURCE_RUNTIME_RETENTION_DAYS: ${{ vars.AINEWS_SOURCE_RUNTIME_RETENTION_DAYS }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
