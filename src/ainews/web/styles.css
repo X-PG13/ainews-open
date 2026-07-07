@@ -320,7 +320,7 @@ button {
 }
 
 .preview-mode-kicker {
-  grid-row: span 2;
+  grid-row: span 3;
   color: var(--accent-deep);
   font: 800 10px/1.2 "JetBrains Mono", monospace;
   letter-spacing: 0.14em;
@@ -332,11 +332,16 @@ button {
   font: 800 13px/1.25 "JetBrains Mono", monospace;
 }
 
-.preview-mode-strip span:last-child {
+.preview-mode-detail,
+.preview-asset-detail {
   min-width: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.preview-asset-detail {
+  font-family: "JetBrains Mono", monospace;
 }
 
 .status-chip.good {
