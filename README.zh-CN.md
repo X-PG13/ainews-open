@@ -100,6 +100,15 @@ make check
 
 `make check` 现在就是本地维护者总门禁，会一次跑完 lint、coverage、构建校验和 `/health` smoke。只有在你单独调某一层时，才需要单跑 `make coverage` 或 `make smoke`。
 
+## 控制台运维路径
+
+当 Web 控制台是主要操作面时，按这条路径走：
+
+1. 先看[首次部署指南](docs/first-deploy.zh-CN.md)，把 API 和控制台跑到 `http://127.0.0.1:8000/`。
+2. 按[控制台 Walkthrough](docs/operator-console-walkthrough.md)完成安全的抓取、正文抽取、日报审阅、冻结编辑稿和发布预览流程。
+3. 如果控制台只显示裸文本、资源加载失败，或 preview-mode 状态条提示静态/fallback 视图，先看[故障排查](docs/troubleshooting.zh-CN.md)。
+4. 准备补丁发版前，按[发版清单](docs/release-checklist.zh-CN.md)和发布后证据快照确认控制台、release notes、制品和 smoke 结果一致。
+
 ## 运维与交付文档
 
 - [架构总览](docs/architecture.md)
