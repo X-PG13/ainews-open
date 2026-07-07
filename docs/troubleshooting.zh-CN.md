@@ -28,6 +28,10 @@
 - 在浏览器控制台确认 `styles.css` / `app.js` 与 `assets/styles.css` / `assets/app.js` 资源请求返回 200（按打开方式对照）：
   - 服务方式（`http://127.0.0.1:8000/`）：优先检查 `assets/styles.css`、`assets/app.js`。
   - file 协议（`file://.../src/ainews/web/index.html`）：优先检查同目录的 `styles.css`、`app.js`。
+- 如果页面已经能渲染出 preview-mode 状态条，先看其中的 `Assets` 行再改代码：
+  - `CSS 已加载` / `JS 已加载` 表示控制台找到了可用的样式或脚本候选路径。
+  - `重试中` 表示某个候选路径失败，bootstrap 还在尝试下一个路径。
+  - `fallback` 表示当前主要靠内联兜底样式撑起静态预览；先记录失败的 CSS/JS URL，在资源路径修好前优先使用服务方式打开。
 - 若仍然只有裸文本，请检查页面源码里是否存在未清理的 `<<<<<<< HEAD` `=======` `>>>>>>>` 合并标记。
 - 若已合并冲突且仍无样式，清理缓存或无痕窗口后强制刷新一次。
 
@@ -37,7 +41,8 @@
 2. 执行 `python -m http.server 8000` 后打开 `http://127.0.0.1:8000/src/ainews/web/index.html`，用于本地 HTTP 预览。
 3. 在 DevTools 里确认至少有一个 CSS 请求和一个 JavaScript 请求成功。file 模式应尝试 `styles.css` 和 `app.js`；HTTP 模式也应能在 `assets/...` 与同目录候选路径之间回退。
 4. 刷新后稍等一个加载周期再判断页面是否损坏。控制台 bootstrap 会在首个资源路径短时间内未加载时继续尝试下一个候选资源。
-5. 确认 hero、状态条、工具栏和运维区块都以卡片与控件样式展示。如果强制刷新后仍然只有裸文本，请先记录失败的 CSS/JS URL，再改代码。
+5. 确认 preview-mode 的 `Assets` 行显示 CSS 和 JS 已加载路径，或明确显示与 DevTools 一致的 fallback/重试状态。
+6. 确认 hero、状态条、工具栏和运维区块都以卡片与控件样式展示。如果强制刷新后仍然只有裸文本，请先记录失败的 CSS/JS URL，再改代码。
 
 期望结果：
 

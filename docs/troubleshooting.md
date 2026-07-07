@@ -63,6 +63,10 @@ Checks:
 - In DevTools, confirm CSS/JS requests return 200:
   - For service mode (`http://127.0.0.1:8000/`): `assets/styles.css`, `assets/app.js`.
   - For local file mode (`file://.../src/ainews/web/index.html`): `styles.css`, `app.js`.
+- If the page is styled enough to show the preview-mode strip, read its `Assets` line before changing code:
+  - `CSS loaded` / `JS loaded` means the console found a working stylesheet or app script candidate.
+  - `retrying` means one candidate failed and the bootstrap is still trying the next path.
+  - `fallback` means inline fallback styles are carrying the static preview; capture the failed CSS/JS URLs and prefer the served URL until the asset path is fixed.
 - If you open `src/ainews/web/index.html` directly as file, you should use it as a static preview only. Backend interactions (buttons that fetch `/admin/*`) are intentionally read-only in this mode and will show a file-mode message.
 - If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
 - Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
@@ -73,7 +77,8 @@ Preview checklist:
 2. Open `http://127.0.0.1:8000/src/ainews/web/index.html` after `python -m http.server 8000` for a local HTTP preview.
 3. Confirm DevTools shows at least one successful CSS request and one successful JavaScript request. File mode should try `styles.css` and `app.js`; HTTP mode should also be able to fall back between `assets/...` and same-directory candidates.
 4. Wait one refresh cycle before judging the page broken. The console bootstrap retries the next asset candidate after a short timeout when the first path does not load.
-5. Confirm the hero, status strip, toolbar, and operational sections are styled as cards and controls. If only plain text appears after a hard refresh, capture the failed CSS/JS URLs before changing code.
+5. Confirm the preview-mode `Assets` line reports loaded CSS and JS paths, or explicitly reports fallback/retrying status that matches DevTools.
+6. Confirm the hero, status strip, toolbar, and operational sections are styled as cards and controls. If only plain text appears after a hard refresh, capture the failed CSS/JS URLs before changing code.
 
 Expected outcome:
 
