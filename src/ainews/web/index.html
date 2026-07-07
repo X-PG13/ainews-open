@@ -78,6 +78,31 @@
       .hero-status-rail {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
+      .first-screen-loading-block {
+        display: grid;
+        gap: 10px;
+      }
+      .loading-card {
+        border: 1px solid rgba(23, 23, 23, 0.1);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.52);
+      }
+      .loading-heading,
+      .loading-line {
+        display: block;
+        border-radius: 999px;
+        background: rgba(23, 23, 23, 0.08);
+      }
+      .loading-heading {
+        width: 52%;
+        height: 18px;
+      }
+      .loading-line {
+        width: 78%;
+        height: 10px;
+        margin-top: 10px;
+      }
       .preview-mode-strip {
         display: grid;
         gap: 6px;
@@ -237,7 +262,7 @@
             <button id="saveTokenButton" class="button ghost">保存</button>
           </div>
           <p class="muted">所有管理操作都会自动带上 `X-Admin-Token`。</p>
-          <div id="operationsStatusStrip" class="operations-status-strip" aria-live="polite">
+          <div id="operationsStatusStrip" class="operations-status-strip loading" aria-live="polite">
             <span id="heroHealthBadge" class="chip status-chip">系统状态：加载中</span>
             <span id="heroSchemaVersion">schema：未同步</span>
             <span id="heroBuildVersion">build：未同步</span>
@@ -266,22 +291,22 @@
             </div>
           </div>
           <div id="heroStatusRail" class="hero-status-rail" role="list" aria-label="运营状态速览" aria-live="polite">
-            <article id="heroRailHealthCard" class="status-rail-item" role="listitem" aria-describedby="heroRailHealthHint">
+            <article id="heroRailHealthCard" class="status-rail-item is-loading" role="listitem" aria-describedby="heroRailHealthHint">
               <p>运行健康</p>
               <h3 id="heroRailHealth">未采样</h3>
               <p id="heroRailHealthHint" class="sr-only">运行健康状态用于快速判断，异常时先看 Operations 面板里的健康检查列表。</p>
             </article>
-            <article id="heroRailSchemaCard" class="status-rail-item" role="listitem" aria-describedby="heroRailSchemaHint">
+            <article id="heroRailSchemaCard" class="status-rail-item is-loading" role="listitem" aria-describedby="heroRailSchemaHint">
               <p>Schema</p>
               <h3 id="heroRailSchema">--</h3>
               <p id="heroRailSchemaHint" class="sr-only">Schema 用于确认后台与前端约定未发生版本漂移。</p>
             </article>
-            <article id="heroRailBuildCard" class="status-rail-item" role="listitem" aria-describedby="heroRailBuildHint">
+            <article id="heroRailBuildCard" class="status-rail-item is-loading" role="listitem" aria-describedby="heroRailBuildHint">
               <p>构建版本</p>
               <h3 id="heroRailBuild">--</h3>
               <p id="heroRailBuildHint" class="sr-only">构建版本用于核对发布件与服务实例是否匹配。</p>
             </article>
-            <article id="heroRailAgeCard" class="status-rail-item" role="listitem" aria-describedby="heroRailAgeHint">
+            <article id="heroRailAgeCard" class="status-rail-item is-loading" role="listitem" aria-describedby="heroRailAgeHint">
               <p>数据时效</p>
               <h3 id="heroRailAge">--</h3>
               <p id="heroRailAgeHint" class="sr-only">数据时效超过 1 小时通常表示运维层采集或 pipeline 刷新异常。</p>
@@ -327,7 +352,23 @@
         </div>
       </section>
 
-      <section class="stats-grid" id="statsGrid"></section>
+      <section class="stats-grid first-screen-loading" id="statsGrid" aria-label="首屏统计正在加载">
+        <article class="panel stat-card loading-card" data-loading-placeholder="stats">
+          <p class="loading-kicker">Loading</p>
+          <span class="loading-heading"></span>
+          <span class="loading-line"></span>
+        </article>
+        <article class="panel stat-card loading-card" data-loading-placeholder="stats">
+          <p class="loading-kicker">Loading</p>
+          <span class="loading-heading"></span>
+          <span class="loading-line short"></span>
+        </article>
+        <article class="panel stat-card loading-card" data-loading-placeholder="stats">
+          <p class="loading-kicker">Loading</p>
+          <span class="loading-heading"></span>
+          <span class="loading-line"></span>
+        </article>
+      </section>
 
       <section class="panel operations-panel">
         <div class="section-head">
@@ -346,7 +387,23 @@
         <p class="muted">
           把 `/health`、最近 pipeline、冷却来源、来源告警和发布失败收成一屏。细节操作仍保留在下方来源与抽取面板里。
         </p>
-        <div id="operationsSummary" class="operations-summary-grid"></div>
+        <div id="operationsSummary" class="operations-summary-grid first-screen-loading" aria-label="运维摘要正在加载">
+          <article class="stat-card operations-stat-card loading-card" data-loading-placeholder="operations-summary">
+            <p class="loading-kicker">Health</p>
+            <span class="loading-heading"></span>
+            <span class="loading-line"></span>
+          </article>
+          <article class="stat-card operations-stat-card loading-card" data-loading-placeholder="operations-summary">
+            <p class="loading-kicker">Runtime</p>
+            <span class="loading-heading"></span>
+            <span class="loading-line short"></span>
+          </article>
+          <article class="stat-card operations-stat-card loading-card" data-loading-placeholder="operations-summary">
+            <p class="loading-kicker">Publish</p>
+            <span class="loading-heading"></span>
+            <span class="loading-line"></span>
+          </article>
+        </div>
         <div class="operations-grid">
           <article class="operations-slab">
             <div class="section-head">
@@ -355,8 +412,17 @@
                 <h3>系统状态</h3>
               </div>
             </div>
-            <div id="operationsHealth"></div>
-            <div id="operationsMetrics" class="chip-row"></div>
+            <div id="operationsHealth" class="first-screen-loading-block">
+              <article class="publication-card loading-card" data-loading-placeholder="operations-health">
+                <p class="loading-kicker">Waiting for /health</p>
+                <span class="loading-heading"></span>
+                <span class="loading-line"></span>
+                <span class="loading-line short"></span>
+              </article>
+            </div>
+            <div id="operationsMetrics" class="chip-row first-screen-loading-block">
+              <span class="chip pending">metrics: 等待采样</span>
+            </div>
           </article>
 
           <article class="operations-slab">
@@ -366,7 +432,13 @@
                 <h3>最近运行</h3>
               </div>
             </div>
-            <div id="operationsPipelineRuns" class="publication-list compact-list"></div>
+            <div id="operationsPipelineRuns" class="publication-list compact-list first-screen-loading-block">
+              <article class="publication-card operations-card loading-card" data-loading-placeholder="pipeline-runs">
+                <p class="loading-kicker">Recent run</p>
+                <span class="loading-heading"></span>
+                <span class="loading-line"></span>
+              </article>
+            </div>
           </article>
 
           <article class="operations-slab">
@@ -376,7 +448,13 @@
                 <h3>热点来源</h3>
               </div>
             </div>
-            <div id="operationsSources" class="publication-list compact-list"></div>
+            <div id="operationsSources" class="publication-list compact-list first-screen-loading-block">
+              <article class="publication-card operations-card loading-card" data-loading-placeholder="runtime-sources">
+                <p class="loading-kicker">Source health</p>
+                <span class="loading-heading"></span>
+                <span class="loading-line"></span>
+              </article>
+            </div>
           </article>
 
           <article class="operations-slab">
@@ -386,8 +464,20 @@
                 <h3>告警与发布失败</h3>
               </div>
             </div>
-            <div id="operationsAlerts" class="publication-list compact-list"></div>
-            <div id="operationsPublicationFailures" class="publication-list compact-list"></div>
+            <div id="operationsAlerts" class="publication-list compact-list first-screen-loading-block">
+              <article class="publication-card operations-card loading-card" data-loading-placeholder="source-alerts">
+                <p class="loading-kicker">Incidents</p>
+                <span class="loading-heading"></span>
+                <span class="loading-line short"></span>
+              </article>
+            </div>
+            <div id="operationsPublicationFailures" class="publication-list compact-list first-screen-loading-block">
+              <article class="publication-card operations-card loading-card" data-loading-placeholder="publication-failures">
+                <p class="loading-kicker">Publish queue</p>
+                <span class="loading-heading"></span>
+                <span class="loading-line"></span>
+              </article>
+            </div>
           </article>
         </div>
       </section>

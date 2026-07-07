@@ -238,6 +238,65 @@ class WebConsoleTestCase(unittest.TestCase):
         for expected in expected_app_snippets:
             self.assertIn(expected, app)
 
+    def test_console_first_screen_loading_states_are_visible_and_settled(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+        app = _read_text("src/ainews/web/app.js")
+        styles = _read_text("src/ainews/web/styles.css")
+
+        for expected in (
+            'class="operations-status-strip loading"',
+            'class="status-rail-item is-loading"',
+            'class="stats-grid first-screen-loading"',
+            'class="operations-summary-grid first-screen-loading"',
+            'class="first-screen-loading-block"',
+            'data-loading-placeholder="stats"',
+            'data-loading-placeholder="operations-summary"',
+            'data-loading-placeholder="operations-health"',
+            'data-loading-placeholder="pipeline-runs"',
+            'data-loading-placeholder="runtime-sources"',
+            'data-loading-placeholder="source-alerts"',
+            'data-loading-placeholder="publication-failures"',
+            "首屏统计正在加载",
+            "运维摘要正在加载",
+            "metrics: 等待采样",
+        ):
+            self.assertIn(expected, index)
+
+        for expected in (
+            "function firstScreenLoadingContainers",
+            "function markFirstScreenSectionLoaded",
+            "function settleFirstScreenLoading",
+            "function markFirstScreenWaiting",
+            'classList.remove("first-screen-loading", "first-screen-loading-block")',
+            'document.querySelectorAll(".status-rail-item.is-loading")',
+            'document.querySelectorAll("[data-loading-placeholder]")',
+            'element.classList.add("loading-paused")',
+            'refs.operationsStatusStrip.classList.remove("loading", "waiting")',
+            'refs.operationsStatusStrip.classList.add("waiting")',
+            "markFirstScreenSectionLoaded(refs.statsGrid)",
+            "markFirstScreenSectionLoaded(refs.operationsSummary)",
+            "markFirstScreenSectionLoaded(refs.operationsHealth)",
+            "markFirstScreenSectionLoaded(refs.operationsPipelineRuns)",
+            "markFirstScreenWaiting();",
+            "settleFirstScreenLoading();",
+        ):
+            self.assertIn(expected, app)
+
+        for expected in (
+            ".operations-status-strip.loading",
+            ".status-rail-item.is-loading",
+            ".first-screen-loading-block",
+            ".loading-card",
+            ".loading-card.loading-paused",
+            ".loading-kicker",
+            ".loading-heading",
+            ".loading-line.short",
+            "@keyframes loading-sweep",
+            "@media (prefers-reduced-motion: reduce)",
+            ".loading-card::after",
+        ):
+            self.assertIn(expected, styles)
+
     def test_console_includes_inline_fallback_styles_for_static_views(self) -> None:
         index = _read_text("src/ainews/web/index.html")
 
@@ -247,6 +306,10 @@ class WebConsoleTestCase(unittest.TestCase):
             ".preview-mode-strip",
             ".preview-mode-kicker",
             ".preview-asset-detail",
+            ".first-screen-loading-block",
+            ".loading-card",
+            ".loading-heading",
+            ".loading-line",
             ".toolbar-row",
             ".publication-list",
             "background:",
