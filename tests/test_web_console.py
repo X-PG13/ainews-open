@@ -41,6 +41,11 @@ class WebConsoleTestCase(unittest.TestCase):
         styles = _read_text("src/ainews/web/styles.css")
 
         for expected in (
+            'id="previewModeStrip"',
+            'id="previewModeTitle"',
+            'id="previewModeDetail"',
+            "Preview mode",
+            "正在确认连接方式",
             'id="heroStatusRail"',
             'id="heroRailHealthCard"',
             'id="heroRailSchemaCard"',
@@ -88,6 +93,13 @@ class WebConsoleTestCase(unittest.TestCase):
             "refs.heroLastSync",
             "refs.heroReleaseVersion",
             "refs.heroDataWindow",
+            "refs.previewModeStrip",
+            "refs.previewModeTitle",
+            "refs.previewModeDetail",
+            "setPreviewModeState",
+            "静态预览，只读",
+            "HTTP 服务视图，等待后端数据",
+            "已连接后端服务",
             "heroReleaseVersion",
             "heroDataWindow",
             "updateLastSyncStatus",
@@ -114,6 +126,10 @@ class WebConsoleTestCase(unittest.TestCase):
         for expected in (
             ".hero-status-rail",
             ".status-rail-item",
+            ".preview-mode-strip",
+            ".preview-mode-strip.connected",
+            ".preview-mode-strip.file",
+            ".preview-mode-kicker",
             ".status-rail-item p",
             ".status-rail-item h3",
             ".status-rail-item.status-good",
@@ -209,6 +225,8 @@ class WebConsoleTestCase(unittest.TestCase):
         for expected in (
             '<style id="consoleFallbackStyles">',
             ".hero-status-rail",
+            ".preview-mode-strip",
+            ".preview-mode-kicker",
             ".toolbar-row",
             ".publication-list",
             "background:",

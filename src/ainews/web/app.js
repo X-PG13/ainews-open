@@ -80,6 +80,9 @@ const refs = {
   publishTargetInputs: Array.from(document.querySelectorAll(".publish-target")),
   wechatSubmitCheckbox: document.getElementById("wechatSubmitCheckbox"),
   operationsStatusStrip: document.getElementById("operationsStatusStrip"),
+  previewModeStrip: document.getElementById("previewModeStrip"),
+  previewModeTitle: document.getElementById("previewModeTitle"),
+  previewModeDetail: document.getElementById("previewModeDetail"),
   heroHealthBadge: document.getElementById("heroHealthBadge"),
   heroSchemaVersion: document.getElementById("heroSchemaVersion"),
   heroBuildVersion: document.getElementById("heroBuildVersion"),
@@ -107,6 +110,7 @@ const refs = {
 
 refs.adminToken.value = state.token;
 refs.digestEditorActorInput.value = state.editorActor;
+setPreviewModeState(IS_FILE_PROTOCOL ? "file" : "http");
 
 function adminHeaders() {
   const headers = { "Content-Type": "application/json" };
@@ -245,7 +249,36 @@ function formatDataAge(value) {
   return `${day} 天前`;
 }
 
+function setPreviewModeState(mode) {
+  if (!refs.previewModeStrip || !refs.previewModeTitle || !refs.previewModeDetail) {
+    return;
+  }
+
+  const states = {
+    file: [
+      "file",
+      "静态预览，只读",
+      "样式和结构已加载；后端数据、刷新和发布操作需要用 HTTP 服务地址打开。",
+    ],
+    http: [
+      "pending",
+      "HTTP 服务视图，等待后端数据",
+      "正在尝试读取 /admin/operations；如果服务未启动，控件会保留但状态不会变为已连接。",
+    ],
+    connected: [
+      "connected",
+      "已连接后端服务",
+      "运行状态来自当前服务实例，可以继续执行刷新、选稿、编辑和发布检查。",
+    ],
+  };
+  const [className, title, detail] = states[mode] || states.http;
+  refs.previewModeStrip.className = `preview-mode-strip ${className}`;
+  refs.previewModeTitle.textContent = title;
+  refs.previewModeDetail.textContent = detail;
+}
+
 function setFileModeReadOnly() {
+  setPreviewModeState("file");
   refs.jobOutput.textContent = FILE_MODE_MESSAGE;
 
   if (refs.refreshAllButton) {
@@ -359,6 +392,7 @@ function describeDataWindow(value) {
 }
 
 function updateHeroOperationStatus(payload) {
+  setPreviewModeState("connected");
   const health = payload.health || {};
   const stats = payload.stats || {};
   const metrics = payload.metrics || {};
