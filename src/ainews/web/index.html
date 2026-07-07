@@ -94,6 +94,10 @@
         letter-spacing: 0.14em;
         text-transform: uppercase;
       }
+      .preview-asset-detail {
+        color: var(--muted);
+        font-size: 12px;
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -111,8 +115,22 @@
           ? ["app.js", "assets/app.js"]
           : ["/assets/app.js", "assets/app.js", "app.js"];
         const LOAD_TIMEOUT_MS = 900;
+        const ASSET_STATUS_EVENT = "ainews-console-asset-status";
+        const assetStatus = (window.__ainewsConsoleAssetStatus = window.__ainewsConsoleAssetStatus || {
+          css: { state: "pending", path: "" },
+          js: { state: "pending", path: "" },
+        });
 
         const dedup = (items) => Array.from(new Set(items.filter((item) => typeof item === "string" && item)));
+        const snapshotAssetStatus = () => ({
+          css: { ...assetStatus.css },
+          js: { ...assetStatus.js },
+        });
+
+        const updateAssetStatus = (kind, state, path) => {
+          assetStatus[kind] = { state, path };
+          window.dispatchEvent(new CustomEvent(ASSET_STATUS_EVENT, { detail: snapshotAssetStatus() }));
+        };
 
         const waitForAssetLoad = (element) =>
           new Promise((resolve, reject) => {
@@ -143,20 +161,24 @@
           }
         };
 
-        const loadElementWithFallback = async (id, candidates, createNode) => {
+        const loadElementWithFallback = async (id, candidates, createNode, kind) => {
           const unique = dedup(candidates);
           for (const candidate of unique) {
             const element = createNode(candidate);
             element.id = id;
             element.setAttribute("data-console-asset", "bootstrap");
+            updateAssetStatus(kind, "loading", candidate);
             document.head.appendChild(element);
             try {
               await waitForAssetLoad(element);
+              updateAssetStatus(kind, "loaded", candidate);
               return;
             } catch (_error) {
+              updateAssetStatus(kind, "failed", candidate);
               removeFailedAssetNode(element);
             }
           }
+          updateAssetStatus(kind, "fallback", "inline");
         };
 
         const bootstrapConsoleAssets = () => {
@@ -168,7 +190,8 @@
               link.rel = "stylesheet";
               link.href = href;
               return link;
-            }
+            },
+            "css"
           ).catch(() => {});
           loadElementWithFallback(
             "consoleAppScript",
@@ -178,7 +201,8 @@
               script.defer = true;
               script.src = src;
               return script;
-            }
+            },
+            "js"
           ).catch(() => {});
         };
 
@@ -225,7 +249,8 @@
           <div id="previewModeStrip" class="preview-mode-strip pending" aria-live="polite">
             <span class="preview-mode-kicker">Preview mode</span>
             <strong id="previewModeTitle">正在确认连接方式</strong>
-            <span id="previewModeDetail">HTTP 服务视图会显示实时状态；file 模式只作为静态预览。</span>
+            <span id="previewModeDetail" class="preview-mode-detail">HTTP 服务视图会显示实时状态；file 模式只作为静态预览。</span>
+            <span id="previewAssetDetail" class="preview-asset-detail">Assets: CSS/JS 等待加载</span>
           </div>
           <div id="heroVersionPulse" class="hero-version-pulse" aria-live="polite">
             <p class="version-kicker">版本脉搏</p>

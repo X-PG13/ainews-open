@@ -83,6 +83,7 @@ const refs = {
   previewModeStrip: document.getElementById("previewModeStrip"),
   previewModeTitle: document.getElementById("previewModeTitle"),
   previewModeDetail: document.getElementById("previewModeDetail"),
+  previewAssetDetail: document.getElementById("previewAssetDetail"),
   heroHealthBadge: document.getElementById("heroHealthBadge"),
   heroSchemaVersion: document.getElementById("heroSchemaVersion"),
   heroBuildVersion: document.getElementById("heroBuildVersion"),
@@ -111,6 +112,10 @@ const refs = {
 refs.adminToken.value = state.token;
 refs.digestEditorActorInput.value = state.editorActor;
 setPreviewModeState(IS_FILE_PROTOCOL ? "file" : "http");
+updatePreviewAssetStatus(window.__ainewsConsoleAssetStatus);
+window.addEventListener("ainews-console-asset-status", (event) => {
+  updatePreviewAssetStatus(event.detail);
+});
 
 function adminHeaders() {
   const headers = { "Content-Type": "application/json" };
@@ -275,6 +280,46 @@ function setPreviewModeState(mode) {
   refs.previewModeStrip.className = `preview-mode-strip ${className}`;
   refs.previewModeTitle.textContent = title;
   refs.previewModeDetail.textContent = detail;
+}
+
+function shortAssetPath(path) {
+  if (!path) {
+    return "未命中";
+  }
+  if (path === "inline") {
+    return "inline fallback";
+  }
+  try {
+    const url = new URL(path, window.location.href);
+    const parts = url.pathname.split("/").filter(Boolean);
+    return parts.slice(-2).join("/") || url.pathname || path;
+  } catch (_error) {
+    return path;
+  }
+}
+
+function formatAssetStatus(label, asset) {
+  const stateLabels = {
+    pending: "等待",
+    loading: "加载中",
+    loaded: "已加载",
+    failed: "重试中",
+    fallback: "仅 fallback",
+  };
+  const status = asset || { state: "pending", path: "" };
+  const stateLabel = stateLabels[status.state] || "等待";
+  return `${label} ${stateLabel}: ${shortAssetPath(status.path)}`;
+}
+
+function updatePreviewAssetStatus(status = {}) {
+  if (!refs.previewAssetDetail) {
+    return;
+  }
+  refs.previewAssetDetail.textContent = [
+    "Assets",
+    formatAssetStatus("CSS", status.css),
+    formatAssetStatus("JS", status.js),
+  ].join(" · ");
 }
 
 function setFileModeReadOnly() {
