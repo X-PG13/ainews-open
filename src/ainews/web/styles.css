@@ -296,6 +296,49 @@ button {
   opacity: 1;
 }
 
+.preview-mode-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 23, 23, 0.14);
+  border-left: 4px solid rgba(184, 140, 50, 0.78);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.preview-mode-strip.connected {
+  border-left-color: rgba(46, 110, 61, 0.72);
+  background: rgba(58, 132, 77, 0.08);
+}
+
+.preview-mode-strip.file {
+  border-left-color: rgba(219, 61, 27, 0.78);
+  background: rgba(219, 61, 27, 0.08);
+}
+
+.preview-mode-kicker {
+  grid-row: span 2;
+  color: var(--accent-deep);
+  font: 800 10px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.preview-mode-strip strong {
+  min-width: 0;
+  font: 800 13px/1.25 "JetBrains Mono", monospace;
+}
+
+.preview-mode-strip span:last-child {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .status-chip.good {
   background: rgba(58, 132, 77, 0.16);
   color: #1f6b34;
@@ -887,6 +930,14 @@ textarea:focus-visible {
 
   .operations-status-strip {
     grid-template-columns: 1fr;
+  }
+
+  .preview-mode-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-mode-kicker {
+    grid-row: auto;
   }
 
   .hero-status-rail {
