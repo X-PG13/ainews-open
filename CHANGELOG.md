@@ -2,6 +2,23 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.70] - 2026-07-07
+
+### Added
+
+- Added a web console preview checklist to help operators diagnose plain-text rendering, missing CSS, file-mode previews, and served HTTP console views.
+- Added a post-publish release evidence checklist so maintainers capture tag, release asset, workflow, smoke-test, and milestone closeout proof after publishing.
+- Added a preview-mode status strip to the web console hero that distinguishes static file previews, HTTP pending views, and connected backend sessions.
+
+### Changed
+
+- Package version is now `1.2.70`.
+- Web console fallback styling now includes the preview-mode status strip so static previews stay readable even when external CSS is unavailable.
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured.
+
 ## [1.2.69] - 2026-07-07
 
 ### Changed
