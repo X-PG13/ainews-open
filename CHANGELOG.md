@@ -2,6 +2,22 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.69] - 2026-07-07
+
+### Changed
+
+- Package version is now `1.2.69`.
+- Updated all GitHub Actions workflows to use `actions/checkout@v7`.
+- Relaxed the development pytest upper bound to `<10.0.0` so future pytest 9 releases can be evaluated without another metadata-only dependency range change.
+
+### Fixed
+
+- Hardened web console asset loading for static and served previews by retrying file-mode and service-mode CSS/JS candidates with a timeout fallback before leaving the inline static preview styles in place.
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured.
+
 ## [1.2.68] - 2026-06-10
 
 ### Added
