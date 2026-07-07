@@ -117,6 +117,50 @@ window.addEventListener("ainews-console-asset-status", (event) => {
   updatePreviewAssetStatus(event.detail);
 });
 
+function firstScreenLoadingContainers() {
+  return [
+    refs.statsGrid,
+    refs.operationsSummary,
+    refs.operationsHealth,
+    refs.operationsMetrics,
+    refs.operationsPipelineRuns,
+    refs.operationsSources,
+    refs.operationsAlerts,
+    refs.operationsPublicationFailures,
+  ].filter(Boolean);
+}
+
+function markFirstScreenSectionLoaded(element) {
+  if (!element) {
+    return;
+  }
+  element.classList.remove("first-screen-loading", "first-screen-loading-block");
+}
+
+function settleFirstScreenLoading() {
+  firstScreenLoadingContainers().forEach(markFirstScreenSectionLoaded);
+  document.querySelectorAll(".status-rail-item.is-loading").forEach((element) => {
+    element.classList.remove("is-loading");
+  });
+  if (refs.operationsStatusStrip) {
+    refs.operationsStatusStrip.classList.remove("loading", "waiting");
+  }
+}
+
+function markFirstScreenWaiting() {
+  firstScreenLoadingContainers().forEach(markFirstScreenSectionLoaded);
+  document.querySelectorAll(".status-rail-item.is-loading").forEach((element) => {
+    element.classList.remove("is-loading");
+  });
+  document.querySelectorAll("[data-loading-placeholder]").forEach((element) => {
+    element.classList.add("loading-paused");
+  });
+  if (refs.operationsStatusStrip) {
+    refs.operationsStatusStrip.classList.remove("loading", "loaded");
+    refs.operationsStatusStrip.classList.add("waiting");
+  }
+}
+
 function adminHeaders() {
   const headers = { "Content-Type": "application/json" };
   if (state.token) {
@@ -174,6 +218,7 @@ function getDigestEditorMeta() {
 }
 
 function renderStats(stats) {
+  markFirstScreenSectionLoaded(refs.statsGrid);
   const cards = [
     ["文章总数", stats.total_articles || 0],
     ["可见文章", stats.visible_articles || 0],
@@ -323,6 +368,7 @@ function updatePreviewAssetStatus(status = {}) {
 }
 
 function setFileModeReadOnly() {
+  markFirstScreenWaiting();
   setPreviewModeState("file");
   refs.jobOutput.textContent = FILE_MODE_MESSAGE;
 
@@ -437,6 +483,7 @@ function describeDataWindow(value) {
 }
 
 function updateHeroOperationStatus(payload) {
+  settleFirstScreenLoading();
   setPreviewModeState("connected");
   const health = payload.health || {};
   const stats = payload.stats || {};
@@ -520,6 +567,7 @@ function updateHeroOperationStatus(payload) {
     refs.heroRailAgeHint.textContent = ageHint;
   }
   if (refs.operationsStatusStrip) {
+    refs.operationsStatusStrip.classList.remove("loading", "waiting");
     refs.operationsStatusStrip.classList.add("loaded");
   }
 }
@@ -534,6 +582,7 @@ function summarizePairs(payload) {
 }
 
 function renderOperationsSummary(payload) {
+  markFirstScreenSectionLoaded(refs.operationsSummary);
   const health = payload.health || {};
   const stats = payload.stats || {};
   const metrics = payload.metrics || {};
@@ -558,6 +607,8 @@ function renderOperationsSummary(payload) {
 }
 
 function renderOperationsHealth(payload) {
+  markFirstScreenSectionLoaded(refs.operationsHealth);
+  markFirstScreenSectionLoaded(refs.operationsMetrics);
   const health = payload.health || {};
   const checks = Object.entries(health.checks || {})
     .map(
@@ -605,6 +656,7 @@ function renderOperationsHealth(payload) {
 }
 
 function renderOperationsPipelineRuns(runs) {
+  markFirstScreenSectionLoaded(refs.operationsPipelineRuns);
   refs.operationsPipelineRuns.innerHTML = runs.length
     ? runs
         .map(
@@ -640,6 +692,7 @@ function renderOperationsPipelineRuns(runs) {
 }
 
 function renderOperationsSources(sources) {
+  markFirstScreenSectionLoaded(refs.operationsSources);
   refs.operationsSources.innerHTML = sources.length
     ? sources
         .map(
@@ -690,6 +743,7 @@ function renderOperationsSources(sources) {
 }
 
 function renderOperationsAlerts(sourceAlerts) {
+  markFirstScreenSectionLoaded(refs.operationsAlerts);
   refs.operationsAlerts.innerHTML = sourceAlerts.length
     ? sourceAlerts
         .map(
@@ -715,6 +769,7 @@ function renderOperationsAlerts(sourceAlerts) {
 }
 
 function renderOperationsPublicationFailures(failures, pending) {
+  markFirstScreenSectionLoaded(refs.operationsPublicationFailures);
   const cards = [];
   if (failures.length) {
     cards.push(
@@ -1894,6 +1949,7 @@ async function refreshAll() {
     ]);
   } catch (error) {
     logJob("refresh failed", { error: error.message });
+    markFirstScreenWaiting();
     success = false;
   } finally {
     if (success) {

@@ -8,6 +8,9 @@
   --accent-deep: #8e1f0a;
   --gold: #b88c32;
   --panel-shadow: 0 24px 70px rgba(81, 51, 17, 0.08);
+  --loading-base: rgba(255, 255, 255, 0.56);
+  --loading-line: rgba(23, 23, 23, 0.08);
+  --loading-sheen: rgba(219, 61, 27, 0.12);
 }
 
 * {
@@ -246,6 +249,30 @@ button {
   font-weight: 700;
 }
 
+.operations-status-strip.loading {
+  position: relative;
+  overflow: hidden;
+  border-style: solid;
+  background:
+    linear-gradient(110deg, rgba(255, 255, 255, 0.72), rgba(255, 247, 232, 0.62)),
+    radial-gradient(circle at 12% 30%, rgba(184, 140, 50, 0.18), transparent 32%);
+}
+
+.operations-status-strip.loading::after,
+.status-rail-item.is-loading::after,
+.loading-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 0%, var(--loading-sheen) 42%, transparent 72%);
+  animation: loading-sweep 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.operations-status-strip.loading span {
+  position: relative;
+}
+
 .hero-version-pulse {
   margin-top: 14px;
   display: grid;
@@ -294,6 +321,16 @@ button {
 
 .operations-status-strip.loaded {
   opacity: 1;
+}
+
+.operations-status-strip.loaded,
+.operations-status-strip.waiting {
+  overflow: visible;
+}
+
+.operations-status-strip.loaded::after,
+.operations-status-strip.waiting::after {
+  display: none;
 }
 
 .preview-mode-strip {
@@ -357,6 +394,84 @@ button {
 .status-chip.warn {
   background: rgba(219, 61, 27, 0.16);
   color: var(--accent-deep);
+}
+
+.status-rail-item.is-loading,
+.loading-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-rail-item.is-loading {
+  border-left: 4px solid rgba(184, 140, 50, 0.58);
+  background:
+    linear-gradient(135deg, var(--loading-base), rgba(255, 248, 238, 0.62)),
+    radial-gradient(circle at 100% 0%, rgba(219, 61, 27, 0.1), transparent 34%);
+}
+
+.status-rail-item.is-loading h3 {
+  color: rgba(23, 23, 23, 0.56);
+}
+
+.first-screen-loading-block {
+  display: grid;
+  gap: 10px;
+}
+
+.loading-card {
+  min-height: 112px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 248, 238, 0.54)),
+    radial-gradient(circle at top right, rgba(184, 140, 50, 0.11), transparent 34%);
+}
+
+.loading-card.loading-paused {
+  opacity: 0.86;
+}
+
+.loading-card.loading-paused::after {
+  display: none;
+}
+
+.loading-kicker {
+  margin: 0 0 12px;
+  color: var(--accent-deep);
+  font: 800 10px/1 "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.loading-heading,
+.loading-line {
+  display: block;
+  border-radius: 999px;
+  background: var(--loading-line);
+}
+
+.loading-heading {
+  width: min(180px, 58%);
+  height: 22px;
+}
+
+.loading-line {
+  width: 82%;
+  height: 10px;
+  margin-top: 12px;
+}
+
+.loading-line.short {
+  width: 48%;
+}
+
+@keyframes loading-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  55%,
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .token-box,
@@ -982,5 +1097,11 @@ textarea:focus-visible {
 
   .button:hover {
     transform: none;
+  }
+
+  .operations-status-strip.loading::after,
+  .status-rail-item.is-loading::after,
+  .loading-card::after {
+    display: none;
   }
 }
