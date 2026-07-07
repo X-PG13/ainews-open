@@ -84,6 +84,18 @@ python -m ainews --help
 4. 只有当所有剩余 open item 都已经发布、移动或明确延期后，才关闭 release milestone。
 5. 开始后续维护 issue 前，先创建下一个 `v1.2.x` milestone，避免新工作继续堆到已经关闭的 release 上。
 
+### 发布后证据快照
+
+关闭 release 前，在 release PR、milestone 收尾记录或维护者交接说明里保留这组紧凑证据：
+
+- Release URL：已经发布的 `vX.Y.Z` GitHub Release 页面。
+- Tag commit：`git rev-list -n 1 vX.Y.Z` 对应的 commit，并确认它是否等于预期的 `main` commit。
+- 已发布资产：wheel、source archive、`sha256sums.txt` 和 `vX.Y.Z-sbom.json`。
+- 校验入口：引用 [Release 产物校验](./release-artifacts.zh-CN.md#copy-paste-verification-flow)，不要在这里重复完整 checklist。
+- Release workflow：该 tag 对应的成功 `Release` workflow run URL。
+- Artifact smoke：该 tag 对应的成功 `Release Artifact Smoke` workflow run URL。
+- 延期事项：确认除非本次明确启用 PyPI 发布，否则 PyPI publishing 仍留在 `Deferred: PyPI`。
+
 ### Milestone rollover 责任
 
 除非另一位维护者明确接手，否则合并 release PR 或发布 tag 的维护者负责完成 milestone rollover。
