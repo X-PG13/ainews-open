@@ -378,11 +378,17 @@ class ReleaseMetadataTestCase(unittest.TestCase):
 
         for expected in (
             "### Release Closeout Sequence",
+            "### Post-Publish Evidence Snapshot",
             "### Milestone Rollover Ownership",
             "release notes index",
             "active GitHub milestone",
             "Move deferred work, including PyPI trusted publishing",
             "Create the next `v1.2.x` milestone",
+            "Release URL",
+            "Tag commit",
+            "Assets present",
+            "Release workflow",
+            "Artifact smoke",
             "The maintainer who merges the release PR or publishes the tag owns milestone rollover",
             "Keep issue `#86` in `Deferred: PyPI`",
         ):
@@ -390,11 +396,17 @@ class ReleaseMetadataTestCase(unittest.TestCase):
 
         for expected in (
             "### Release 收尾顺序",
+            "### 发布后证据快照",
             "### Milestone rollover 责任",
             "release notes 索引",
             "活跃的 GitHub milestone",
             "包括 PyPI trusted publishing",
             "创建下一个 `v1.2.x` milestone",
+            "Release URL",
+            "Tag commit",
+            "已发布资产",
+            "Release workflow",
+            "Artifact smoke",
             "合并 release PR 或发布 tag 的维护者负责完成 milestone rollover",
             "issue `#86` 继续留在 `Deferred: PyPI`",
         ):

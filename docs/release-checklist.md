@@ -84,6 +84,18 @@ Use this order after the release page, assets, and smoke workflows are verified:
 4. Close the release milestone only after every remaining open item has either shipped, moved, or been explicitly deferred.
 5. Create the next `v1.2.x` milestone before opening follow-up maintenance issues, so new work does not accumulate against a closed release.
 
+### Post-Publish Evidence Snapshot
+
+Record this compact evidence set in the release PR, milestone closeout note, or maintainer handoff before closing the release:
+
+- Release URL: the published GitHub Release page for `vX.Y.Z`.
+- Tag commit: the `git rev-list -n 1 vX.Y.Z` commit, and whether it matches the intended `main` commit.
+- Assets present: wheel, source archive, `sha256sums.txt`, and `vX.Y.Z-sbom.json`.
+- Verification anchor: the [release artifact verification flow](./release-artifacts.md#copy-paste-verification-flow), not a duplicated checklist.
+- Release workflow: the successful `Release` workflow run URL for the tag.
+- Artifact smoke: the successful `Release Artifact Smoke` workflow run URL for the tag.
+- Deferred work: confirmation that PyPI publishing remains in `Deferred: PyPI` unless this release explicitly enabled it.
+
 ### Milestone Rollover Ownership
 
 The maintainer who merges the release PR or publishes the tag owns milestone rollover unless another maintainer explicitly takes it over.
