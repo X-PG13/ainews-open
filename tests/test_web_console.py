@@ -177,11 +177,20 @@ class WebConsoleTestCase(unittest.TestCase):
             "assets/app.js",
             "consoleStylesheet",
             "consoleAppScript",
-            "this.dataset.fallback",
-            "window.__ainewsAppScriptFallback",
+            "loadElementWithFallback",
+            "waitForAssetLoad",
+            "bootstrapConsoleAssets",
+            "LOAD_TIMEOUT_MS",
         )
         for expected in expected_snippets:
             self.assertIn(expected, index)
+
+        expected_absent_snippets = (
+            "this.dataset.fallback",
+            "window.__ainewsAppScriptFallback",
+        )
+        for expected in expected_absent_snippets:
+            self.assertNotIn(expected, index)
 
         expected_app_snippets = (
             "const IS_FILE_PROTOCOL = window.location.protocol === \"file:\";",

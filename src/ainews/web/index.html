@@ -85,18 +85,94 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
-    <link
-      rel="stylesheet"
-      id="consoleStylesheet"
-      href="assets/styles.css"
-      onerror="if (!this.dataset.fallback) { this.dataset.fallback='1'; this.href='styles.css'; }"
-    />
-    <script
-      defer
-      id="consoleAppScript"
-      src="assets/app.js"
-      onerror="if (!window.__ainewsAppScriptFallback) { window.__ainewsAppScriptFallback=true; const s=document.createElement('script'); s.defer=true; s.src='app.js'; document.head.appendChild(s); }"
-    ></script>
+    <script>
+      (function () {
+        const isFileProtocol = window.location.protocol === "file:";
+        const cssCandidates = isFileProtocol
+          ? ["styles.css", "assets/styles.css"]
+          : ["/assets/styles.css", "assets/styles.css", "styles.css"];
+        const jsCandidates = isFileProtocol
+          ? ["app.js", "assets/app.js"]
+          : ["/assets/app.js", "assets/app.js", "app.js"];
+        const LOAD_TIMEOUT_MS = 900;
+
+        const dedup = (items) => Array.from(new Set(items.filter((item) => typeof item === "string" && item)));
+
+        const waitForAssetLoad = (element) =>
+          new Promise((resolve, reject) => {
+            const timeout = window.setTimeout(() => {
+              reject(new Error("asset load timeout"));
+            }, LOAD_TIMEOUT_MS);
+            element.addEventListener(
+              "load",
+              () => {
+                clearTimeout(timeout);
+                resolve();
+              },
+              { once: true }
+            );
+            element.addEventListener(
+              "error",
+              () => {
+                clearTimeout(timeout);
+                reject(new Error("asset load error"));
+              },
+              { once: true }
+            );
+          });
+
+        const removeFailedAssetNode = (element) => {
+          if (element && element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        };
+
+        const loadElementWithFallback = async (id, candidates, createNode) => {
+          const unique = dedup(candidates);
+          for (const candidate of unique) {
+            const element = createNode(candidate);
+            element.id = id;
+            element.setAttribute("data-console-asset", "bootstrap");
+            document.head.appendChild(element);
+            try {
+              await waitForAssetLoad(element);
+              return;
+            } catch (_error) {
+              removeFailedAssetNode(element);
+            }
+          }
+        };
+
+        const bootstrapConsoleAssets = () => {
+          loadElementWithFallback(
+            "consoleStylesheet",
+            cssCandidates,
+            (href) => {
+              const link = document.createElement("link");
+              link.rel = "stylesheet";
+              link.href = href;
+              return link;
+            }
+          ).catch(() => {});
+          loadElementWithFallback(
+            "consoleAppScript",
+            jsCandidates,
+            (src) => {
+              const script = document.createElement("script");
+              script.defer = true;
+              script.src = src;
+              return script;
+            }
+          ).catch(() => {});
+        };
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", bootstrapConsoleAssets, { once: true });
+        } else {
+          bootstrapConsoleAssets();
+        }
+      })();
+    </script>
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
