@@ -2,6 +2,23 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.71] - 2026-07-07
+
+### Added
+
+- Added package-resource smoke coverage for the web console assets so `index.html`, `styles.css`, and `app.js` stay readable from the installed package contract.
+- Added compact CSS and JavaScript asset-load diagnostics to the web console preview-mode strip so operators can see loaded paths, retrying states, and fallback status.
+- Added English and Simplified Chinese README operator paths that connect first deploy, console walkthrough, troubleshooting, and release evidence documentation.
+
+### Changed
+
+- Package version is now `1.2.71`.
+- Web console static asset bootstrap now publishes CSS and JavaScript loading state for the runtime UI to display.
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured.
+
 ## [1.2.70] - 2026-07-07
 
 ### Added
