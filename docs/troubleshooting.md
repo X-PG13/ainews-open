@@ -67,6 +67,14 @@ Checks:
 - If you still only see raw tags/text, check the page source for unresolved merge markers like `<<<<<<< HEAD` `=======` `>>>>>>>`.
 - Clear browser cache / open an in-private window after fixing merge conflicts, then refresh once with hard reload.
 
+Preview checklist:
+
+1. Open `src/ainews/web/index.html` directly for a static file-mode preview.
+2. Open `http://127.0.0.1:8000/src/ainews/web/index.html` after `python -m http.server 8000` for a local HTTP preview.
+3. Confirm DevTools shows at least one successful CSS request and one successful JavaScript request. File mode should try `styles.css` and `app.js`; HTTP mode should also be able to fall back between `assets/...` and same-directory candidates.
+4. Wait one refresh cycle before judging the page broken. The console bootstrap retries the next asset candidate after a short timeout when the first path does not load.
+5. Confirm the hero, status strip, toolbar, and operational sections are styled as cards and controls. If only plain text appears after a hard refresh, capture the failed CSS/JS URLs before changing code.
+
 Expected outcome:
 
 - Hero status chips, toolbar buttons, and sections render as styled cards (no raw HTML tags).
