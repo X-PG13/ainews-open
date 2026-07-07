@@ -177,11 +177,20 @@ class WebConsoleTestCase(unittest.TestCase):
             "assets/app.js",
             "consoleStylesheet",
             "consoleAppScript",
-            "this.dataset.fallback",
-            "window.__ainewsAppScriptFallback",
+            "loadElementWithFallback",
+            "waitForAssetLoad",
+            "bootstrapConsoleAssets",
+            "LOAD_TIMEOUT_MS",
         )
         for expected in expected_snippets:
             self.assertIn(expected, index)
+
+        expected_absent_snippets = (
+            "this.dataset.fallback",
+            "window.__ainewsAppScriptFallback",
+        )
+        for expected in expected_absent_snippets:
+            self.assertNotIn(expected, index)
 
         expected_app_snippets = (
             "const IS_FILE_PROTOCOL = window.location.protocol === \"file:\";",
@@ -193,6 +202,18 @@ class WebConsoleTestCase(unittest.TestCase):
         )
         for expected in expected_app_snippets:
             self.assertIn(expected, app)
+
+    def test_console_includes_inline_fallback_styles_for_static_views(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+
+        for expected in (
+            '<style id="consoleFallbackStyles">',
+            ".hero-status-rail",
+            ".toolbar-row",
+            ".publication-list",
+            "background:",
+        ):
+            self.assertIn(expected, index)
 
 
 if __name__ == "__main__":
