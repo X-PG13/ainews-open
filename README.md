@@ -100,14 +100,16 @@ make check
 
 `make check` is the local maintainer gate. It runs lint, coverage, package build validation, and the `/health` smoke check in one command. Use `make coverage` or `make smoke` separately only when you are iterating on one layer.
 
-## Console Operator Path
+## Operator Navigation Map
 
-Use this path when the web console is the main operating surface:
+Read the [Architecture Overview](docs/architecture.md) for system boundaries, then enter the map at the stage that matches the current task. The normal path is setup, operate, and verify; use recovery only when a runtime or release action fails.
 
-1. Start with the [First Deploy Guide](docs/first-deploy.md) to get the API and console running on `http://127.0.0.1:8000/`.
-2. Follow the [Operator Console Walkthrough](docs/operator-console-walkthrough.md) for the safe ingest, extraction, digest review, snapshot editing, and publication preview loop.
-3. Use [Troubleshooting](docs/troubleshooting.md) when the console renders as plain text, assets do not load, or the preview-mode strip reports a static or fallback view.
-4. Before shipping a patch release, use the [Release Checklist](docs/release-checklist.md) and its post-publish evidence snapshot so console, release notes, assets, and smoke results stay aligned.
+| Stage | Primary path | Completion signal | If blocked |
+| --- | --- | --- | --- |
+| Setup | [First Deploy Guide](docs/first-deploy.md), then [Configuration Matrix](docs/configuration.md) or [Deployment Guide](docs/deployment.md) | `/health` returns `ready: true` and the console loads as a styled interface | Use [Troubleshooting](docs/troubleshooting.md) for startup and static-asset checks |
+| Operate | [Operator Console Walkthrough](docs/operator-console-walkthrough.md) and [Monitoring](docs/monitoring.md) | A preview-safe ingest, extraction, and digest cycle completes, with matching health and operations evidence | Follow the runtime failure path in [Troubleshooting](docs/troubleshooting.md) |
+| Verify a release | [Release Notes](docs/releases/README.md), [Release Artifacts](docs/release-artifacts.md), and [Release Checklist](docs/release-checklist.md) | The version, tag, checksums, SBOM, assets, and post-install smoke result agree | Reconcile remote and local state with [Release Recovery Notes](docs/release-recovery.md) |
+| Recover | [Troubleshooting](docs/troubleshooting.md) for runtime failures; [Release Recovery Notes](docs/release-recovery.md) for GitHub release failures | Runtime health is restored, or release refs and evidence are consistent again | Check the [Support Policy](SUPPORT.md) before opening a focused issue |
 
 ## Operator Docs
 
