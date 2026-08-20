@@ -2,6 +2,23 @@
 
 All notable changes to this project should be recorded in this file.
 
+## [1.2.72] - 2026-08-20
+
+### Added
+
+- Added visible first-screen skeleton placeholders for web console metrics and operations while runtime data is loading.
+- Added an English and Simplified Chinese operator navigation map that connects setup, daily operation, release verification, and recovery documentation.
+- Added bilingual troubleshooting guidance for reading the console's CSS and JavaScript asset status before changing code.
+
+### Changed
+
+- Package version is now `1.2.72`.
+- Improved console loading feedback with a warm shimmer, a reduced-motion fallback, and a paused waiting state for file-mode or failed refreshes.
+
+### Deferred
+
+- PyPI trusted publishing remains deferred in the `Deferred: PyPI` milestone until the PyPI project and trusted publisher are configured.
+
 ## [1.2.71] - 2026-07-07
 
 ### Added
