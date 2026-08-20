@@ -100,14 +100,16 @@ make check
 
 `make check` 现在就是本地维护者总门禁，会一次跑完 lint、coverage、构建校验和 `/health` smoke。只有在你单独调某一层时，才需要单跑 `make coverage` 或 `make smoke`。
 
-## 控制台运维路径
+## 运维导航图
 
-当 Web 控制台是主要操作面时，按这条路径走：
+先通过[架构总览](docs/architecture.md)了解系统边界，再从当前任务对应的阶段进入。正常路径是部署、操作、校验；只有运行或发版动作失败时才进入恢复流程。
 
-1. 先看[首次部署指南](docs/first-deploy.zh-CN.md)，把 API 和控制台跑到 `http://127.0.0.1:8000/`。
-2. 按[控制台 Walkthrough](docs/operator-console-walkthrough.md)完成安全的抓取、正文抽取、日报审阅、冻结编辑稿和发布预览流程。
-3. 如果控制台只显示裸文本、资源加载失败，或 preview-mode 状态条提示静态/fallback 视图，先看[故障排查](docs/troubleshooting.zh-CN.md)。
-4. 准备补丁发版前，按[发版清单](docs/release-checklist.zh-CN.md)和发布后证据快照确认控制台、release notes、制品和 smoke 结果一致。
+| 阶段 | 主路径 | 完成信号 | 受阻时 |
+| --- | --- | --- | --- |
+| 部署 | [首次部署指南](docs/first-deploy.zh-CN.md)，然后按需查看[配置矩阵](docs/configuration.zh-CN.md)或[部署指南](docs/deployment.zh-CN.md) | `/health` 返回 `ready: true`，控制台以完整样式加载 | 按[故障排查](docs/troubleshooting.zh-CN.md)检查启动和静态资源 |
+| 日常操作 | [控制台 Walkthrough](docs/operator-console-walkthrough.md)和[监控接入](docs/monitoring.zh-CN.md) | 安全预览模式下完成抓取、正文抽取和日报流程，health 与 operations 证据一致 | 按[故障排查](docs/troubleshooting.zh-CN.md)进入对应运行故障路径 |
+| 发版校验 | [Release Notes](docs/releases/README.zh-CN.md)、[Release 产物校验](docs/release-artifacts.zh-CN.md)和[发版清单](docs/release-checklist.zh-CN.md) | 版本号、tag、checksum、SBOM、制品和安装后 smoke 结果一致 | 按[Release 恢复说明](docs/release-recovery.zh-CN.md)核对远端与本地状态 |
+| 恢复 | 运行故障看[故障排查](docs/troubleshooting.zh-CN.md)，GitHub 发版故障看[Release 恢复说明](docs/release-recovery.zh-CN.md) | 运行状态恢复健康，或 release refs 与证据重新一致 | 开聚焦 issue 前先查看[支持策略](SUPPORT.md) |
 
 ## 运维与交付文档
 
