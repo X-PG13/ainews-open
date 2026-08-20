@@ -79,6 +79,17 @@ class ApiTestCase(unittest.TestCase):
         self.assertIn("stats", response.json())
         self.assertTrue(response.headers["X-Request-ID"])
 
+    def test_console_and_favicon_routes(self) -> None:
+        console = self.client.get("/")
+        favicon = self.client.get("/favicon.svg")
+
+        self.assertEqual(console.status_code, 200)
+        self.assertIn("text/html", console.headers["content-type"])
+        self.assertIn('<link rel="icon" type="image/svg+xml" href="favicon.svg" />', console.text)
+        self.assertEqual(favicon.status_code, 200)
+        self.assertIn("image/svg+xml", favicon.headers["content-type"])
+        self.assertIn("<svg", favicon.text)
+
     def test_metrics_route_exposes_prometheus_counters(self) -> None:
         repository = ArticleRepository(Path(self._temp_dir.name) / "data" / "ainews.db")
         repository.record_source_event(

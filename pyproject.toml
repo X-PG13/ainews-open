@@ -72,7 +72,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-ainews = ["sources.default.json", "web/*.html", "web/*.css", "web/*.js"]
+ainews = ["sources.default.json", "web/*.html", "web/*.css", "web/*.js", "web/*.svg"]
 
 [tool.ruff]
 line-length = 100

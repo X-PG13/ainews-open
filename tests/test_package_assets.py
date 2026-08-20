@@ -9,11 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 class PackageAssetsTestCase(unittest.TestCase):
     def test_package_data_declares_web_console_assets(self) -> None:
         pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-        expected_patterns = ("web/*.html", "web/*.css", "web/*.js")
+        expected_patterns = ("web/*.html", "web/*.css", "web/*.js", "web/*.svg")
         expected_assets = (
             "web/index.html",
             "web/styles.css",
             "web/app.js",
+            "web/favicon.svg",
         )
 
         self.assertIn("[tool.setuptools.package-data]", pyproject)
@@ -32,14 +33,16 @@ class PackageAssetsTestCase(unittest.TestCase):
         package_root = resources.files("ainews")
         assets = {
             name: package_root.joinpath("web", name).read_text(encoding="utf-8")
-            for name in ("index.html", "styles.css", "app.js")
+            for name in ("index.html", "styles.css", "app.js", "favicon.svg")
         }
 
         self.assertIn("<title>AI News Open Console</title>", assets["index.html"])
+        self.assertIn('href="favicon.svg"', assets["index.html"])
         self.assertIn('<style id="consoleFallbackStyles">', assets["index.html"])
         self.assertIn(".preview-mode-strip", assets["index.html"])
         self.assertIn(".preview-mode-strip", assets["styles.css"])
         self.assertIn("function setPreviewModeState", assets["app.js"])
+        self.assertIn('<svg xmlns="http://www.w3.org/2000/svg"', assets["favicon.svg"])
 
         for expected_path in (
             "/assets/styles.css",
