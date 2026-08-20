@@ -9,6 +9,36 @@ def _read_text(relative_path: str) -> str:
 
 
 class WebConsoleTestCase(unittest.TestCase):
+    def test_console_exposes_page_identity_and_keyboard_entry(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+        styles = _read_text("src/ainews/web/styles.css")
+
+        for expected in (
+            'name="description"',
+            'name="theme-color" content="#f7f0e5"',
+            '<link rel="icon" type="image/svg+xml" href="favicon.svg" />',
+            '<a class="skip-link" href="#operator-console">',
+            'id="mainContent"',
+            'id="operator-console"',
+            'aria-labelledby="operatorConsoleTitle"',
+            'id="operatorConsoleTitle"',
+            'tabindex="-1"',
+        ):
+            self.assertIn(expected, index)
+
+        for expected in (
+            ".skip-link",
+            ".skip-link:focus-visible",
+            "max-width: calc(100vw - 24px);",
+            "transform: translateY(-180%);",
+            "transform: translateY(0);",
+            "#operator-console",
+            "scroll-margin-top: 16px;",
+            "outline: 2px solid rgba(219, 61, 27, 0.48);",
+            ".article-link:focus-visible",
+        ):
+            self.assertIn(expected, styles)
+
     def test_console_exposes_operator_workflow_map(self) -> None:
         index = _read_text("src/ainews/web/index.html")
         styles = _read_text("src/ainews/web/styles.css")

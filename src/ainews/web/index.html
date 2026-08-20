@@ -3,7 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AI News Open operator console for ingest, extraction, digest review, publishing, and recovery."
+    />
+    <meta name="theme-color" content="#f7f0e5" />
     <title>AI News Open Console</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <style id="consoleFallbackStyles">
       :root {
         --bg: #f7f0e5;
@@ -27,6 +33,25 @@
           radial-gradient(circle at top left, rgba(219, 61, 27, 0.08), transparent 28%),
           radial-gradient(circle at bottom right, rgba(184, 140, 50, 0.12), transparent 32%),
           linear-gradient(180deg, #fbf5eb 0%, #f3ead8 100%);
+      }
+      .skip-link {
+        position: fixed;
+        z-index: 1000;
+        top: 12px;
+        left: 12px;
+        max-width: calc(100vw - 24px);
+        padding: 10px 14px;
+        border-radius: 999px;
+        color: #fff8ee;
+        background: var(--ink);
+        transform: translateY(-180%);
+      }
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+      #operator-console:focus {
+        outline: 2px solid rgba(219, 61, 27, 0.48);
+        outline-offset: 4px;
       }
       .shell {
         width: min(1400px, calc(100vw - 32px));
@@ -240,8 +265,9 @@
     </script>
   </head>
   <body>
+    <a class="skip-link" href="#operator-console">跳到运维控制台</a>
     <div class="background-grid" aria-hidden="true"></div>
-    <main class="shell">
+    <main id="mainContent" class="shell">
       <section class="hero panel">
         <div>
           <p class="eyebrow">AI News Open</p>
@@ -370,11 +396,16 @@
         </article>
       </section>
 
-      <section class="panel operations-panel">
+      <section
+        id="operator-console"
+        class="panel operations-panel"
+        aria-labelledby="operatorConsoleTitle"
+        tabindex="-1"
+      >
         <div class="section-head">
           <div>
             <p class="eyebrow">Operations</p>
-            <h2>运维总览</h2>
+            <h2 id="operatorConsoleTitle">运维总览</h2>
           </div>
           <div class="toolbar-row">
             <label class="check-label compact-toggle">

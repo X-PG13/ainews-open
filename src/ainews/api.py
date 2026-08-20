@@ -432,6 +432,10 @@ def create_app() -> FastAPI:
     def index() -> FileResponse:
         return FileResponse(web_dir / "index.html")
 
+    @app.get("/favicon.svg", include_in_schema=False)
+    def favicon() -> FileResponse:
+        return FileResponse(web_dir / "favicon.svg", media_type="image/svg+xml")
+
     @app.get("/health")
     def health(request: Request) -> dict:
         _begin_route_action(request, "health")

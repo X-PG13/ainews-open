@@ -33,6 +33,39 @@ body {
     linear-gradient(180deg, #fbf5eb 0%, #f3ead8 100%);
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 248, 238, 0.32);
+  border-radius: 999px;
+  color: #fff8ee;
+  background: var(--ink);
+  box-shadow: 0 12px 30px rgba(23, 23, 23, 0.24);
+  font: 700 13px/1 "Space Grotesk", sans-serif;
+  text-decoration: none;
+  transform: translateY(-180%);
+  transition: transform 140ms ease;
+}
+
+.skip-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  transform: translateY(0);
+}
+
+#operator-console {
+  scroll-margin-top: 16px;
+}
+
+#operator-console:focus {
+  outline: 2px solid rgba(219, 61, 27, 0.48);
+  outline-offset: 6px;
+}
+
 .background-grid {
   position: fixed;
   inset: 0;
@@ -522,6 +555,7 @@ textarea {
   transform: translateY(-1px);
 }
 
+.article-link:focus-visible,
 .button:focus-visible,
 input:focus-visible,
 select:focus-visible,
