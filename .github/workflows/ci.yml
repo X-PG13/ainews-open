@@ -10,17 +10,27 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    # Name only the Python version. The runner image stays in the matrix so 3.9
+    # can use ubuntu-24.04, but branch protection requires `quality (3.9)` and
+    # `quality (3.12)` with no OS suffix.
+    name: quality (${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
+        include:
+          # actions/python-versions publishes CPython 3.9 for Ubuntu 24.04, not 26.04.
+          # ubuntu-latest is 26.04, so this leg stays on the newest image that can install 3.9.
+          - python-version: "3.9"
+            os: ubuntu-24.04
+          - python-version: "3.12"
+            os: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -41,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -71,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
