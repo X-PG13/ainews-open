@@ -10,12 +10,18 @@ concurrency:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.12"]
+        include:
+          # actions/python-versions publishes CPython 3.9 for Ubuntu 24.04, not 26.04.
+          # ubuntu-latest is 26.04, so this leg stays on the newest image that can install 3.9.
+          - python-version: "3.9"
+            os: ubuntu-24.04
+          - python-version: "3.12"
+            os: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v7
