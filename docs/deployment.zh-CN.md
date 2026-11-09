@@ -146,7 +146,7 @@ sudo systemctl status ainews-open
 - [pypi-publish.yml](../.github/workflows/pypi-publish.yml)：PyPI trusted publishing
 - [daily-digest.yml](../.github/workflows/daily-digest.yml)：定时生成日报 artifact
 - [demo-pages.yml](../.github/workflows/demo-pages.yml)：发布 GitHub Pages demo
-- [codeql.yml](../.github/workflows/codeql.yml)：安全扫描
+- [codeql-analysis.yml](../.github/workflows/codeql-analysis.yml)：安全扫描
 
 如果这是你第一次给仓库启用 GitHub Pages 或 PyPI 发布，先看 [maintainer-bootstrap.zh-CN.md](./maintainer-bootstrap.zh-CN.md)。里面写清楚了这些 workflow 依赖的 GitHub 仓库设置、environment 名称和 PyPI trusted publisher 表单字段。
 

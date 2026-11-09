@@ -150,7 +150,7 @@ The repository also includes:
 - [release.yml](../.github/workflows/release.yml) for tag-based release builds, checksums, SBOM, and provenance
 - [pypi-publish.yml](../.github/workflows/pypi-publish.yml) for trusted PyPI publishing
 - [demo-pages.yml](../.github/workflows/demo-pages.yml) for publishing the sample demo to GitHub Pages
-- [codeql.yml](../.github/workflows/codeql.yml) for security analysis
+- [codeql-analysis.yml](../.github/workflows/codeql-analysis.yml) for security analysis
 - [.github/dependabot.yml](../.github/dependabot.yml) for dependency update PRs
 
 If this is the first time you are enabling GitHub Pages or PyPI publishing for the repository, follow [maintainer-bootstrap.md](./maintainer-bootstrap.md) for the exact repository settings, environment names, and trusted-publisher fields expected by these workflows.

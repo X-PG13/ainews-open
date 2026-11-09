@@ -6,10 +6,7 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    # Monday 02:00 UTC. The day-of-week field is written as MON, equivalent
-    # to 1, so this commit changes the cron value. GitHub reactivates a
-    # workflow that it disabled for inactivity only when the cron schedule changes.
-    - cron: "0 2 * * MON"
+    - cron: "0 2 * * 1"
 
 concurrency:
   group: codeql-${{ github.ref }}
