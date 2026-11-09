@@ -86,6 +86,12 @@ Expected outcome:
 - In served mode (`http://127.0.0.1:8000/`), the page can execute refresh controls without immediate JS errors in the browser console.
 - In file mode, actions are intentionally disabled and a clear read-only guidance message is shown.
 
+## Web console refresh fails
+
+When the console is opened over HTTP, a failed initial load or manual refresh shows a refresh-failure status directly under the first-screen status strip. The status includes a sanitized failure summary, the last successful sync time, and a `重试刷新` action. The next successful refresh clears that status and updates the last successful sync time.
+
+File-mode previews keep the preview-mode guidance. That static preview stays separate from an HTTP refresh failure.
+
 ## Health is degraded
 - `curl http://127.0.0.1:8000/health`
 - `curl -H "X-Admin-Token: your-secret-token" "http://127.0.0.1:8000/admin/articles?extraction_status=throttled&due_only=true"`
