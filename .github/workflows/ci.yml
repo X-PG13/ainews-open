@@ -10,6 +10,10 @@ concurrency:
 
 jobs:
   quality:
+    # Name only the Python version. The runner image stays in the matrix so 3.9
+    # can use ubuntu-24.04, but branch protection requires `quality (3.9)` and
+    # `quality (3.12)` with no OS suffix.
+    name: quality (${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
