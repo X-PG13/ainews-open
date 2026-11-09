@@ -148,6 +148,26 @@
         color: var(--muted);
         font-size: 12px;
       }
+      .refresh-failure-strip {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px solid rgba(142, 31, 10, 0.28);
+        border-left: 4px solid #db3d1b;
+        border-radius: 14px;
+        background: rgba(219, 61, 27, 0.1);
+      }
+      .refresh-failure-strip[hidden] {
+        display: none;
+      }
+      .refresh-failure-summary,
+      .refresh-failure-last-sync {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -296,6 +316,22 @@
             <span id="heroDataAge">数据时效：--</span>
             <span id="heroAutoRefreshCountdown">自动刷新：--</span>
             <span id="heroLastSync">上次同步：--</span>
+          </div>
+          <div
+            id="refreshFailureStrip"
+            class="refresh-failure-strip"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            hidden
+          >
+            <div class="refresh-failure-copy">
+              <span class="refresh-failure-kicker">Refresh failed</span>
+              <strong id="refreshFailureTitle">面板刷新失败</strong>
+              <p id="refreshFailureSummary" class="refresh-failure-summary"></p>
+              <p id="refreshFailureLastSync" class="refresh-failure-last-sync">上次成功同步：尚未成功同步</p>
+            </div>
+            <button id="retryRefreshButton" class="button primary" type="button">重试刷新</button>
           </div>
           <div id="previewModeStrip" class="preview-mode-strip pending" aria-live="polite">
             <span class="preview-mode-kicker">Preview mode</span>

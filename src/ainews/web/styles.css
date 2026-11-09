@@ -414,6 +414,58 @@ button {
   font-family: "JetBrains Mono", monospace;
 }
 
+.refresh-failure-strip {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(142, 31, 10, 0.28);
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  background: rgba(219, 61, 27, 0.1);
+}
+
+.refresh-failure-strip[hidden] {
+  display: none;
+}
+
+.refresh-failure-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.refresh-failure-kicker {
+  color: var(--accent-deep);
+  font: 800 10px/1.2 "JetBrains Mono", monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.refresh-failure-strip strong {
+  font: 800 13px/1.25 "JetBrains Mono", monospace;
+}
+
+.refresh-failure-summary,
+.refresh-failure-last-sync {
+  margin: 0;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.refresh-failure-last-sync {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.refresh-failure-strip .button {
+  flex: 0 0 auto;
+}
+
 .status-chip.good {
   background: rgba(58, 132, 77, 0.16);
   color: #1f6b34;
@@ -1092,6 +1144,14 @@ textarea:focus-visible {
 
   .preview-mode-kicker {
     grid-row: auto;
+  }
+
+  .refresh-failure-strip {
+    flex-direction: column;
+  }
+
+  .refresh-failure-strip .button {
+    align-self: flex-start;
   }
 
   .hero-status-rail {

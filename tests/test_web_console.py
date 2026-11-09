@@ -336,6 +336,8 @@ class WebConsoleTestCase(unittest.TestCase):
             ".preview-mode-strip",
             ".preview-mode-kicker",
             ".preview-asset-detail",
+            ".refresh-failure-strip",
+            ".refresh-failure-strip[hidden]",
             ".first-screen-loading-block",
             ".loading-card",
             ".loading-heading",
@@ -345,6 +347,110 @@ class WebConsoleTestCase(unittest.TestCase):
             "background:",
         ):
             self.assertIn(expected, index)
+
+    def test_console_refresh_failure_exposes_retry_and_recovery_hooks(self) -> None:
+        index = _read_text("src/ainews/web/index.html")
+        app = _read_text("src/ainews/web/app.js")
+        styles = _read_text("src/ainews/web/styles.css")
+
+        status_at = index.index('id="operationsStatusStrip"')
+        failure_at = index.index('id="refreshFailureStrip"')
+        preview_at = index.index('id="previewModeStrip"')
+        self.assertLess(status_at, failure_at)
+        self.assertLess(failure_at, preview_at)
+
+        for expected in (
+            'id="refreshFailureStrip"',
+            'class="refresh-failure-strip"',
+            'role="status"',
+            'aria-live="polite"',
+            'aria-atomic="true"',
+            'id="refreshFailureTitle"',
+            'id="refreshFailureSummary"',
+            'id="refreshFailureLastSync"',
+            'id="retryRefreshButton"',
+            "面板刷新失败",
+            "上次成功同步：尚未成功同步",
+            "重试刷新",
+            "Refresh failed",
+        ):
+            self.assertIn(expected, index)
+
+        for expected in (
+            "refreshFailure: null",
+            "refs.refreshFailureStrip",
+            "refs.refreshFailureSummary",
+            "refs.refreshFailureLastSync",
+            "refs.retryRefreshButton",
+            "function isFileModeRefreshError",
+            "function sanitizeRefreshFailureMessage",
+            "function renderRefreshFailure",
+            "function clearRefreshFailure",
+            "function setRefreshFailure",
+            "function lastSuccessfulSyncText",
+            "REFRESH_FAILURE_SUMMARY_LIMIT",
+            "REFRESH_FAILURE_FALLBACK",
+            'normalized === FILE_MODE_MESSAGE',
+            'return "";',
+            '.replace(/<[^>]*>/g, " ")',
+            '.replace(/bearer\\s+\\S+/gi, "bearer [redacted]")',
+            '(token|password|secret|api[_-]?key)',
+            '$1=[redacted]',
+            '.replace(/https?:\\/\\/\\S+/gi, "[url]")',
+            "redacted.slice(0, REFRESH_FAILURE_SUMMARY_LIMIT)",
+            "refs.refreshFailureSummary.textContent = active ? failure.message : \"\"",
+            'strip.dataset.refreshState = active ? "failed" : "idle"',
+            "strip.hidden = !active",
+            "state.refreshFailure = null",
+            "failedAt: Date.now()",
+            "sanitizeRefreshFailureMessage(error && error.message)",
+            "if (!message) {\n    clearRefreshFailure();",
+            'refs.retryRefreshButton.addEventListener("click", refreshAll);',
+            "renderRefreshFailure();",
+        ):
+            self.assertIn(expected, app)
+
+        self.assertNotIn("refreshFailureSummary.innerHTML", app)
+
+        refresh_all = _function_source(app, "refreshAll")
+        self.assertIn('logJob("refresh failed", { error: error.message });', refresh_all)
+        self.assertIn("markFirstScreenWaiting();", refresh_all)
+        self.assertIn("setRefreshFailure(error);", refresh_all)
+        self.assertIn("if (success) {\n      state.lastSyncAt = Date.now();\n      clearRefreshFailure();", refresh_all)
+        self.assertEqual(refresh_all.count("state.lastSyncAt = Date.now();"), 1)
+
+        file_mode = _function_source(app, "setFileModeReadOnly")
+        self.assertIn("clearRefreshFailure();", file_mode)
+        self.assertIn('setPreviewModeState("file");', file_mode)
+        self.assertNotIn("setRefreshFailure(", file_mode)
+        self.assertIn("refs.retryRefreshButton.disabled = true;", file_mode)
+
+        for expected in (
+            ".refresh-failure-strip",
+            ".refresh-failure-strip[hidden]",
+            ".refresh-failure-copy",
+            ".refresh-failure-kicker",
+            ".refresh-failure-summary",
+            ".refresh-failure-last-sync",
+            ".refresh-failure-strip .button",
+        ):
+            self.assertIn(expected, styles)
+
+
+def _function_source(source: str, name: str) -> str:
+    marker = f"function {name}("
+    start = source.index(marker)
+    brace = source.index("{", start)
+    depth = 0
+    for index in range(brace, len(source)):
+        char = source[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start : index + 1]
+    raise AssertionError(f"could not extract {name}")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ const state = {
   autoRefreshEnabled: localStorage.getItem("ainews_auto_refresh") === "1",
   nextAutoRefreshAt: null,
   lastSyncAt: null,
+  refreshFailure: null,
 };
 
 const IS_FILE_PROTOCOL = window.location.protocol === "file:";
@@ -107,6 +108,10 @@ const refs = {
   autoRefreshStatus: document.getElementById("autoRefreshStatus"),
   heroAutoRefreshCountdown: document.getElementById("heroAutoRefreshCountdown"),
   heroLastSync: document.getElementById("heroLastSync"),
+  refreshFailureStrip: document.getElementById("refreshFailureStrip"),
+  refreshFailureSummary: document.getElementById("refreshFailureSummary"),
+  refreshFailureLastSync: document.getElementById("refreshFailureLastSync"),
+  retryRefreshButton: document.getElementById("retryRefreshButton"),
 };
 
 refs.adminToken.value = state.token;
@@ -369,11 +374,15 @@ function updatePreviewAssetStatus(status = {}) {
 
 function setFileModeReadOnly() {
   markFirstScreenWaiting();
+  clearRefreshFailure();
   setPreviewModeState("file");
   refs.jobOutput.textContent = FILE_MODE_MESSAGE;
 
   if (refs.refreshAllButton) {
     refs.refreshAllButton.disabled = true;
+  }
+  if (refs.retryRefreshButton) {
+    refs.retryRefreshButton.disabled = true;
   }
   if (refs.refreshSourcesButton) {
     refs.refreshSourcesButton.disabled = true;
@@ -462,6 +471,88 @@ function updateLastSyncStatus() {
   }
 
   refs.heroLastSync.textContent = `上次同步：${formatLastSyncTime(state.lastSyncAt)}`;
+}
+
+const REFRESH_FAILURE_SUMMARY_LIMIT = 180;
+const REFRESH_FAILURE_FALLBACK = "面板刷新未完成。后端没有返回可用数据，请重试。详细原因已写入任务日志。";
+
+function isFileModeRefreshError(error) {
+  if (!CAN_USE_BACKEND) {
+    return true;
+  }
+  const message = error && typeof error.message === "string" ? error.message : "";
+  return message === FILE_MODE_MESSAGE;
+}
+
+function sanitizeRefreshFailureMessage(message) {
+  const normalized = String(message || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized === FILE_MODE_MESSAGE) {
+    return "";
+  }
+  if (!normalized) {
+    return REFRESH_FAILURE_FALLBACK;
+  }
+  const redacted = normalized
+    .replace(/bearer\s+\S+/gi, "bearer [redacted]")
+    .replace(/(token|password|secret|api[_-]?key)\s*[:=]\s*\S+/gi, "$1=[redacted]")
+    .replace(/https?:\/\/\S+/gi, "[url]");
+  const summary = redacted.slice(0, REFRESH_FAILURE_SUMMARY_LIMIT).trim();
+  return summary || REFRESH_FAILURE_FALLBACK;
+}
+
+function lastSuccessfulSyncText() {
+  if (!state.lastSyncAt) {
+    return "上次成功同步：尚未成功同步";
+  }
+  return `上次成功同步：${formatLastSyncTime(state.lastSyncAt)}`;
+}
+
+function renderRefreshFailure() {
+  const strip = refs.refreshFailureStrip;
+  if (!strip) {
+    return;
+  }
+
+  const failure = state.refreshFailure;
+  const active = Boolean(failure && failure.message);
+  const lastSyncText = lastSuccessfulSyncText();
+  if (refs.refreshFailureSummary) {
+    refs.refreshFailureSummary.textContent = active ? failure.message : "";
+  }
+  if (refs.refreshFailureLastSync) {
+    refs.refreshFailureLastSync.textContent = lastSyncText;
+  }
+  if (refs.retryRefreshButton) {
+    refs.retryRefreshButton.disabled = !active || !CAN_USE_BACKEND;
+  }
+  strip.dataset.refreshState = active ? "failed" : "idle";
+  strip.hidden = !active;
+}
+
+function clearRefreshFailure() {
+  state.refreshFailure = null;
+  renderRefreshFailure();
+}
+
+function setRefreshFailure(error) {
+  if (isFileModeRefreshError(error)) {
+    clearRefreshFailure();
+    return;
+  }
+  const message = sanitizeRefreshFailureMessage(error && error.message);
+  if (!message) {
+    clearRefreshFailure();
+    return;
+  }
+  state.refreshFailure = {
+    message,
+    failedAt: Date.now(),
+  };
+  renderRefreshFailure();
 }
 
 function describeDataWindow(value) {
@@ -1950,10 +2041,12 @@ async function refreshAll() {
   } catch (error) {
     logJob("refresh failed", { error: error.message });
     markFirstScreenWaiting();
+    setRefreshFailure(error);
     success = false;
   } finally {
     if (success) {
       state.lastSyncAt = Date.now();
+      clearRefreshFailure();
     }
     updateLastSyncStatus();
     if (state.autoRefreshEnabled) {
@@ -2242,6 +2335,9 @@ refs.digestEditorActorInput.addEventListener("change", () => {
 });
 
 refs.refreshAllButton.addEventListener("click", refreshAll);
+if (refs.retryRefreshButton) {
+  refs.retryRefreshButton.addEventListener("click", refreshAll);
+}
 refs.refreshSourcesButton.addEventListener("click", () =>
   loadSources().catch((error) => logJob("load sources failed", { error: error.message }))
 );
@@ -2411,6 +2507,7 @@ refs.extractionOpsList.addEventListener("click", async (event) => {
 setSelectedDigestId(null);
 setAutoRefreshStatus(state.autoRefreshEnabled);
 updateLastSyncStatus();
+renderRefreshFailure();
 if (!CAN_USE_BACKEND) {
   setFileModeReadOnly();
 } else {
